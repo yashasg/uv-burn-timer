@@ -1,6 +1,6 @@
 ---
 configured: true
-interval: 10
+interval: 1
 timeout: 30
 description: "My squad work loop"
 ---
