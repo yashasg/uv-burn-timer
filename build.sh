@@ -8,16 +8,17 @@ select_destination() {
   local preferred_device="iPhone 17 Pro"
   local available_devices
   available_devices="$(xcrun simctl list devices available)"
+  local device_id
 
   if grep -Fq "$preferred_device (" <<< "$available_devices"; then
-    echo "platform=iOS Simulator,name=$preferred_device"
+    device_id="$(grep -F "$preferred_device (" <<< "$available_devices" | head -n 1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+    echo "platform=iOS Simulator,id=$device_id"
     return
   fi
 
-  local fallback_device
-  fallback_device="$(awk -F '[()]' '/iPhone/ { gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1; exit }' <<< "$available_devices")"
-  if [[ -n "$fallback_device" ]]; then
-    echo "platform=iOS Simulator,name=$fallback_device"
+  device_id="$(grep -m 1 'iPhone.*([0-9A-F-]\{36\})' <<< "$available_devices" | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+  if [[ -n "$device_id" ]]; then
+    echo "platform=iOS Simulator,id=$device_id"
     return
   fi
 
