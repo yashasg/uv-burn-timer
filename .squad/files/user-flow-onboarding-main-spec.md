@@ -2,7 +2,7 @@
 
 **Author:** Linka (UI/UX, Apple HIG & Accessibility)
 **Date:** 2026-05-19T01:15:44-07:00
-**Companion Excalidraw scene:** `.squad/files/user-flow-onboarding-main.excalidraw` (146 elements, 4 swimlanes, ~1720 × 2480 logical px)
+**Companion Excalidraw scene:** `user-flow-onboarding-main.excalidraw` (repo root — 146 elements, 4 swimlanes, ~1720 × 2480 logical px)
 **Source of truth:** `.squad/decisions/archive/linka-ios-design-spec.md`
 **Persona overlays:** `.squad/files/suchi-persona-annotations.md` (incorporated as LANE 4)
 

@@ -118,6 +118,8 @@ The MCP tools accept one element per call, so a 146-element scene means 146 roun
    ```
    That JSON can be saved as `.excalidraw` and re-imported into excalidraw.com — making the scene portable beyond the MCP session.
 
+   **Export path convention (this team, 2026-05-19):** `.excalidraw` deliverable files live at the **repo root** (e.g. `{repo_root}/user-flow-onboarding-main.excalidraw`), NOT inside `.squad/files/`. `.squad/files/` is reserved for non-deliverable session artifacts (specs, intermediate JSON, internal notes). Top-level visibility of design artifacts is the rule. Per directive `copilot-directive-2026-05-19T08-34-13Z-excalidraw-at-repo-root`.
+
 ---
 
 ## "Don't reify what you don't have" — a design honesty rule

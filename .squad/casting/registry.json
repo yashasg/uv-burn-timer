@@ -1,0 +1,70 @@
+{
+  "agents": {
+    "gaia": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Gaia",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "kwame": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Kwame",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "linka": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Linka",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "gi": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Gi",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "ma-ti": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Ma-Ti",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "scribe": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Scribe",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "ralph": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "persistent_name": "Ralph",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "wheeler": {
+      "created_at": "2026-05-18T23:33:15.470Z",
+      "persistent_name": "Wheeler",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "suchi": {
+      "created_at": "2026-05-18T23:33:15.470Z",
+      "persistent_name": "Suchi",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "plunder": {
+      "created_at": "2026-05-18T23:33:15.470Z",
+      "persistent_name": "Plunder",
+      "universe": "Captain Planet",
+      "status": "active"
+    },
+    "argos": {
+      "created_at": "2026-05-19T06:42:14.000Z",
+      "persistent_name": "Argos",
+      "universe": "Captain Planet",
+      "status": "active"
+    }
+  }
+}

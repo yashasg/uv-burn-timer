@@ -30,7 +30,7 @@ Fitzpatrick stays @State only, never @AppStorage (GDPR Art.9 special-category-ad
 - `.squad/skills/excalidraw-flow-diagrams-via-mcp/SKILL.md` — MCP drawing patterns, swimlane layout, batch strategy.
 
 **Excalidraw diagram (D-2026-05-19-013):**
-146 elements, 4 lanes: (1) onboarding flow 6 screens left-to-right, (2) main screen 7 sub-regions, (3) branch-point callouts + 8 yellow annotations, (4) Suchi persona overlays (5 personas × 6 columns). Deliberately omits photosensitization hard screen — drawn as passive-moment with L1 loop (zero-data architecture). Visualizes all key decisions. Exported to `.squad/files/user-flow-onboarding-main.excalidraw` (61.7 KB portable JSON).
+146 elements, 4 lanes: (1) onboarding flow 6 screens left-to-right, (2) main screen 7 sub-regions, (3) branch-point callouts + 8 yellow annotations, (4) Suchi persona overlays (5 personas × 6 columns). Deliberately omits photosensitization hard screen — drawn as passive-moment with L1 loop (zero-data architecture). Visualizes all key decisions. Exported to `user-flow-onboarding-main.excalidraw` at **repo root** (61.7 KB portable JSON). *(File location updated 2026-05-19T08:34Z per user directive: `.excalidraw` deliverables live at repo root for top-level visibility.)*
 
 **MCP gotchas discovered:**
 - Arrows are (x, y, width, height) where width/height are **deltas**, not corners.
@@ -55,7 +55,7 @@ Flagged that "photosensitization attestation" is **NOT a separate screen** — i
 
 **File paths (spec + diagram):**
 - `.squad/decisions/inbox/linka-ios-design-spec.md` — primary design spec
-- `.squad/files/user-flow-onboarding-main.excalidraw` — portable Excalidraw scene
+- `user-flow-onboarding-main.excalidraw` — portable Excalidraw scene (repo root)
 - `.squad/files/user-flow-onboarding-main-spec.md` — textual snapshot
 - `.squad/files/suchi-persona-annotations.md` — persona overlay spec
 

@@ -24,7 +24,7 @@
 ### Excalidraw Diagram Captured (D-2026-05-19-013)
 
 - **4 lanes:** onboarding flow · main screen · branch-point callouts (8 yellow safety notes) · Suchi persona overlays (5 personas × 6 flow positions)
-- **146 elements:** 35 rectangles, 99 text labels, 12 arrows. Exported to `.squad/files/user-flow-onboarding-main.excalidraw` (61.7 KB portable JSON).
+- **146 elements:** 35 rectangles, 99 text labels, 12 arrows. Exported to `user-flow-onboarding-main.excalidraw` at **repo root** (61.7 KB portable JSON). *(Originally written to `.squad/files/`; moved to repo root per user directive 2026-05-19T08:34Z — `.excalidraw` deliverables live at root for top-level visibility.)*
 - **Key design truth:** Photosensitization is a **loop off L1** (visibility, not attestation). No hard screen. Drawn as passive-moment box.
 - **Visualizes:** D-2026-05-19-002 through -012 (all active decisions).
 

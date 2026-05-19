@@ -1,0 +1,23 @@
+{
+  "assignment_cast_snapshots": {
+    "repl-cast-2026-05-19T06:26:01.535Z": {
+      "created_at": "2026-05-19T06:26:01.535Z",
+      "agents": [
+        "gaia",
+        "kwame",
+        "linka",
+        "gi",
+        "ma-ti",
+        "scribe",
+        "ralph"
+      ],
+      "universe": "Captain Planet"
+    }
+  },
+  "universe_usage_history": [
+    {
+      "universe": "Captain Planet",
+      "used_at": "2026-05-19T06:26:01.535Z"
+    }
+  ]
+}
