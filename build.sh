@@ -5,13 +5,21 @@
 set -euo pipefail
 
 select_destination() {
-  local preferred_device="iPhone 17 Pro"
+  local preferred_devices=("iPhone 16 Pro" "iPhone 16" "iPhone 15 Pro" "iPhone 15")
   local available_devices
   available_devices="$(xcrun simctl list devices available)"
   local device_id
 
-  if grep -Fq "$preferred_device (" <<< "$available_devices"; then
-    device_id="$(grep -F "$preferred_device (" <<< "$available_devices" | head -n 1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+  for preferred_device in "${preferred_devices[@]}"; do
+    if grep -Fq "$preferred_device (" <<< "$available_devices"; then
+      device_id="$(grep -F "$preferred_device (" <<< "$available_devices" | head -n 1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+      echo "platform=iOS Simulator,id=$device_id,arch=arm64"
+      return
+    fi
+  done
+
+  device_id="$(grep -v 'iPhone 17' <<< "$available_devices" | grep -m 1 'iPhone.*([0-9A-F-]\{36\})' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+  if [[ -n "$device_id" ]]; then
     echo "platform=iOS Simulator,id=$device_id,arch=arm64"
     return
   fi
