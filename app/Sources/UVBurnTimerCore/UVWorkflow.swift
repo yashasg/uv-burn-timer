@@ -33,24 +33,20 @@ public struct UVSnapshot: Equatable, Sendable {
     }
 }
 
-public struct CachedUVSnapshot: Codable, Equatable, Sendable {
-    public let uvIndex: Double
-    public let fetchedAt: Date
-    public let roundedCoordinate: UVCoordinate?
+public struct CachedRoundedCoordinate: Codable, Equatable, Sendable {
+    public let roundedCoordinate: UVCoordinate
 
-    public init(uvIndex: Double, fetchedAt: Date, roundedCoordinate: UVCoordinate? = nil) {
-        self.uvIndex = uvIndex
-        self.fetchedAt = fetchedAt
+    public init(roundedCoordinate: UVCoordinate) {
         self.roundedCoordinate = roundedCoordinate
     }
 
     public init(snapshot: UVSnapshot) {
-        self.uvIndex = snapshot.uvIndex
-        self.fetchedAt = snapshot.fetchedAt
         self.roundedCoordinate = snapshot.roundedCoordinate
     }
+}
 
-    public func relativeAgeText(now: Date) -> String {
+public enum RelativeAgeText {
+    public static func text(fetchedAt: Date, now: Date) -> String {
         let elapsedSeconds = max(0, now.timeIntervalSince(fetchedAt))
         let elapsedMinutes = max(1, Int(elapsedSeconds / 60))
         return "Updated \(elapsedMinutes) min ago"

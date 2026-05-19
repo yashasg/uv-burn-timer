@@ -9,7 +9,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Binding var session: UVBurnTimerSession
     @Binding var showDisclaimer: Bool
-    @AppStorage("lastUVSnapshot") private var cachedUVSnapshotStorage = ""
+    @AppStorage("lastRoundedCoordinate") private var cachedRoundedCoordinateStorage = ""
+    @AppStorage("lastUVSnapshot") private var legacyCachedUVSnapshotStorage = ""
     @StateObject private var locationProvider = DeviceLocationProvider()
     @State private var showSettings = false
     @State private var uvIndex: Double?
@@ -52,7 +53,6 @@ struct RootView: View {
                     } else {
                         UVIndexPlaceholderCard(sourceLine: ProductCopy.uvSourceLine)
                     }
-                    WeatherAttributionView()
                     contextChipRow
                     spfCard
                 }
@@ -83,7 +83,7 @@ struct RootView: View {
                 .padding(.top, 8)
                 .background(.bar)
             }
-            .onAppear(perform: restoreCachedUVSnapshot)
+            .onAppear(perform: restoreSavedRoundedCoordinate)
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { newValue in
                 now = newValue
             }
@@ -106,8 +106,15 @@ struct RootView: View {
                     break
                 }
             }
+            .onChange(of: statusMessage) { _, newValue in
+                announceStatusForAccessibility(newValue)
+            }
             .sheet(isPresented: $showSettings) {
-                SettingsSheet(session: $session)
+                SettingsSheet(
+                    session: $session,
+                    hasSavedLocation: roundedCoordinate != nil || !cachedRoundedCoordinateStorage.isEmpty,
+                    onClearSavedLocation: clearSavedRoundedCoordinate
+                )
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
@@ -209,12 +216,12 @@ struct RootView: View {
         )
     }
 
-    private var primaryActionTitle: String {
-        if uvIndex == nil, !locationPromptGate.hasAcknowledgedRationale {
-            return "Continue to location request"
-        }
-
-        return uvIndex == nil ? "Use my location" : "Recalculate"
+    private var primaryActionPresentation: LocationActionPresentation {
+        LocationActionPresentation(
+            hasUVIndex: uvIndex != nil,
+            hasAcknowledgedRationale: locationPromptGate.hasAcknowledgedRationale,
+            isFetching: isFetching
+        )
     }
 
     private var updatedText: String? {
@@ -222,7 +229,7 @@ struct RootView: View {
             return nil
         }
 
-        return CachedUVSnapshot(uvIndex: uvIndex ?? 0, fetchedAt: fetchedAt).relativeAgeText(now: now)
+        return RelativeAgeText.text(fetchedAt: fetchedAt, now: now)
     }
 
     private var primaryAction: some View {
@@ -231,16 +238,28 @@ struct RootView: View {
                 await refreshUV()
             }
         } label: {
-            Label(primaryActionTitle, systemImage: "location")
-                .frame(maxWidth: .infinity)
+            HStack {
+                if isFetching {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityHidden(true)
+                }
+
+                Label(primaryActionPresentation.title, systemImage: primaryActionPresentation.systemImageName)
+            }
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .disabled(isFetching)
-        .accessibilityHint("Requests current location and fetches the UV index from Apple Weather.")
+        .accessibilityHint(primaryActionPresentation.accessibilityHint)
     }
 
     private func refreshUV() async {
+        guard !isFetching else {
+            return
+        }
+
         do {
             guard session.selectedSkinType != nil else {
                 throw UVBurnTimerWorkflowError.missingSkinType
@@ -300,30 +319,45 @@ struct RootView: View {
         )
     }
 
-    private func restoreCachedUVSnapshot() {
-        guard uvIndex == nil, let data = cachedUVSnapshotStorage.data(using: .utf8) else {
+    private func restoreSavedRoundedCoordinate() {
+        legacyCachedUVSnapshotStorage = ""
+
+        guard roundedCoordinate == nil, let data = cachedRoundedCoordinateStorage.data(using: .utf8) else {
             return
         }
 
         do {
-            let cached = try JSONDecoder().decode(CachedUVSnapshot.self, from: data)
-            uvIndex = cached.uvIndex
-            fetchedAt = cached.fetchedAt
+            let cached = try JSONDecoder().decode(CachedRoundedCoordinate.self, from: data)
             roundedCoordinate = cached.roundedCoordinate
             locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
-            statusMessage = cached.relativeAgeText(now: now)
         } catch {
-            cachedUVSnapshotStorage = ""
+            cachedRoundedCoordinateStorage = ""
         }
     }
 
     private func persist(snapshot: UVSnapshot) {
         do {
-            let data = try JSONEncoder().encode(CachedUVSnapshot(snapshot: snapshot))
-            cachedUVSnapshotStorage = String(decoding: data, as: UTF8.self)
+            let data = try JSONEncoder().encode(CachedRoundedCoordinate(snapshot: snapshot))
+            cachedRoundedCoordinateStorage = String(decoding: data, as: UTF8.self)
+            legacyCachedUVSnapshotStorage = ""
         } catch {
-            cachedUVSnapshotStorage = ""
+            cachedRoundedCoordinateStorage = ""
         }
+    }
+
+    private func clearSavedRoundedCoordinate() {
+        cachedRoundedCoordinateStorage = ""
+        legacyCachedUVSnapshotStorage = ""
+        roundedCoordinate = nil
+        statusMessage = "Saved location cleared."
+    }
+
+    private func announceStatusForAccessibility(_ message: String) {
+        #if canImport(UIKit)
+        UIAccessibility.post(notification: .announcement, argument: message)
+        #else
+        _ = message
+        #endif
     }
 }
 
@@ -340,7 +374,7 @@ struct HeroTimerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Burn time")
+            Text(ProductCopy.burnTimeEstimateTitle)
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
@@ -361,6 +395,13 @@ struct HeroTimerCard: View {
                         title: "Estimate window elapsed",
                         message: ProductCopy.estimateElapsedWarning,
                         systemImage: "exclamationmark.shield.fill"
+                    )
+                }
+                if estimate.isCappedForDisplay {
+                    SafetyStatusCard(
+                        title: "Long estimate caveat",
+                        message: ProductCopy.longEstimateHedge,
+                        systemImage: "shield.lefthalf.filled"
                     )
                 }
             } else {
@@ -516,6 +557,7 @@ struct UVIndexCard: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            WeatherAttributionView()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -538,6 +580,7 @@ struct UVIndexPlaceholderCard: View {
             Text(sourceLine)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
+            WeatherAttributionView()
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -771,6 +814,8 @@ struct SkinTypeOnboardingView: View {
 
 struct SettingsSheet: View {
     @Binding var session: UVBurnTimerSession
+    let hasSavedLocation: Bool
+    let onClearSavedLocation: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -799,12 +844,16 @@ struct SettingsSheet: View {
                                 if session.selectedSkinType == skinType {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(.tint)
+                                        .accessibilityHidden(true)
                                 }
                             }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .frame(minHeight: 56)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityAddTraits(session.selectedSkinType == skinType ? .isSelected : [])
+                        .accessibilityHint(session.selectedSkinType == skinType ? "Selected skin type." : "Selects this skin type.")
                     }
                 } header: {
                     Text(ProductCopy.skinTypePickerPrompt)
@@ -830,6 +879,20 @@ struct SettingsSheet: View {
                     Text(ProductCopy.pricingLine)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+
+                Section("Privacy") {
+                    Text(ProductCopy.cacheRetentionLine)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    Button(role: .destructive) {
+                        onClearSavedLocation()
+                    } label: {
+                        Text(ProductCopy.clearSavedLocationButtonTitle)
+                    }
+                    .disabled(!hasSavedLocation)
+                    .accessibilityHint(hasSavedLocation ? "Clears the last saved rounded coordinate." : "No saved location is stored.")
                 }
             }
             .navigationTitle("Settings")
@@ -896,6 +959,9 @@ struct AboutView: View {
                             .accessibilityAddTraits(.isHeader)
 
                         Text(ProductCopy.aboutEstimateApplicability)
+                        Text(ProductCopy.photosensitizationAuthorityLine)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                     .id(notForMeAnchor)
                     .padding(highlightEstimateApplicability ? 12 : 0)
@@ -957,22 +1023,27 @@ struct AttributionView: View {
     private let legalURL = ProductCopy.weatherAttributionLegalURL
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Attribution & Legal")
-                .font(.title.bold())
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Attribution & Legal")
+                    .font(.title.bold())
 
-            Text("UV Burn Timer uses Apple Weather for UV index data. Apple Weather data is sourced from a range of providers.")
+                Text("UV Burn Timer uses Apple Weather for UV index data. Apple Weather data is sourced from a range of providers.")
 
-            Link("Other data sources", destination: legalURL)
+                WeatherAttributionView()
+
+                Link("Other data sources", destination: legalURL)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .navigationTitle("Attribution")
     }
 }
 
 struct WeatherAttributionView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @ScaledMetric(relativeTo: .caption) private var markHeight = 20
     @State private var attribution: WeatherAttribution?
     @State private var attributionError: String?
     private let fallbackLegalURL = ProductCopy.weatherAttributionLegalURL
@@ -1004,7 +1075,7 @@ struct WeatherAttributionView: View {
                     image
                         .resizable()
                         .scaledToFit()
-                        .frame(height: 20)
+                        .frame(height: markHeight)
                         .accessibilityLabel(attribution?.serviceName ?? ProductCopy.weatherAttributionServiceName)
                 case .failure:
                     Text(attributionError ?? "Apple Weather attribution unavailable")
@@ -1040,7 +1111,7 @@ struct PersistentFooter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(ProductCopy.reapplicationFooter)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
 
             NavigationLink {

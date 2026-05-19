@@ -253,12 +253,18 @@ import Testing
 }
 
 @Test func approvedMainScreenSafetyCopyIsCaptured() {
+    #expect(ProductCopy.burnTimeEstimateTitle == "Burn-time estimate")
     #expect(ProductCopy.photosensitizerDisclaimerLine.contains("Photosensitizing"))
+    #expect(ProductCopy.photosensitizationAuthorityLine.localizedCaseInsensitiveContains("informational"))
+    #expect(ProductCopy.photosensitizationAuthorityLine.localizedCaseInsensitiveContains("NIH MedlinePlus"))
     #expect(ProductCopy.photosensitizationBannerLabel.localizedCaseInsensitiveContains("meds"))
     #expect(ProductCopy.photosensitizationBannerLabel.localizedCaseInsensitiveContains("conditions"))
     #expect(ProductCopy.locationRationale == "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather.")
     #expect(ProductCopy.locationPrivacyLine.contains("2 decimals"))
-    #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("cached"))
+    #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("last rounded coordinate"))
+    #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("last rounded coordinate"))
+    #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("does not save UV values"))
+    #expect(ProductCopy.clearSavedLocationButtonTitle == "Clear saved location")
     #expect(!ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("never saved"))
     #expect(ProductCopy.childrenDisclaimerLine == "For children, consult a pediatrician.")
     #expect(ProductCopy.locationDeniedEmptyState.contains("tap Use my location again"))
@@ -270,6 +276,8 @@ import Testing
     #expect(ProductCopy.reapplicationFooter.localizedCaseInsensitiveContains("skin reddens"))
     #expect(ProductCopy.mainVerdictCaveatLinkLabel == "Meds + conditions can shorten this. Learn more")
     #expect(ProductCopy.mainVerdictCaveatLinkLabel.localizedCaseInsensitiveContains("can shorten"))
+    #expect(ProductCopy.longEstimateHedge.localizedCaseInsensitiveContains("does not mean"))
+    #expect(ProductCopy.longEstimateHedge.localizedCaseInsensitiveContains("safe"))
     #expect(ProductCopy.skinTypePickerPrompt == "Pick the row that matches what your skin does, not its color.")
     #expect(ProductCopy.uvSourceLine == "Source: Apple Weather")
     #expect(ProductCopy.disclaimerLinkLabel == "About & applicability")
@@ -356,7 +364,8 @@ import Testing
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("rounded coordinates"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("Apple Weather"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("skin type and SPF"))
-    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("stay on this device"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("app memory only"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("last rounded coordinate"))
 }
 
 @Test func attributionAndPricingCopyAreCanonical() {
@@ -436,32 +445,74 @@ import Testing
     #expect(secondAttemptAllowsPrompt)
 }
 
-@Test func cachedUVSnapshotRoundTripsWithoutSkinTypeOrSPF() throws {
+@Test func locationActionPresentationShowsVisibleFetchProgress() {
+    let fetching = LocationActionPresentation(
+        hasUVIndex: false,
+        hasAcknowledgedRationale: true,
+        isFetching: true
+    )
+
+    #expect(fetching.title == "Fetching UV...")
+    #expect(fetching.systemImageName == "location.fill")
+    #expect(fetching.accessibilityHint.localizedCaseInsensitiveContains("fetching"))
+    #expect(fetching.accessibilityHint.localizedCaseInsensitiveContains("Apple Weather"))
+}
+
+@Test func locationActionPresentationPrioritizesFetchingOverRecalculate() {
+    let fetching = LocationActionPresentation(
+        hasUVIndex: true,
+        hasAcknowledgedRationale: true,
+        isFetching: true
+    )
+
+    #expect(fetching.title == "Fetching UV...")
+    #expect(fetching.systemImageName == "location.fill")
+}
+
+@Test func locationActionPresentationMatchesReadyStates() {
+    #expect(LocationActionPresentation(
+        hasUVIndex: false,
+        hasAcknowledgedRationale: false,
+        isFetching: false
+    ).title == "Continue to location request")
+    #expect(LocationActionPresentation(
+        hasUVIndex: false,
+        hasAcknowledgedRationale: true,
+        isFetching: false
+    ).title == "Use my location")
+    #expect(LocationActionPresentation(
+        hasUVIndex: true,
+        hasAcknowledgedRationale: true,
+        isFetching: false
+    ).title == "Recalculate")
+}
+
+@Test func cachedRoundedCoordinateRoundTripsWithoutUVSkinTypeOrSPF() throws {
     let snapshot = UVSnapshot(
         uvIndex: 6.5,
         fetchedAt: Date(timeIntervalSince1970: 1_000),
         roundedCoordinate: UVCoordinate(latitude: 37.77, longitude: -122.42)
     )
 
-    let cached = CachedUVSnapshot(snapshot: snapshot)
+    let cached = CachedRoundedCoordinate(snapshot: snapshot)
     let encoded = try JSONEncoder().encode(cached)
-    let decoded = try JSONDecoder().decode(CachedUVSnapshot.self, from: encoded)
+    let encodedObject = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    let decoded = try JSONDecoder().decode(CachedRoundedCoordinate.self, from: encoded)
 
     #expect(decoded == cached)
-    #expect(decoded.uvIndex == 6.5)
-    #expect(decoded.fetchedAt == Date(timeIntervalSince1970: 1_000))
     #expect(decoded.roundedCoordinate == UVCoordinate(latitude: 37.77, longitude: -122.42))
-    #expect(decoded.roundedCoordinate?.privacyDisplayText == "Approx. 37.77, -122.42")
+    #expect(decoded.roundedCoordinate.privacyDisplayText == "Approx. 37.77, -122.42")
+    #expect(encodedObject["uvIndex"] == nil)
+    #expect(encodedObject["fetchedAt"] == nil)
+    #expect(encodedObject["selectedSkinType"] == nil)
+    #expect(encodedObject["selectedSPF"] == nil)
 }
 
-@Test func cachedUVSnapshotRelativeAgeCopyIsHumanReadable() {
-    let cached = CachedUVSnapshot(
-        uvIndex: 3,
-        fetchedAt: Date(timeIntervalSince1970: 1_000)
-    )
+@Test func relativeAgeCopyIsHumanReadable() {
+    let fetchedAt = Date(timeIntervalSince1970: 1_000)
 
-    #expect(cached.relativeAgeText(now: Date(timeIntervalSince1970: 1_000)) == "Updated 1 min ago")
-    #expect(cached.relativeAgeText(now: Date(timeIntervalSince1970: 1_059)) == "Updated 1 min ago")
-    #expect(cached.relativeAgeText(now: Date(timeIntervalSince1970: 1_090)) == "Updated 1 min ago")
-    #expect(cached.relativeAgeText(now: Date(timeIntervalSince1970: 1_300)) == "Updated 5 min ago")
+    #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_000)) == "Updated 1 min ago")
+    #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_059)) == "Updated 1 min ago")
+    #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_090)) == "Updated 1 min ago")
+    #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_300)) == "Updated 5 min ago")
 }

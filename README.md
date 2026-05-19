@@ -25,12 +25,12 @@ The script builds Debug, runs Swift tests, and validates a Release simulator bui
 7. Denied location access shows an empty state with a path to retry after enabling When In Use access.
 8. Estimates older than the earlier of the burn-time window or two hours show a recalculate warning and re-present the disclaimer when returning from background, while the footer reminds users to cover up if skin reddens and reapply sunscreen every two hours regardless of timer.
 9. Repeating users can revisit About, citations, and one-time pricing from Settings without adding any account, analytics, or subscription flow.
-10. The last approximate UV lookup can be restored on device, with rounded coordinates shown only at two-decimal precision.
+10. The last rounded coordinate can be restored on device for location context, but UV values, burn estimates, skin type, and SPF do not persist; Settings includes a clear saved location control.
 
 ## Privacy and product guardrails
 
 - Skin type and SPF live in app memory only.
-- Rounded two-decimal coordinates are sent to Apple Weather for UV lookup; the app may cache the last UV value, fetch time, and rounded coordinates on device to restore the previous estimate.
+- Rounded two-decimal coordinates are sent to Apple Weather for UV lookup; the app may save only the last rounded coordinate on device for location context.
 - No HealthKit integration.
 - No analytics, ads, crash SDKs, account system, subscription, or third-party tracking.
 - Weather attribution is shown as Apple Weather on iOS surfaces.
