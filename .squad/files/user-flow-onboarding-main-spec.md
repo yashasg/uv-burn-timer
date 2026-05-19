@@ -1,8 +1,8 @@
 # User-Flow Diagram — Onboarding + Main Screen (Excalidraw Snapshot Spec)
 
-**Author:** Linka (UI/UX, Apple HIG & Accessibility)
-**Date:** 2026-05-19T01:15:44-07:00
-**Companion Excalidraw scene:** `user-flow-onboarding-main.excalidraw` (repo root — 146 elements, 4 swimlanes, ~1720 × 2480 logical px)
+**Author:** Iris (UI/UX, Apple HIG & Accessibility; revising Linka's canonical scene)
+**Date:** 2026-05-19
+**Companion Excalidraw scene:** `user-flow-onboarding-main.excalidraw` (repo root — 142 elements, 4 swimlanes, ~2240 × 2591 logical px)
 **Source of truth:** `.squad/decisions/archive/linka-ios-design-spec.md`
 **Persona overlays:** `.squad/files/suchi-persona-annotations.md` (incorporated as LANE 4)
 
@@ -18,7 +18,7 @@ y = 110   ┌─ LANE 1 — ONBOARDING (cold launch → first verdict) ─┐
 y = 180   │   6 screen rectangles, left-to-right                │
 y = 460   └──────────────────────────────────────────────────────┘
 y = 540   ┌─ LANE 2 — MAIN SCREEN (NowView) ────────────────────┐
-y = 600   │   one container with 7 sub-region rectangles        │
+y = 600   │   one portrait iPhone frame + HIG annotation block  │
 y = 1420  └──────────────────────────────────────────────────────┘
 y = 1480  ┌─ LANE 3 — BRANCH POINTS / ANNOTATIONS (callouts) ───┐
 y = 1540  │   8 yellow callouts arranged in 2 rows              │
@@ -53,17 +53,19 @@ The orange arrow between screen 4 and 5 marks that screen 5 is conceptual (a mom
 
 ## LANE 2 — Main Screen (NowView)
 
-One large container rectangle (1320×820, at x=60, y=600) with the title "NowView (single-root NavigationStack, no TabView)". Inside it, 7 sub-region rectangles:
+The desktop-shaped 7-region grid is gone. LANE 2 now centers one portrait phone frame (360×780 logical units, at x=540, y=600) with a small HIG / accessibility annotation block to its right.
 
-1. **Nav bar** (full width, 42pt high) — title "UV Burn Timer" + ⚙ gearshape → SettingsSheet.
-2. **Verdict card** (green, left, 800×280) — hero "47" + "min" + Moderate tier badge (color+shape+symbol) + context line *"Fitzpatrick III · SPF 30 · UV 6.2"* + L3 link **"ⓘ Is this estimate for me?"** with annotation *"→ deep-links to AboutView, scrolled to `notForMe` anchor"*.
-3. **Inputs + Timer** (light blue, right, 460×280) — `DisclosureGroup("Inputs")` with Skin-type / SPF / Use-my-location; `TimelineView(.periodic(by: 60))`; pull-to-refresh; haptic on tier crossing.
-4. **WeatherKit attribution lockup** (purple, left, 420×100) — *" Weather · Data sources"*, tappable to `weatherkit.apple.com/legal-attribution.html`. **Always visible.**
-5. **Window-elapsed / re-attestation** (orange, right, 840×100) — hero swaps to 🛡 + caption + warning haptic + "Recalculate" button. L2 + L3 remain visible.
-6. **L2 footer** (gray, full width, 60h) — inert, `.footnote`, secondary label: *"Estimate only. Not medical advice. Cover up if skin reddens. Reapply sunscreen every 2 hours."* + ⓘ About.
-7. **Settings / About entry** (pink, full width, 110h) — gearshape → SettingsSheet → AboutView (the L4 source of truth). AboutView anchors enumerated: `howItWorks`, `notForMe` (L3 destination), `weatherWhy`, `citations`, `weatherData`, `privacy`, `pricing`, `outdoorTip`.
+1. **Status bar** — `9:41` on the left, `signal · wifi · battery` on the right. Annotated only; not pixel-perfect.
+2. **Large Title nav bar** — left-aligned `UV Burn Timer` + trailing ⚙︎ gear (SettingsSheet entry point).
+3. **Photosensitization loop banner** (yellow, 320×40) — `Taking photosensitizing meds? →`; this is the L1 reach-back surface when the loop is active, not a separate screen.
+4. **Hero verdict card** (amber, 320×224) — label `Burn time`, hero `47 min`, verdict `Moderate`, and inline caveat `Meds + conditions can shorten this. Learn more →`. The caveat preserves the `notForMe` deep-link pattern without reintroducing a desktop sub-panel.
+5. **UV Index secondary card** (neutral, 320×96) — `UV Index 6.2` + `Source: Apple WeatherKit`. This attribution stays visible in the portrait viewport.
+6. **Location + skin row** — two compact 44pt chips: `📍 San Francisco ›` and `Type III ›`. Both imply a hop into settings rather than a separate dashboard panel.
+7. **L1 disclaimer link** — inline bottom-of-content link: `Informational only. Not medical advice. →`.
+8. **Home indicator** — thin bottom pill for safe-area completeness.
+9. **HIG note block (beside the frame)** — calls out: Large Title nav bar, safe-area top/bottom, ≥44×44pt targets, SF Symbols, semantic system colors, Dynamic Type AX5 reflow, and VoiceOver combined-card reading.
 
-A green arrow from screen 6 (LANE 1) drops down at x=1780 to signal the first verdict landing into NowView.
+A green arrow from screen 6 (LANE 1) now lands diagonally into the portrait frame near the nav bar to show the first-verdict handoff.
 
 ---
 
@@ -73,14 +75,14 @@ A green arrow from screen 6 (LANE 1) drops down at x=1780 to signal the first ve
 
 **Row 1 (y=1540):**
 1. 🚨 **No-default Fitzpatrick** (D-2026-05-19-012) — arrow up to skin-type picker.
-2. 🚨 **L1 sticky + photo-sens reach-back** — arrow up to L1 modal.
-3. 📌 **240-min display cap** — arrow up to verdict card hero.
-4. 📌 **WeatherKit attribution always visible** (D-2026-05-19-002/003/004 launch-blocker) — arrow up to lockup region.
+2. 🚨 **L1 sticky + photo-sens reach-back** — arrow up to the yellow NowView banner.
+3. 📌 **240-min display cap** — arrow up to the portrait hero number.
+4. 📌 **WeatherKit attribution always visible** (D-2026-05-19-002/003/004 launch-blocker) — arrow up to the UV secondary card's source line.
 
 **Row 2 (y=1770):**
-5. 📌 **L3 "Is this estimate for me?" deep-link** — arrow up to L3 link inside verdict card.
+5. 📌 **Verdict-card learn-more deep-link** — arrow up to the hero-card caveat line.
 6. ⚖️ **Plunder's 8 attorney pre-submit flags** (non-blocking) — listed inline; no arrow (multi-surface).
-7. 🔁 **Re-attestation on window-elapsed** — arrow up to window-elapsed region of main screen.
+7. 🔁 **Re-attestation on window-elapsed** — arrow up to the hero card (swaps in place).
 8. 📌 **Accessibility conformance gate** (AX5, VoiceOver, Reduce Motion, Increase Contrast, polarized OLED test) — no arrow (cross-cutting).
 
 ---
@@ -105,12 +107,12 @@ Three load-bearing safety annotations have bold (strokeWidth 3) borders: Devon's
 
 | Type | Count |
 |---|---|
-| rectangle | 35 |
-| text | 99 |
+| rectangle | 33 |
+| text | 97 |
 | arrow | 12 |
-| **TOTAL** | **146** |
+| **TOTAL** | **142** |
 
-Spatial extent: x ∈ [60, 1780], y ∈ [20, 2498].
+Spatial extent: x ∈ [60, 2240], y ∈ [20, 2591].
 
 ---
 
@@ -118,8 +120,8 @@ Spatial extent: x ∈ [60, 1780], y ∈ [20, 2498].
 
 1. Read the title + source line.
 2. LANE 1 left → right (cold launch → first verdict).
-3. Drop into LANE 2 (main screen sub-regions, top → bottom).
-4. Glance down at LANE 3 callouts; follow each arrow up to its referenced screen.
+3. Drop into LANE 2 and read the portrait phone frame top → bottom (status bar, nav, banner, hero card, UV card, chips, disclaimer link, home indicator), then glance at the HIG note block.
+4. Glance down at LANE 3 callouts; follow each arrow up to its referenced surface.
 5. LANE 4 row-by-row to layer persona context onto the canonical flow.
 6. The legend (top-right) covers color conventions.
 
@@ -128,9 +130,9 @@ Spatial extent: x ∈ [60, 1780], y ∈ [20, 2498].
 ## What's deliberately NOT on the canvas
 
 Per Suchi's note "**Don't reify an architecture we deliberately don't have**":
-- **No "Photosensitization Attestation" hard screen.** Drawn as a yellow passive-moment box (LANE 1, screen 5) with the three-surface visibility pattern annotated inside. There is no toggle, no medical-question-answer, no special-category-data form. Per Donatello M7 + Raphael Art.9 + D-2026-05-19-007/011.
+- **No "Photosensitization Attestation" hard screen.** Drawn as a yellow passive-moment box (LANE 1, screen 5) plus a yellow reach-back banner in LANE 2. There is no toggle, no medical-question-answer, no special-category-data form. Per Donatello M7 + Raphael Art.9 + D-2026-05-19-007/011.
 - **No Live Activity / Dynamic Island surfaces.** Deferred to v1.1 (spec §3.7).
-- **No reapplication-timer UI.** The 2-hour reapply guidance lives in L2 footer copy only; v1 has no second timer.
+- **No reapplication-timer UI.** The portrait redraw still omits a second timer; v1 stays focused on burn-time verdict + explanatory links.
 - **No "Outdoor Mode" toggle.** System auto-brightness + True Tone owns luminance; HC asset variants via Asset Catalog handle contrast.
 - **No watchOS / Live Activity / push-notification surfaces.** Out of v1 scope.
 
@@ -160,6 +162,7 @@ Per Suchi's note "**Don't reify an architecture we deliberately don't have**":
 
 - **2026-05-19T08:19Z** — Initial export from live MCP canvas (61.7 KB, 146 elements). **Did not import into excalidraw.com** ("Error: invalid file"): MCP's `query_elements` returns only `id, type, x, y, text, fontSize, strokeColor, width, height, strokeWidth, createdAt, updatedAt, version` per element — missing the bulk of the `ExcalidrawElement` schema (most critically, arrows lacked `points`, which causes `isInvisiblySmallElement` to throw inside `restoreElements` before defaults are filled in).
 - **2026-05-19T01:49-07:00** — Re-saved at ~162 KB after normalising every element to the full schema (`seed`, `versionNonce`, `groupIds`, `frameId`, `boundElements`, `isDeleted`, `roundness`, `index`, `roughness`, `opacity`, `angle`, `fillStyle`, `strokeStyle`, `link`, `locked`, `updated`; text adds `fontFamily`, `textAlign`, `verticalAlign`, `containerId`, `originalText`, `lineHeight`, `autoResize`; arrows add `points`, `startBinding`, `endBinding`, `startArrowhead`, `endArrowhead`, `elbowed`, `lastCommittedPoint`). Visual layout, positions, sizes, colors, and text are unchanged — schema-only fix. Verified by running the file through Excalidraw 0.18.1's actual `loadFromBlob` in Node + jsdom (146 elements restored, type counts preserved at 35 rectangles / 99 text / 12 arrows). The previous file is kept on disk as `user-flow-onboarding-main.excalidraw.bak` for one cycle.
+- **2026-05-19** — Iris replaced LANE 2's desktop-style 7-region grid with a portrait iPhone frame, stacked cards, and a right-side HIG note block. Relevant LANE 3 arrows were re-anchored to the banner, hero card, UV card, and inline learn-more caveat; the exported scene now has 142 elements (33 rectangles / 97 text / 12 arrows).
 
 ---
 

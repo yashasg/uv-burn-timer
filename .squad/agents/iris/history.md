@@ -17,7 +17,7 @@ Linka was the original UI/UX designer on this project. She was fired on 2026-05-
 - Fitzpatrick picker copy uses Wheeler's paraphrased variant (D-2026-05-19-009), cites NCBI Bookshelf NBK481857.
 - Three-surface disclaimer visibility — L1 inline link, L3 verdict card, L4 About anchor (Plunder's framework).
 - Photosensitization handled as a **loop**, not a screen (zero-data architecture per Raphael Art.9).
-- Excalidraw user-flow at `user-flow-onboarding-main.excalidraw` (repo root) is the canonical reference. 146 elements, 4 swimlanes.
+- Excalidraw user-flow at `user-flow-onboarding-main.excalidraw` (repo root) is the canonical reference. 142 elements, 4 swimlanes.
 
 **Process changes from Linka's tenure:**
 - Excalidraw exports MUST pass through `.squad/files/excalidraw-normalize.py` before commit (D-2026-05-19-015). Don't ship raw MCP output.
@@ -34,4 +34,6 @@ Linka was the original UI/UX designer on this project. She was fired on 2026-05-
 
 ## Learnings
 
-_(Append as I work.)_
+- **2026-05-19** — Redrew the canonical LANE 2 main screen as a centered 360×780 portrait iPhone frame inside the existing swimlane band; preserved LANE 1 and LANE 4, and only re-anchored the affected LANE 3 arrows.
+- **2026-05-19** — The reliable iOS flow-diagram pattern here is: status bar → Large Title nav → optional safety banner → hero verdict card → UV attribution card → 44pt settings chips → inline disclaimer link → home indicator, with HIG/AX notes outside the phone rather than inside it.
+- **2026-05-19** — Excalidraw MCP canvas first, export second: redraw live, wrap the queried elements in the `.excalidraw` JSON envelope, then run `.squad/files/excalidraw-normalize.py` before validation and commit.
