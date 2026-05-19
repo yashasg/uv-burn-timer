@@ -7,5 +7,8 @@
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
 build/
+.build/
 .DS_Store
 /build
+build.log
+test.log
