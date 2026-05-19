@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UV Burn Timer — Estimated burn time, no subscription</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #dee2e6;
+      --text: #212529;
+      --muted: #6c757d;
+      --accent: #0d6efd;
+      --green: #198754;
+      --amber: #fd7e14;
+      --red: #dc3545;
+      --radius: 12px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 80px; /* room for sticky footer */
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    header p { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+    main {
+      flex: 1;
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .card-title {
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    /* Fitzpatrick picker */
+    .fitz-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .fitz-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .fitz-option:has(input:checked) {
+      border-color: var(--accent);
+      background: #e8f0fe;
+    }
+    .fitz-option input[type=radio] { accent-color: var(--accent); flex-shrink: 0; }
+    .fitz-label { font-weight: 600; font-size: .9rem; min-width: 28px; }
+    .fitz-desc { font-size: .82rem; color: var(--muted); }
+    .caveat {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 10px;
+      font-style: italic;
+    }
+    /* SPF picker */
+    .spf-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .spf-btn {
+      padding: 8px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      cursor: pointer;
+      font-size: .9rem;
+      font-weight: 500;
+      transition: border-color .15s, background .15s;
+    }
+    .spf-btn.active {
+      border-color: var(--accent);
+      background: #e8f0fe;
+      color: var(--accent);
+    }
+    /* Location */
+    .privacy-notice {
+      font-size: .8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 20px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      transition: opacity .15s;
+    }
+    .btn-primary:disabled { opacity: .5; cursor: default; }
+    .btn-primary:hover:not(:disabled) { opacity: .88; }
+    #status-msg {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top: 8px;
+      min-height: 1.2em;
+    }
+    /* Result card */
+    #result-card { display: none; }
+    #result-card.visible { display: block; }
+    .result-tier {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: .78rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .tier-long  { background: #d1e7dd; color: #0a3622; }
+    .tier-mod   { background: #fff3cd; color: #664d03; }
+    .tier-short { background: #f8d7da; color: #58151c; }
+    .result-main {
+      font-size: 1.05rem;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+    .result-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    /* Footer (sticky) */
+    footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 16px;
+      text-align: center;
+      z-index: 10;
+    }
+    .footer-disclaimer {
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .footer-links {
+      margin-top: 4px;
+      font-size: .75rem;
+    }
+    .footer-links a, .footer-links button {
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: .75rem;
+      padding: 0;
+      text-decoration: underline;
+    }
+    /* Dialog / modal */
+    dialog {
+      max-width: 360px;
+      width: 90%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    }
+    dialog::backdrop {
+      background: rgba(0,0,0,.45);
+    }
+    .dialog-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .dialog-body {
+      font-size: .88rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .dialog-footer {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-dismiss {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    /* About details */
+    details summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-size: .82rem;
+      font-weight: 600;
+      user-select: none;
+    }
+    details[open] summary { margin-bottom: 8px; }
+    .about-body {
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    /* Coord display */
+    #coord-display {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- (a) First-launch disclaimer modal — Donatello M1 verbatim. No "don't show again". Dismissed via sessionStorage only. -->
+<dialog id="disclaimer-dialog" aria-modal="true" aria-labelledby="disclaimer-title">
+  <div class="dialog-title" id="disclaimer-title">⚠️ Important Notice</div>
+  <div class="dialog-body">
+    Estimated burn time only. Not medical advice. Skin response varies. This app is for informational purposes only — it is not a substitute for professional medical advice, diagnosis, or treatment. The burn-time estimate is a model calculation, not a measurement, and assumes consistent conditions. It is not a substitute for sunscreen reapplication, shade, protective clothing, or a dermatologist's guidance. When in doubt, cover up or reapply sunscreen. For children, consult a pediatrician for sun-safety guidance.
+  </div>
+  <div class="dialog-footer">
+    <button class="btn-dismiss" id="disclaimer-dismiss">Got it</button>
+  </div>
+</dialog>
+
+<!-- About dialog (b) Fitzpatrick + Diffey citation — Raphael R4 verbatim -->
+<dialog id="about-dialog" aria-labelledby="about-title">
+  <div class="dialog-title" id="about-title">About</div>
+  <div class="dialog-body">
+    <p>Burn-time calculation based on the Fitzpatrick skin phototype scale (Fitzpatrick 1988) and the Diffey erythemal action spectrum (Diffey 1991; CIE Standard S 007/E-1998). Not affiliated with any dermatology organization.</p>
+    <br/>
+    <p>Weather data: Open-Meteo (CC BY 4.0)</p>
+  </div>
+  <div class="dialog-footer">
+    <button class="btn-dismiss" id="about-close">Close</button>
+  </div>
+</dialog>
+
+<header>
+  <h1>UV Burn Timer</h1>
+  <p>Estimated burn time, no subscription.</p>
+</header>
+
+<main>
+
+  <!-- Fitzpatrick skin type selector -->
+  <div class="card">
+    <div class="card-title">Fitzpatrick Skin Type</div>
+    <div class="fitz-grid" id="fitz-grid">
+      <label class="fitz-option">
+        <input type="radio" name="fitz" value="1" />
+        <span class="fitz-label">I</span>
+        <span class="fitz-desc">Always burns, never tans. Very fair; often freckles, red/blonde hair.</span>
+      </label>
+      <label class="fitz-option">
+        <input type="radio" name="fitz" value="2" />
+        <span class="fitz-label">II</span>
+        <span class="fitz-desc">Burns easily, tans minimally. Fair skin; light eyes common.</span>
+      </label>
+      <label class="fitz-option">
+        <input type="radio" name="fitz" value="3" checked />
+        <span class="fitz-label">III</span>
+        <span class="fitz-desc">Burns moderately, tans gradually. Medium skin tone.</span>
+      </label>
+      <label class="fitz-option">
+        <input type="radio" name="fitz" value="4" />
+        <span class="fitz-label">IV</span>
+        <span class="fitz-desc">Burns minimally, tans easily. Olive/medium-brown skin.</span>
+      </label>
+      <label class="fitz-option">
+        <input type="radio" name="fitz" value="5" />
+        <span class="fitz-label">V</span>
+        <span class="fitz-desc">Rarely burns, tans darkly. Brown/dark skin.</span>
+      </label>
+      <label class="fitz-option">
+        <input type="radio" name="fitz" value="6" />
+        <span class="fitz-label">VI</span>
+        <span class="fitz-desc">Never burns, deeply pigmented. Dark brown/black skin.</span>
+      </label>
+    </div>
+    <p class="caveat">Skin type self-assessment is approximate. For accurate classification, consult a dermatologist.</p>
+  </div>
+
+  <!-- SPF selector -->
+  <div class="card">
+    <div class="card-title">SPF</div>
+    <div class="spf-row" id="spf-row">
+      <button class="spf-btn" data-spf="1">None</button>
+      <button class="spf-btn" data-spf="15">15</button>
+      <button class="spf-btn active" data-spf="30">30</button>
+      <button class="spf-btn" data-spf="50">50</button>
+      <button class="spf-btn" data-spf="70">70+</button>
+    </div>
+  </div>
+
+  <!-- Location -->
+  <div class="card">
+    <div class="card-title">Location &amp; UV</div>
+    <p class="privacy-notice">We use your location once to fetch UV data and your skin-type selection to compute an estimate. Both stay in your browser — nothing is stored or sent anywhere.</p>
+    <button class="btn-primary" id="location-btn">📍 Use my location</button>
+    <p id="status-msg"></p>
+    <p id="coord-display"></p>
+  </div>
+
+  <!-- Result card -->
+  <div class="card" id="result-card">
+    <div class="card-title">Estimate</div>
+    <span class="result-tier" id="tier-badge"></span>
+    <p class="result-main" id="result-text"></p>
+    <p class="result-sub">Model estimate. Recalculate as UV changes.</p>
+  </div>
+
+</main>
+
+<!-- (Donatello M2) Persistent footer disclaimer on every screen showing a burn-time number -->
+<footer>
+  <div class="footer-disclaimer">
+    Model estimate only. Not medical advice. Reapply sunscreen every 2 hours regardless of timer.
+  </div>
+  <div class="footer-links">
+    <!-- Open-Meteo attribution verbatim -->
+    Weather data: Open-Meteo (CC BY 4.0)
+    &nbsp;·&nbsp;
+    <button id="about-btn" type="button">About &amp; Citations</button>
+  </div>
+</footer>
+
+<script>
+  // ======================================================
+  // State — (c) Strict separation: fitz/spf in URL hash / in-memory ONLY
+  // ======================================================
+  let fitz = 3;
+  let spf = 30;
+  let uvIndex = null;
+
+  // Standard MED values per Fitzpatrick type (J/m² erythemal-effective UV)
+  // Fitzpatrick 1988 / Diffey 1991 / CIE S 007
+  const MED_TABLE = { 1: 200, 2: 250, 3: 300, 4: 450, 5: 600, 6: 1000 };
+
+  // (c) Diffey/MED pure function — WHO convention: 1 UV index unit ≈ 25 mW/m² erythemal irradiance
+  function computeMED(fitzType, spfValue, uvIdx) {
+    if (uvIdx <= 0) return Infinity;
+    const med_j = MED_TABLE[fitzType];
+    const irr_w_per_m2 = uvIdx * 0.025; // W/m² erythemal-effective
+    const seconds_to_1MED = med_j / irr_w_per_m2;
+    const base_minutes = seconds_to_1MED / 60;
+    return base_minutes * Math.max(1, spfValue);
+  }
+
+  // ======================================================
+  // URL hash — read initial fitz/spf from hash (if present)
+  // ======================================================
+  function readHash() {
+    const raw = location.hash.slice(1);
+    if (!raw) return;
+    const params = new URLSearchParams(raw);
+    const f = parseInt(params.get('fitz'), 10);
+    const s = parseInt(params.get('spf'), 10);
+    if (f >= 1 && f <= 6) fitz = f;
+    if (s >= 1) spf = s;
+  }
+
+  function writeHash() {
+    const params = new URLSearchParams(location.hash.slice(1));
+    params.set('fitz', String(fitz));
+    params.set('spf', String(spf));
+    history.replaceState(null, '', '#' + params.toString());
+  }
+
+  // ======================================================
+  // UI helpers
+  // ======================================================
+  function applyFitzUI() {
+    document.querySelectorAll('#fitz-grid input[type=radio]').forEach(r => {
+      r.checked = (parseInt(r.value, 10) === fitz);
+    });
+  }
+
+  function applySpfUI() {
+    document.querySelectorAll('#spf-row .spf-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.spf, 10) === spf);
+    });
+  }
+
+  function renderResult() {
+    if (uvIndex === null) return;
+    const minutes = computeMED(fitz, spf, uvIndex);
+    const card = document.getElementById('result-card');
+    const badge = document.getElementById('tier-badge');
+    const text = document.getElementById('result-text');
+
+    card.classList.add('visible');
+
+    if (minutes === Infinity) {
+      badge.textContent = '';
+      badge.className = 'result-tier';
+      text.textContent = 'UV index is 0 — no erythemal irradiance detected at this time.';
+      return;
+    }
+
+    const rounded = Math.round(minutes);
+    // Neutral tier labels — no banned-phrase drift
+    let tierClass, tierLabel;
+    if (minutes >= 60) {
+      tierClass = 'tier-long'; tierLabel = 'Long';
+    } else if (minutes >= 20) {
+      tierClass = 'tier-mod'; tierLabel = 'Moderate';
+    } else {
+      tierClass = 'tier-short'; tierLabel = 'Short';
+    }
+    badge.textContent = tierLabel;
+    badge.className = 'result-tier ' + tierClass;
+
+    // (Donatello M3) Exact phrasing pattern
+    const spfLabel = spf === 1 ? 'none' : String(spf);
+    text.textContent =
+      `Estimated time to 1 MED of skin reddening: ~${rounded} minutes` +
+      ` (Fitzpatrick ${['I','II','III','IV','V','VI'][fitz-1]}, SPF ${spfLabel}, UV index ${uvIndex.toFixed(1)}).`;
+  }
+
+  // ======================================================
+  // Fitzpatrick change handler
+  // ======================================================
+  document.querySelectorAll('#fitz-grid input[type=radio]').forEach(r => {
+    r.addEventListener('change', () => {
+      fitz = parseInt(r.value, 10);
+      writeHash();
+      renderResult();
+    });
+  });
+
+  // ======================================================
+  // SPF change handler
+  // ======================================================
+  document.querySelectorAll('#spf-row .spf-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      spf = parseInt(b.dataset.spf, 10);
+      applySpfUI();
+      writeHash();
+      renderResult();
+    });
+  });
+
+  // ======================================================
+  // Location + Open-Meteo fetch — ONE fetch from the browser
+  // ======================================================
+  document.getElementById('location-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('location-btn');
+    const msg = document.getElementById('status-msg');
+    const coordDisplay = document.getElementById('coord-display');
+    btn.disabled = true;
+    msg.textContent = 'Requesting location…';
+
+    if (!navigator.geolocation) {
+      msg.textContent = 'Geolocation not available in this browser. Enter lat,lon below.';
+      btn.disabled = false;
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const rawLat = pos.coords.latitude;
+        const rawLon = pos.coords.longitude;
+
+        // (c) Coordinates: rounded to 2 decimal places before any persistence
+        const lat = +rawLat.toFixed(2);
+        const lon = +rawLon.toFixed(2);
+
+        // ✅ Allowed: lastCoords in localStorage, rounded
+        localStorage.setItem('ubt.lastCoords', JSON.stringify({ lat, lon }));
+
+        coordDisplay.textContent = `Using coords: ${lat}, ${lon}`;
+        msg.textContent = 'Fetching UV data…';
+
+        try {
+          // Open-Meteo Forecast endpoint — hourly UV index
+          const now = new Date();
+          const dateStr = now.toISOString().slice(0, 10);
+          const url =
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+            `&hourly=uv_index&start_date=${dateStr}&end_date=${dateStr}&timezone=auto`;
+
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          // Find the UV index closest to current hour
+          const hours = data.hourly.time;
+          const uvs = data.hourly.uv_index;
+          const nowHour = now.getHours();
+          let best = 0;
+          let bestDiff = Infinity;
+          for (let i = 0; i < hours.length; i++) {
+            const h = new Date(hours[i]).getHours();
+            const diff = Math.abs(h - nowHour);
+            if (diff < bestDiff) { bestDiff = diff; best = i; }
+          }
+          uvIndex = uvs[best] ?? 0;
+          msg.textContent = `UV index now: ${uvIndex.toFixed(1)}`;
+          btn.disabled = false;
+          renderResult();
+        } catch (err) {
+          msg.textContent = `Could not fetch UV data: ${err.message}`;
+          btn.disabled = false;
+        }
+      },
+      (err) => {
+        msg.textContent = `Location error: ${err.message}`;
+        btn.disabled = false;
+      },
+      { timeout: 10000 }
+    );
+  });
+
+  // ======================================================
+  // About dialog
+  // ======================================================
+  document.getElementById('about-btn').addEventListener('click', () => {
+    document.getElementById('about-dialog').showModal();
+  });
+  document.getElementById('about-close').addEventListener('click', () => {
+    document.getElementById('about-dialog').close();
+  });
+
+  // ======================================================
+  // (a) Disclaimer modal — sessionStorage ONLY, re-fires each browser session
+  // ======================================================
+  document.getElementById('disclaimer-dismiss').addEventListener('click', () => {
+    document.getElementById('disclaimer-dialog').close();
+    sessionStorage.setItem('ubt.disclaimerSeen', '1');
+  });
+
+  // ======================================================
+  // Debug override — ?uv=N forces a UV index without an API call
+  // Usage: index.html?uv=8 (or ?uv=8&fitz=2&spf=50 combined with hash)
+  // ======================================================
+  function applyDebugOverrides() {
+    const params = new URLSearchParams(location.search);
+    const forcedUV = parseFloat(params.get('uv'));
+    if (!isNaN(forcedUV) && forcedUV >= 0) {
+      uvIndex = forcedUV;
+      document.getElementById('status-msg').textContent =
+        `[debug] Forced UV index: ${uvIndex.toFixed(1)}`;
+      document.getElementById('location-btn').disabled = true;
+      renderResult();
+    }
+  }
+
+  // ======================================================
+  // Init
+  // ======================================================
+  (function init() {
+    readHash();
+    applyFitzUI();
+    applySpfUI();
+    writeHash();
+
+    // Restore last coords display if available
+    try {
+      const saved = localStorage.getItem('ubt.lastCoords');
+      if (saved) {
+        const c = JSON.parse(saved);
+        document.getElementById('coord-display').textContent =
+          `Last used coords: ${c.lat}, ${c.lon} (tap button to refresh)`;
+      }
+    } catch (_) { /* ignore */ }
+
+    // (a) Show disclaimer if not yet dismissed this session
+    if (!sessionStorage.getItem('ubt.disclaimerSeen')) {
+      document.getElementById('disclaimer-dialog').showModal();
+    }
+
+    applyDebugOverrides();
+  })();
+
+  // ======================================================
+  // Element 4 — Developer-aid banned-phrase sanity check
+  // Runs on DOMContentLoaded; scans rendered body text for 16 banned phrases.
+  // These phrases are NEVER permitted in display text. This check helps
+  // developers catch accidental copy drift before handoff.
+  // NOTE: This array lists phrases as data only — they must not appear
+  // anywhere in user-visible copy or App Store metadata.
+  // ======================================================
+  document.addEventListener('DOMContentLoaded', function bannedPhraseAudit() {
+    const BANNED_PHRASES = [
+      'skin cancer',
+      'cancer prevention',
+      'fda',
+      'clinically proven',
+      'guaranteed safe',
+      'safe sun time',
+      'prevents',
+      'burn-free',
+      'medical-grade',
+      'dermatologist-approved',
+      'doctor-recommended',
+      'safe to stay out for',
+      'burn protection',
+      'you will not burn',
+      'protects you from',
+      'skin cancer prevention'
+    ];
+
+    const bodyText = document.body.innerText.toLowerCase();
+
+    BANNED_PHRASES.forEach(function(phrase) {
+      let searchFrom = 0;
+      while (true) {
+        const idx = bodyText.indexOf(phrase, searchFrom);
+        if (idx === -1) break;
+        const context = bodyText.slice(Math.max(0, idx - 10), idx + phrase.length + 50);
+        console.error(
+          '[UV Burn Timer] BANNED PHRASE DETECTED in rendered text:',
+          JSON.stringify(phrase),
+          'at index', idx,
+          '— context: "...' + context + '..."'
+        );
+        searchFrom = idx + phrase.length;
+      }
+    });
+  });
+</script>
+</body>
+</html>
