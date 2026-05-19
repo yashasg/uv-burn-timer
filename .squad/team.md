@@ -14,7 +14,7 @@
 |------|------|---------|--------|
 | Gaia | Lead | `.squad/agents/gaia/charter.md` | ✅ Active |
 | Kwame | iOS Developer (Swift + WeatherKit) | `.squad/agents/kwame/charter.md` | ✅ Active |
-| Linka | UI/UX Designer (Apple HIG & Accessibility) | `.squad/agents/linka/charter.md` | ✅ Active |
+| Iris | UI/UX Designer (Apple HIG & Accessibility) | `.squad/agents/iris/charter.md` | ✅ Active |
 | Gi | Data Specialist | `.squad/agents/gi/charter.md` | ✅ Active |
 | Ma-Ti | Tester | `.squad/agents/ma-ti/charter.md` | ✅ Active |
 | Wheeler | Skin Science Expert | `.squad/agents/wheeler/charter.md` | ✅ Active |

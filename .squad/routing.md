@@ -44,11 +44,11 @@ How to decide who handles what.
 |-----------|---------|----------|
 | Architecture, code review, decisions | Gaia | — |
 | Swift, SwiftUI, WeatherKit, CoreLocation, StoreKit 2, iOS implementation | Kwame | — |
-| Apple HIG, accessibility (VoiceOver, Dynamic Type), SwiftUI design, design tokens | Linka | — |
+| Apple HIG, accessibility (VoiceOver, Dynamic Type), SwiftUI design, design tokens | Iris | — |
 | Skin types, UV index data | Gi | Wheeler |
 | Tests, edge cases, QA | Ma-Ti | — |
 | Photobiology research, MED/SED math, formula derivation, citations | Wheeler | Gi |
-| User personas, JTBD, Reddit/forum research, use cases, edge cases | Suchi | Linka |
+| User personas, JTBD, Reddit/forum research, use cases, edge cases | Suchi | Iris |
 | Health-claim review, disclaimers, regulatory classification, citation policy | Plunder | Wheeler |
 | Pricing strategy, comp analysis, break-even math, WTP synthesis, App Store pricing copy | Argos | Suchi |
 

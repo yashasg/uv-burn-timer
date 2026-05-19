@@ -4,6 +4,7 @@
     "wheeler": "claude-opus-4.7-xhigh",
     "suchi": "claude-opus-4.7-xhigh",
     "plunder": "claude-opus-4.7-xhigh",
-    "argos": "claude-opus-4.7-xhigh"
+    "argos": "claude-opus-4.7-xhigh",
+    "iris": "claude-sonnet-4.6"
   }
 }
