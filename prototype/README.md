@@ -1,5 +1,7 @@
 # UV Burn Timer — Prototype
 
+This browser prototype is historical and non-canonical for iOS implementation. The approved iOS source of truth is the SwiftUI app in `app/` plus the user-flow/design artifacts at the repository root and in `.squad/`.
+
 Open `index.html` in any modern browser. No server required.
 
 ## What to click

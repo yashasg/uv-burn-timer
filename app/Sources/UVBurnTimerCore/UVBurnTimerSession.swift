@@ -14,13 +14,43 @@ public struct UVBurnTimerSession: Equatable, Sendable {
         self.selectedSPF = selectedSPF
         self.acknowledgedDisclaimer = acknowledgedDisclaimer
     }
+
+    public mutating func requireDisclaimerReattestation() {
+        acknowledgedDisclaimer = false
+    }
 }
 
 public enum DisclaimerReattestationPolicy {
     public static func shouldPresentOnForeground(
         returnedFromBackground: Bool,
-        acknowledgedDisclaimer: Bool
+        acknowledgedDisclaimer: Bool,
+        estimateWindowElapsed: Bool
     ) -> Bool {
-        returnedFromBackground && acknowledgedDisclaimer
+        returnedFromBackground && acknowledgedDisclaimer && estimateWindowElapsed
+    }
+}
+
+public struct ForegroundReattestationTracker: Equatable, Sendable {
+    private var hasEnteredBackground: Bool
+
+    public init(hasEnteredBackground: Bool = false) {
+        self.hasEnteredBackground = hasEnteredBackground
+    }
+
+    public mutating func recordBackgroundEntry() {
+        hasEnteredBackground = true
+    }
+
+    public mutating func shouldPresentOnForeground(
+        acknowledgedDisclaimer: Bool,
+        estimateWindowElapsed: Bool
+    ) -> Bool {
+        let shouldPresent = DisclaimerReattestationPolicy.shouldPresentOnForeground(
+            returnedFromBackground: hasEnteredBackground,
+            acknowledgedDisclaimer: acknowledgedDisclaimer,
+            estimateWindowElapsed: estimateWindowElapsed
+        )
+        hasEnteredBackground = false
+        return shouldPresent
     }
 }

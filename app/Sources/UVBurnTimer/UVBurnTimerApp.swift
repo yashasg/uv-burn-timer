@@ -3,14 +3,12 @@ import UVBurnTimerCore
 
 @main
 struct UVBurnTimerApp: App {
-    @Environment(\.scenePhase) private var scenePhase
     @State private var session = UVBurnTimerSession()
     @State private var showDisclaimer = true
-    @State private var requiresForegroundReattestation = false
 
     var body: some Scene {
         WindowGroup {
-            RootView(session: $session)
+            RootView(session: $session, showDisclaimer: $showDisclaimer)
                 .disclaimerPresentation(isPresented: $showDisclaimer) {
                     DisclaimerCover {
                         session.acknowledgedDisclaimer = true
@@ -25,32 +23,6 @@ struct UVBurnTimerApp: App {
                 ) {
                     SkinTypeOnboardingView(session: $session)
                 }
-                .onChange(of: scenePhase) { _, newPhase in
-                    handleScenePhaseChange(newPhase)
-                }
-        }
-    }
-
-    private func handleScenePhaseChange(_ newPhase: ScenePhase) {
-        switch newPhase {
-        case .active:
-            guard DisclaimerReattestationPolicy.shouldPresentOnForeground(
-                returnedFromBackground: requiresForegroundReattestation,
-                acknowledgedDisclaimer: session.acknowledgedDisclaimer
-            ) else {
-                requiresForegroundReattestation = false
-                return
-            }
-
-            session.acknowledgedDisclaimer = false
-            showDisclaimer = true
-            requiresForegroundReattestation = false
-        case .background:
-            requiresForegroundReattestation = true
-        case .inactive:
-            break
-        @unknown default:
-            break
         }
     }
 }

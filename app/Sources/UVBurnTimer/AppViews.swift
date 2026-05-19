@@ -8,6 +8,7 @@ import UIKit
 struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Binding var session: UVBurnTimerSession
+    @Binding var showDisclaimer: Bool
     @AppStorage("lastUVSnapshot") private var cachedUVSnapshotStorage = ""
     @StateObject private var locationProvider = DeviceLocationProvider()
     @State private var showSettings = false
@@ -19,15 +20,20 @@ struct RootView: View {
     @State private var isFetching = false
     @State private var isLocationAccessDenied = false
     @State private var locationPromptGate = LocationPromptGate()
+    @State private var reattestationTracker = ForegroundReattestationTracker()
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     photosensitizationBanner
+                    if !locationPromptGate.hasAcknowledgedRationale {
+                        LocationRationaleCard()
+                    }
                     HeroTimerCard(
                         estimate: estimate,
                         uvIndex: uvIndex,
+                        contextLine: estimateContextLine,
                         statusMessage: statusMessage,
                         isLocationAccessDenied: isLocationAccessDenied,
                         isEstimateStale: isEstimateStale,
@@ -46,12 +52,9 @@ struct RootView: View {
                     } else {
                         UVIndexPlaceholderCard(sourceLine: ProductCopy.uvSourceLine)
                     }
+                    WeatherAttributionView()
                     contextChipRow
                     spfCard
-                    if !locationPromptGate.hasAcknowledgedRationale {
-                        LocationRationaleCard()
-                    }
-                    WeatherAttributionView()
                 }
                 .padding()
             }
@@ -85,8 +88,22 @@ struct RootView: View {
                 now = newValue
             }
             .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
+                switch newPhase {
+                case .active:
                     now = Date()
+                    if reattestationTracker.shouldPresentOnForeground(
+                        acknowledgedDisclaimer: session.acknowledgedDisclaimer,
+                        estimateWindowElapsed: isEstimateStale
+                    ) {
+                        session.requireDisclaimerReattestation()
+                        showDisclaimer = true
+                    }
+                case .background:
+                    reattestationTracker.recordBackgroundEntry()
+                case .inactive:
+                    break
+                @unknown default:
+                    break
                 }
             }
             .sheet(isPresented: $showSettings) {
@@ -115,7 +132,7 @@ struct RootView: View {
         NavigationLink {
             AboutView(highlightEstimateApplicability: true)
         } label: {
-            Label("Taking photosensitizing meds? Learn more", systemImage: "exclamationmark.triangle")
+            Label(ProductCopy.photosensitizationBannerLabel, systemImage: "exclamationmark.triangle")
                 .font(.callout.weight(.semibold))
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -143,6 +160,8 @@ struct RootView: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
             }
             .buttonStyle(.bordered)
+            .accessibilityLabel("Skin type")
+            .accessibilityValue(skinTypeLabel)
             .accessibilityHint("Opens skin type settings.")
         }
     }
@@ -176,6 +195,18 @@ struct RootView: View {
         }
 
         return estimate.isElapsed(fetchedAt: fetchedAt, now: now)
+    }
+
+    private var estimateContextLine: String? {
+        guard let selectedSkinType = session.selectedSkinType, let uvIndex else {
+            return nil
+        }
+
+        return EstimateContextLine.text(
+            skinType: selectedSkinType,
+            spf: session.selectedSPF,
+            uvIndex: uvIndex
+        )
     }
 
     private var primaryActionTitle: String {
@@ -299,6 +330,7 @@ struct RootView: View {
 struct HeroTimerCard: View {
     let estimate: BurnTimeEstimate?
     let uvIndex: Double?
+    let contextLine: String?
     let statusMessage: String
     let isLocationAccessDenied: Bool
     let isEstimateStale: Bool
@@ -317,6 +349,12 @@ struct HeroTimerCard: View {
             if let estimate {
                 if estimate.tier != .none {
                     TierBadge(tier: estimate.tier)
+                }
+                if let contextLine {
+                    Text(contextLine)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Estimate inputs: \(contextLine)")
                 }
                 if isEstimateStale {
                     SafetyStatusCard(
@@ -337,12 +375,13 @@ struct HeroTimerCard: View {
                     Label(ProductCopy.mainVerdictCaveatLinkLabel, systemImage: "info.circle")
                         .font(.footnote.weight(.medium))
                 }
+                .accessibilityHint("Opens applicability and photosensitizing medication caveats.")
             }
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -405,6 +444,7 @@ struct HeroTimerCard: View {
                 Label("Recalculate", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderedProminent)
+            .accessibilityHint("Fetches a fresh UV index before relying on this estimate.")
         }
 
         if accessibilityReduceMotion {
@@ -423,8 +463,10 @@ struct HeroTimerCard: View {
 
         if accessibilityReduceMotion {
             text
+                .accessibilityLabel(estimate.accessibilitySummary)
         } else {
             text.contentTransition(.numericText())
+                .accessibilityLabel(estimate.accessibilitySummary)
         }
     }
 
@@ -450,8 +492,11 @@ struct HeroTimerCard: View {
             return statusMessage
         }
 
-        let uvText = uvIndex.map { "Current UV index: \($0.formatted(.number.precision(.fractionLength(1))))" } ?? "UV index unavailable."
-        return "\(estimate.accessibilitySummary) \(uvText) \(verdictText) tier. Estimated only, not medical advice."
+        return HeroAccessibilitySummary.text(
+            estimate: estimate,
+            uvIndex: uvIndex,
+            verdict: verdictText
+        )
     }
 }
 
@@ -498,6 +543,7 @@ struct UVIndexPlaceholderCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .combine)
+        .accessibilityHint("UV index is unavailable until location is used.")
     }
 }
 
@@ -518,7 +564,7 @@ struct SafetyStatusCard: View {
         } icon: {
             Image(systemName: systemImage)
         }
-        .foregroundStyle(colorSchemeContrast == .increased ? Color.primary : Color.orange)
+        .foregroundStyle(Color.primary)
         .padding(12)
         .background(
             Color.orange.opacity(colorSchemeContrast == .increased ? 0.28 : 0.14),
@@ -614,6 +660,7 @@ struct DisclaimerCover: View {
                 Text(ProductCopy.disclaimerTitle)
                     .font(.title.bold())
                     .multilineTextAlignment(.center)
+                    .accessibilityAddTraits(.isHeader)
 
                 Text(ProductCopy.disclaimerBody)
                     .font(.body)
@@ -622,7 +669,7 @@ struct DisclaimerCover: View {
                     .font(.callout.weight(.semibold))
                     .foregroundStyle(.orange)
 
-                Label("For children, consult a pediatrician.", systemImage: "figure.and.child.holdinghands")
+                Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
                     .font(.callout.weight(.semibold))
 
                 Button {
@@ -845,7 +892,7 @@ struct AboutView: View {
                     Text("Privacy")
                         .font(.title3.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
-                    Text("Your skin type and SPF live in memory only. They are never saved to disk and never sent to a server. Approximate coordinates may be cached on this device only as the last UV lookup.")
+                    Text(ProductCopy.aboutPrivacy)
 
                     Text("Pricing")
                         .font(.title3.weight(.semibold))
@@ -923,6 +970,7 @@ struct WeatherAttributionView: View {
                 case .empty:
                     ProgressView()
                         .controlSize(.small)
+                        .accessibilityLabel("Loading Apple Weather attribution")
                 case .success(let image):
                     image
                         .resizable()
@@ -966,12 +1014,9 @@ struct PersistentFooter: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            NavigationLink {
-                AboutView()
-            } label: {
-                Text("\(ProductCopy.disclaimerLinkLabel) →")
-                    .font(.caption.weight(.semibold))
-            }
+            Text(ProductCopy.disclaimerLinkLabel)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

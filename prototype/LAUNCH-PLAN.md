@@ -33,7 +33,7 @@ Estimated minutes to skin reddening — based on UV index, Fitzpatrick type, and
 >
 > **$2.99 once. No subscription. No account. No ads. No tracking.** Calculation is based on the Fitzpatrick skin phototype scale (Fitzpatrick 1988) and the Diffey erythemal action spectrum (Diffey 1991; CIE S 007). Not affiliated with any dermatology organization.
 >
-> Weather data: Open-Meteo (CC BY 4.0).
+> Weather data: Apple Weather.
 >
 > *Model estimate only. Reapply sunscreen every 2 hours regardless of timer.*
 
@@ -101,7 +101,7 @@ Estimated minutes to skin reddening — based on UV index, Fitzpatrick type, and
 >
 > *Model estimate only — not medical advice. Skin response varies. Reapply sunscreen every 2 hours regardless of timer.*
 >
-> Weather data: Open-Meteo (CC BY 4.0).
+> Weather data: Apple Weather.
 >
 > Happy to answer questions about the calculation method.
 
@@ -117,7 +117,7 @@ Estimated minutes to skin reddening — based on UV index, Fitzpatrick type, and
 >
 > Based on Fitzpatrick (1988) and Diffey (1991) — the same reference spectrum used in academic UV exposure research.
 >
-> $2.99 once, no recurring charges. No account. No tracking. UV data from Open-Meteo (free, CC BY 4.0).
+> $2.99 once, no recurring charges. No account. No tracking. UV data from Apple Weather.
 >
 > *Model estimate only. Not medical advice. Skin response varies. Reapply sunscreen every 2 hours.*
 
@@ -135,7 +135,7 @@ Estimated minutes to skin reddening — based on UV index, Fitzpatrick type, and
 >
 > *Estimated burn time only. Not medical advice. Skin response varies. Reapply sunscreen every 2 hours regardless of timer.*
 >
-> Weather data: Open-Meteo (CC BY 4.0).
+> Weather data: Apple Weather.
 
 ---
 
@@ -214,11 +214,10 @@ After 90 days, the following questions should be revisited with actual sales dat
 
 | Service | Tier | Cost | Notes |
 |---------|------|------|-------|
-| Open-Meteo Forecast | Commercial plan | **€29/yr (~$31 USD)** | Required for commercial use. Covers 10,000 req/day — well above any realistic launch traffic. |
-| Open-Meteo Geocoding | Not used | $0 | Per Casey Stage 5: browser Geolocation only; no reverse-geocoder. |
+| Apple Weather | Included with Apple Developer Program entitlement limits | $0 incremental at launch scale | iOS app uses WeatherKit / Apple Weather for UV data. |
+| Geocoding | Not used | $0 | CoreLocation provides coordinates; no reverse-geocoder. |
 
-**Break-even:** Open-Meteo at €29/yr, Apple small-business take-rate 15% → net per $2.99 sale = $2.54.
-**Break-even = ~13 sales/year (~1 sale/month).** r/Ultralight alone (~250K subscribers) generates this trivially. Plan is cost-negligible.
+**Break-even:** Apple Weather has no incremental launch-scale API fee, and Apple small-business take-rate 15% → net per $2.99 sale = $2.54. Plan is cost-negligible at launch scale.
 
 ---
 
@@ -238,7 +237,7 @@ After 90 days, the following questions should be revisited with actual sales dat
 
 Primary: `uv index app`, `sunscreen timer`, `uv burn time`, `estimated burn time`, `fitzpatrick skin type calculator`, `sun exposure timer`, `uv tracker no subscription`, `ultralight sun safety`, `uv index calculator`
 
-Secondary: `open-meteo uv`, `spf timer`, `sun safety app`, `outdoor uv calculator`, `hiker sun exposure`
+Secondary: `spf timer`, `sun safety app`, `outdoor uv calculator`, `hiker sun exposure`, `apple weather uv`
 
 **Explicitly do NOT chase:** medical, health-condition, clinical, or any phrase touching the 16 banned-phrase list. No App Store optimization targeting that territory.
 
@@ -288,7 +287,7 @@ The following are **explicitly out of scope** for v1 and the first 90 days post-
 *(Casey Stage 5 / Mondo Stage 7 — forwarded to iOS handoff)*
 
 - **Language:** Swift 5.9 / SwiftUI (iOS 16+)
-- **Networking:** `URLSession` + `Codable` — one GET to Open-Meteo Forecast for `hourly=uv_index`
+- **Networking:** WeatherKit / Apple Weather for current UV index.
 - **Location:** `CoreLocation` (when-in-use only; prompt shown on first tap of "Use my location")
 - **Persistence:**
   - **Skin type + SPF:** `@State` SwiftUI properties only — **NOT `@AppStorage`, NOT `UserDefaults`**. This is the iOS-side enforcement of Donatello M7 + Raphael Art.9 special-category-data mitigation. Skin type and SPF must live in app memory only — equivalent to URL-hash in the web prototype.
@@ -305,13 +304,13 @@ The following are **explicitly out of scope** for v1 and the first 90 days post-
 
 ---
 
-## Open-Meteo Attribution
+## Apple Weather Attribution
 
 All distribution surfaces must include:
 
-> Weather data: Open-Meteo (CC BY 4.0)
+> Weather data: Apple Weather.
 
-Required in: App Store description ✅ (see draft above) · In-app About screen ✅ (in prototype) · This LAUNCH-PLAN ✅
+Required in: App Store description ✅ (see draft above) · In-app About screen ✅ · This LAUNCH-PLAN ✅. In-app WeatherKit surfaces must also include the Apple Weather attribution lockup and "Other data sources" legal link.
 
 ---
 

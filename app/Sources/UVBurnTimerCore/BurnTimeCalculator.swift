@@ -76,7 +76,7 @@ public enum BurnTimeCalculator {
         let erythemalIrradianceWattsPerSquareMeter = uvIndex * 0.025
         let secondsToOneMED = skinType.minimalErythemalDoseJoules / erythemalIrradianceWattsPerSquareMeter
         let unprotectedMinutes = secondsToOneMED / 60
-        let protectedMinutes = unprotectedMinutes * Double(spf.rawValue)
+        let protectedMinutes = unprotectedMinutes * Double(spf.modelMultiplier)
 
         return BurnTimeEstimate(
             rawMinutes: protectedMinutes,

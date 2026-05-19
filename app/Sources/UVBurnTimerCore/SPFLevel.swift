@@ -25,4 +25,13 @@ public enum SPFLevel: Int, CaseIterable, Codable, Identifiable, Sendable {
         default: displayName
         }
     }
+
+    public var modelMultiplier: Int {
+        switch self {
+        case .spf70Plus:
+            50
+        default:
+            rawValue
+        }
+    }
 }
