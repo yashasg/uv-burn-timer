@@ -493,6 +493,23 @@ This is a load-bearing learning — **any future Excalidraw export via MCP must 
 - **No downstream agent re-work.** Kwame, Suchi, Wheeler, and Plunder do not need to re-read the diagram — it is the same diagram, now portable.
 - **Process change:** Future Excalidraw deliverables from MCP must pass through `excalidraw-normalize.py` before being committed. Captured in the skill; this decision file is the audit trail.
 
+### Build & Infrastructure
+
+#### D-2026-05-19-015 — Xcode project container path renamed to app/app.xcodeproj
+- **Date:** 2026-05-19T12:15:11.894-07:00
+- **Decision:** The Xcode project container path is now `app/app.xcodeproj`.
+- **Scope:** This is a project-file path change only. App/product names, target names, schemes, bundle IDs, Swift modules, source folders, and `UVBurnTimer.app` remain `UVBurnTimer`.
+- **References updated:** Build/list/test tooling and source checks now point to `app/app.xcodeproj`.
+- **Owner:** Kwame
+- **Status:** active
+
+#### D-2026-05-19-016 — Use glab CLI for GitLab operations, not GitLab MCP
+- **Date:** 2026-05-19T13:32:27.559-07:00
+- **Decision:** All GitLab operations must use the `glab` CLI, not GitLab MCP.
+- **Rationale:** User directive. Source: `.squad/decisions/inbox/copilot-directive-2026-05-19T13-32-27-559-07-00.md`.
+- **Owner:** Coordinator
+- **Status:** active
+
 ---
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
