@@ -1,6 +1,6 @@
 import SwiftUI
 import UVBurnTimerCore
-import WeatherKit
+@preconcurrency import WeatherKit
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -320,34 +320,34 @@ struct RootView: View {
     }
 
     private func restoreSavedRoundedCoordinate() {
-        legacyCachedUVSnapshotStorage = ""
+        legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
 
-        guard roundedCoordinate == nil, let data = cachedRoundedCoordinateStorage.data(using: .utf8) else {
+        guard roundedCoordinate == nil else {
             return
         }
 
         do {
-            let cached = try JSONDecoder().decode(CachedRoundedCoordinate.self, from: data)
-            roundedCoordinate = cached.roundedCoordinate
-            locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+            if let restoredCoordinate = try CachedRoundedCoordinateStorage.roundedCoordinate(from: cachedRoundedCoordinateStorage) {
+                roundedCoordinate = restoredCoordinate
+                locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+            }
         } catch {
-            cachedRoundedCoordinateStorage = ""
+            cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         }
     }
 
     private func persist(snapshot: UVSnapshot) {
         do {
-            let data = try JSONEncoder().encode(CachedRoundedCoordinate(snapshot: snapshot))
-            cachedRoundedCoordinateStorage = String(decoding: data, as: UTF8.self)
-            legacyCachedUVSnapshotStorage = ""
+            cachedRoundedCoordinateStorage = try CachedRoundedCoordinateStorage.storageValue(for: snapshot)
+            legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         } catch {
-            cachedRoundedCoordinateStorage = ""
+            cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         }
     }
 
     private func clearSavedRoundedCoordinate() {
-        cachedRoundedCoordinateStorage = ""
-        legacyCachedUVSnapshotStorage = ""
+        cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
+        legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         roundedCoordinate = nil
         statusMessage = "Saved location cleared."
     }

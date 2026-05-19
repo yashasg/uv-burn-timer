@@ -12,13 +12,13 @@ select_destination() {
 
   if grep -Fq "$preferred_device (" <<< "$available_devices"; then
     device_id="$(grep -F "$preferred_device (" <<< "$available_devices" | head -n 1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
-    echo "platform=iOS Simulator,id=$device_id"
+    echo "platform=iOS Simulator,id=$device_id,arch=arm64"
     return
   fi
 
   device_id="$(grep -m 1 'iPhone.*([0-9A-F-]\{36\})' <<< "$available_devices" | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
   if [[ -n "$device_id" ]]; then
-    echo "platform=iOS Simulator,id=$device_id"
+    echo "platform=iOS Simulator,id=$device_id,arch=arm64"
     return
   fi
 

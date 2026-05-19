@@ -45,6 +45,28 @@ public struct CachedRoundedCoordinate: Codable, Equatable, Sendable {
     }
 }
 
+public enum CachedRoundedCoordinateStorage {
+    public static let clearedStorageValue = ""
+
+    public static func storageValue(for snapshot: UVSnapshot) throws -> String {
+        try storageValue(for: CachedRoundedCoordinate(snapshot: snapshot))
+    }
+
+    public static func storageValue(for cached: CachedRoundedCoordinate) throws -> String {
+        let data = try JSONEncoder().encode(cached)
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    public static func roundedCoordinate(from storageValue: String) throws -> UVCoordinate? {
+        guard !storageValue.isEmpty else {
+            return nil
+        }
+
+        let data = Data(storageValue.utf8)
+        return try JSONDecoder().decode(CachedRoundedCoordinate.self, from: data).roundedCoordinate
+    }
+}
+
 public enum RelativeAgeText {
     public static func text(fetchedAt: Date, now: Date) -> String {
         let elapsedSeconds = max(0, now.timeIntervalSince(fetchedAt))

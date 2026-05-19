@@ -139,6 +139,36 @@ import Testing
     #expect(!session.acknowledgedDisclaimer)
 }
 
+@Test func foregroundReturnAfterElapsedEstimateRequiresDisclaimerReattestation() throws {
+    var session = UVBurnTimerSession(
+        selectedSkinType: .typeII,
+        selectedSPF: .spf30,
+        acknowledgedDisclaimer: true
+    )
+    var tracker = ForegroundReattestationTracker()
+    let fetchedAt = Date(timeIntervalSince1970: 1_000)
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeII,
+        spf: .none,
+        uvIndex: 10
+    )
+
+    tracker.recordBackgroundEntry()
+    if tracker.shouldPresentOnForeground(
+        acknowledgedDisclaimer: session.acknowledgedDisclaimer,
+        estimateWindowElapsed: estimate.isElapsed(
+            fetchedAt: fetchedAt,
+            now: fetchedAt.addingTimeInterval((estimate.rawMinutes * 60) + 1)
+        )
+    ) {
+        session.requireDisclaimerReattestation()
+    }
+
+    #expect(session.selectedSkinType == .typeII)
+    #expect(session.selectedSPF == .spf30)
+    #expect(!session.acknowledgedDisclaimer)
+}
+
 @Test func skinTypeOnboardingRequiresSelectionBeforeCommit() {
     var draft = SkinTypeOnboardingDraft()
     var session = UVBurnTimerSession()
@@ -495,11 +525,14 @@ import Testing
     )
 
     let cached = CachedRoundedCoordinate(snapshot: snapshot)
-    let encoded = try JSONEncoder().encode(cached)
+    let storageValue = try CachedRoundedCoordinateStorage.storageValue(for: snapshot)
+    let encoded = try #require(storageValue.data(using: .utf8))
     let encodedObject = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
     let decoded = try JSONDecoder().decode(CachedRoundedCoordinate.self, from: encoded)
 
     #expect(decoded == cached)
+    #expect(try CachedRoundedCoordinateStorage.roundedCoordinate(from: storageValue) == UVCoordinate(latitude: 37.77, longitude: -122.42))
+    #expect(try CachedRoundedCoordinateStorage.roundedCoordinate(from: CachedRoundedCoordinateStorage.clearedStorageValue) == nil)
     #expect(decoded.roundedCoordinate == UVCoordinate(latitude: 37.77, longitude: -122.42))
     #expect(decoded.roundedCoordinate.privacyDisplayText == "Approx. 37.77, -122.42")
     #expect(encodedObject["uvIndex"] == nil)
