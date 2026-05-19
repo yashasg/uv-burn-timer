@@ -20,6 +20,32 @@ public struct UVBurnTimerSession: Equatable, Sendable {
     }
 }
 
+public struct SkinTypeOnboardingDraft: Equatable, Sendable {
+    public private(set) var pendingSkinType: FitzpatrickSkinType?
+
+    public init(pendingSkinType: FitzpatrickSkinType? = nil) {
+        self.pendingSkinType = pendingSkinType
+    }
+
+    public var canContinue: Bool {
+        pendingSkinType != nil
+    }
+
+    public mutating func select(_ skinType: FitzpatrickSkinType) {
+        pendingSkinType = skinType
+    }
+
+    @discardableResult
+    public func commit(to session: inout UVBurnTimerSession) -> Bool {
+        guard let pendingSkinType else {
+            return false
+        }
+
+        session.selectedSkinType = pendingSkinType
+        return true
+    }
+}
+
 public enum DisclaimerReattestationPolicy {
     public static func shouldPresentOnForeground(
         returnedFromBackground: Bool,

@@ -139,6 +139,23 @@ import Testing
     #expect(!session.acknowledgedDisclaimer)
 }
 
+@Test func skinTypeOnboardingRequiresSelectionBeforeCommit() {
+    var draft = SkinTypeOnboardingDraft()
+    var session = UVBurnTimerSession()
+
+    #expect(draft.pendingSkinType == nil)
+    #expect(!draft.canContinue)
+    #expect(!draft.commit(to: &session))
+    #expect(session.selectedSkinType == nil)
+
+    draft.select(.typeV)
+
+    #expect(draft.pendingSkinType == .typeV)
+    #expect(draft.canContinue)
+    #expect(draft.commit(to: &session))
+    #expect(session.selectedSkinType == .typeV)
+}
+
 @Test func foregroundReattestationResetsAfterForegroundDecision() {
     var tracker = ForegroundReattestationTracker()
 
@@ -255,7 +272,7 @@ import Testing
     #expect(ProductCopy.mainVerdictCaveatLinkLabel.localizedCaseInsensitiveContains("can shorten"))
     #expect(ProductCopy.skinTypePickerPrompt == "Pick the row that matches what your skin does, not its color.")
     #expect(ProductCopy.uvSourceLine == "Source: Apple Weather")
-    #expect(ProductCopy.disclaimerLinkLabel == "Informational only. Not medical advice.")
+    #expect(ProductCopy.disclaimerLinkLabel == "About & applicability")
     #expect(ProductCopy.fitzpatrickCitations.contains("NCBI Bookshelf NBK481857"))
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("WHO Global Solar UV Index"))
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("Schalka"))
@@ -290,19 +307,49 @@ import Testing
 }
 
 @Test func aboutCopyIncludesApplicabilityAndWeatherMentalModel() {
-    let aboutCopy = ProductCopy.aboutEstimateApplicability + " " + ProductCopy.aboutWeatherVariability
+    let aboutCopy = ProductCopy.aboutEstimateApplicability + " " + ProductCopy.aboutWeatherVariability + " " + ProductCopy.aboutSunscreenAssumptions
 
     #expect(aboutCopy.localizedCaseInsensitiveContains("certain medications"))
     #expect(aboutCopy.localizedCaseInsensitiveContains("photosensitive conditions"))
-    #expect(!aboutCopy.localizedCaseInsensitiveContains("isotretinoin"))
-    #expect(!aboutCopy.localizedCaseInsensitiveContains("doxycycline"))
-    #expect(!aboutCopy.localizedCaseInsensitiveContains("hydroxychloroquine"))
-    #expect(!aboutCopy.localizedCaseInsensitiveContains("lupus"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("retinoid acne treatments"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("tetracycline-class antibiotics"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("autoimmune-disease medications"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("diuretics"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("heart-rhythm medications"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("antifungals"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("lupus"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("vitiligo"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("albinism"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("porphyria"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("recent skin treatments"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("laser"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("chemical peel"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("microneedling"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("pregnant"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("water"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("sweat"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("toweling"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("correctly applied"))
     #expect(aboutCopy.localizedCaseInsensitiveContains("cloud"))
     #expect(aboutCopy.localizedCaseInsensitiveContains("UV"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("Fitzpatrick"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("SPF"))
     #expect(ProductCopy.outdoorReadabilityTip.localizedCaseInsensitiveContains("Increase Contrast"))
+}
+
+@Test func photosensitizerCopyAvoidsBrandAndOverSpecificMedicationNames() {
+    let aboutCopy = ProductCopy.aboutEstimateApplicability
+    let excludedMedicationNames = [
+        "Accutane",
+        "Plaquenil",
+        "doxycycline",
+        "hydroxychloroquine",
+        "isotretinoin"
+    ]
+
+    for medicationName in excludedMedicationNames {
+        #expect(!aboutCopy.localizedCaseInsensitiveContains(medicationName))
+    }
 }
 
 @Test func aboutPrivacyCopyDescribesRoundedCoordinatesToAppleWeather() {

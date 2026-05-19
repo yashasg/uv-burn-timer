@@ -12,7 +12,7 @@ Use the canonical build script:
 ./build.sh
 ```
 
-The script runs Swift tests and builds the app package with Swift warnings treated as errors.
+The script builds Debug, runs Swift tests, and validates a Release simulator build with Swift warnings treated as errors.
 
 ## User scenarios captured
 

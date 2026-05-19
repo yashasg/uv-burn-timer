@@ -61,4 +61,14 @@ run_xcodebuild test.log \
   OTHER_SWIFT_FLAGS="-warnings-as-errors" \
   test
 
+run_xcodebuild release-build.log \
+  xcodebuild -project app/UVBurnTimer.xcodeproj \
+  -scheme UVBurnTimer \
+  -configuration Release \
+  -destination "$destination" \
+  SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+  GCC_TREAT_WARNINGS_AS_ERRORS=YES \
+  OTHER_SWIFT_FLAGS="-warnings-as-errors" \
+  build
+
 echo "Build and tests completed."

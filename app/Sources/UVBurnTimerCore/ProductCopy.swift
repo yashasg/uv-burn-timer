@@ -3,7 +3,7 @@ import Foundation
 public enum ProductCopy {
     public static let disclaimerTitle = "How accurate is this for you?"
     public static let disclaimerBody = "UV Burn Timer is informational only and is not medical advice. It is a model calculation, not a measurement, and cannot replace professional medical advice, diagnosis, or treatment. Estimates assume healthy adult skin, consistent conditions, and that the labeled SPF is achieved through correct sunscreen amount and reapplication; skin response varies. For personal guidance, consult a dermatologist. When in doubt: cover up, reapply sunscreen, or move into shade."
-    public static let photosensitizerDisclaimerLine = "Photosensitizing medications and conditions can make this estimate overstate your burn window."
+    public static let photosensitizerDisclaimerLine = "Photosensitizing medications, conditions, recent skin treatments, and pregnancy can make this estimate overstate your burn window."
     public static let childrenDisclaimerLine = "For children, consult a pediatrician."
     public static let photosensitizationBannerLabel = "Meds or photosensitive conditions? Learn more"
     public static let locationRationale = "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather."
@@ -16,12 +16,13 @@ public enum ProductCopy {
     public static let mainVerdictCaveatLinkLabel = "Meds + conditions can shorten this. Learn more"
     public static let skinTypePickerPrompt = "Pick the row that matches what your skin does, not its color."
     public static let uvSourceLine = "Source: Apple Weather"
-    public static let disclaimerLinkLabel = "Informational only. Not medical advice."
+    public static let disclaimerLinkLabel = "About & applicability"
     public static let fitzpatrickCitations = "Fitzpatrick TB (1988); Ward & Farma, Cutaneous Melanoma: Etiology and Therapy, NCBI Bookshelf NBK481857 (2017); WHO Global Solar UV Index practical guide (2002); Schalka & Reis on real-world sunscreen/SPF use; Diffey BL (1991) / CIE Standard S 007/E-1998."
     public static let skinTypePickerFooter = "No default is selected. Choose deliberately before location or UV lookup. Skin type self-assessment is approximate; consult a dermatologist before using this estimate to plan sun exposure. This model assumes healthy skin and no photosensitizing medications. Use the result screen Learn more link for details."
     public static let skinTypeSettingsFooter = "Skin type self-assessment is approximate; consult a dermatologist before using this estimate to plan sun exposure. This model assumes healthy skin and no photosensitizing medications. Use the result screen Learn more link for details."
-    public static let aboutEstimateApplicability = "The estimate may overstate your burn window if you take certain medications, have photosensitive conditions, recently had a dermatologic procedure, are pregnant, or are unsure whether UV exposure guidance applies to you. Consult a dermatologist before using this estimate to plan sun exposure."
+    public static let aboutEstimateApplicability = "The estimate may overstate your burn window if you take certain medications known to increase sun sensitivity, including some retinoid acne treatments, tetracycline-class antibiotics, autoimmune-disease medications, diuretics, heart-rhythm medications, or antifungals; have photosensitive conditions such as lupus, vitiligo, albinism, or porphyria; have had recent skin treatments such as laser, chemical peel, microneedling, or retinoid therapy; are pregnant; or are unsure whether UV exposure guidance applies to you. Consult a dermatologist before using this estimate to plan sun exposure."
     public static let aboutHowThisWorks = "How this works: the app estimates minutes to one minimal erythemal dose by combining your selected Fitzpatrick skin type, your SPF selection, and the current UV index. Higher UV shortens the estimate; SPF lengthens the model estimate only when sunscreen is applied correctly and reapplied."
+    public static let aboutSunscreenAssumptions = "The estimate assumes sunscreen remains correctly applied. Water, sweat, and toweling can remove sunscreen; reapply sooner when the label or your situation calls for it."
     public static let aboutWeatherVariability = "Why this number changes with weather: UV can pass through clouds, haze, and reflected glare, and the UV index can change quickly with time of day and conditions. Recalculate before relying on an older estimate."
     public static let aboutPrivacy = "Skin type and SPF stay on this device. Rounded coordinates are sent to Apple Weather to fetch UV index data and may be cached only as part of the last UV lookup on this device."
     public static let outdoorReadabilityTip = "Bright sunlight? Try Settings → Accessibility → Display & Text Size → Increase Contrast."
@@ -51,6 +52,7 @@ public enum ProductCopy {
         skinTypeSettingsFooter,
         aboutEstimateApplicability,
         aboutHowThisWorks,
+        aboutSunscreenAssumptions,
         aboutWeatherVariability,
         aboutPrivacy,
         outdoorReadabilityTip,

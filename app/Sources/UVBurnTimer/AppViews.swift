@@ -704,6 +704,7 @@ struct DisclaimerCover: View {
 
 struct SkinTypeOnboardingView: View {
     @Binding var session: UVBurnTimerSession
+    @State private var draft = SkinTypeOnboardingDraft()
 
     var body: some View {
         NavigationStack {
@@ -711,7 +712,7 @@ struct SkinTypeOnboardingView: View {
                 Section {
                     ForEach(FitzpatrickSkinType.allCases) { skinType in
                         Button {
-                            session.selectedSkinType = skinType
+                            draft.select(skinType)
                         } label: {
                             HStack(alignment: .top, spacing: 12) {
                                 Text(skinType.romanNumeral)
@@ -727,11 +728,20 @@ struct SkinTypeOnboardingView: View {
                                 }
 
                                 Spacer()
+
+                                if draft.pendingSkinType == skinType {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.tint)
+                                        .accessibilityHidden(true)
+                                }
                             }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .frame(minHeight: 56)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityAddTraits(draft.pendingSkinType == skinType ? .isSelected : [])
+                        .accessibilityHint(draft.pendingSkinType == skinType ? "Selected. Continue to confirm this skin type." : "Selects this skin type before confirmation.")
                     }
                 } header: {
                     Text(ProductCopy.skinTypePickerPrompt)
@@ -740,6 +750,20 @@ struct SkinTypeOnboardingView: View {
                 }
             }
             .navigationTitle("Choose skin type")
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    _ = draft.commit(to: &session)
+                } label: {
+                    Text("Continue")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!draft.canContinue)
+                .padding()
+                .background(.bar)
+                .accessibilityHint(draft.canContinue ? "Confirms the selected skin type." : "Select a skin type first.")
+            }
         }
         .interactiveDismissDisabled(true)
     }
@@ -860,6 +884,11 @@ struct AboutView: View {
                         .font(.title3.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
                     Text(ProductCopy.aboutHowThisWorks)
+
+                    Text("Sunscreen assumptions")
+                        .font(.title3.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
+                    Text(ProductCopy.aboutSunscreenAssumptions)
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("When this estimate may not apply")
@@ -1014,9 +1043,14 @@ struct PersistentFooter: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text(ProductCopy.disclaimerLinkLabel)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+            NavigationLink {
+                AboutView(highlightEstimateApplicability: true)
+            } label: {
+                Label(ProductCopy.disclaimerLinkLabel, systemImage: "info.circle")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(.tint)
+            .accessibilityHint("Opens About and applicability details.")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
