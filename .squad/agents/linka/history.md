@@ -7,6 +7,20 @@
 - **Joined:** 2026-05-19T06:26:01.546Z
 - **Archive:** See `history-archive.md` for session 2026-05-19 iOS spec + Excalidraw diagram work (detailed learnings 1–20, archived to keep working history <15KB).
 
+## Learnings (Session 2026-05-19 patch — Excalidraw export normalisation)
+
+### 21. MCP `query_elements` returns a minimal element shape — must normalise before export
+
+**Symptom:** `user-flow-onboarding-main.excalidraw` exported from MCP would not import into excalidraw.com — generic `Error: invalid file`.
+
+**Root cause:** The Excalidraw MCP server's `query_elements` only surfaces `id, type, x, y, text, fontSize, strokeColor, width, height, strokeWidth, createdAt, updatedAt, version`. The excalidraw.com loader's strict path is `loadFromBlob → restoreElements → reduce(isInvisiblySmallElement(raw)) → restoreElement`. The pre-restore `isInvisiblySmallElement` calls `e.points.length` on arrows — and our arrows had no `points` → `TypeError` → outer catch rewrites to "invalid file." A second cascading failure waits behind `fontFamily`/`lineHeight`/`height` missing on text.
+
+**Fix:** Wrote `.squad/files/excalidraw-normalize.py` to fill every required field per the canonical `ExcalidrawElement` schema (types.ts) + restore defaults (restore.ts). Visual layout untouched. Verified by running real `loadFromBlob` from `@excalidraw/excalidraw@0.18.1` in Node + jsdom + esbuild harness — file restores cleanly, all 146 elements, same type distribution (35 rect / 99 text / 12 arrows).
+
+**Skill captured:** `.squad/skills/excalidraw-flow-diagrams-via-mcp/SKILL.md` got a new "Export gotcha" section with the full defaults table inline. The single load-bearing field is `points: [[0,0],[width,height]]` on arrows — without it, every excalidraw.com import fails.
+
+**Process change:** All future Excalidraw MCP exports must pass through `excalidraw-normalize.py` before commit. Decision recorded at `.squad/decisions/inbox/linka-excalidraw-export-fix.md`.
+
 ## Learnings (Session 2026-05-19 Summary)
 
 ### Design Principles Locked for iOS v1

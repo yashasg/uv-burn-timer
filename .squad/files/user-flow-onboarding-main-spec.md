@@ -152,7 +152,14 @@ Per Suchi's note "**Don't reify an architecture we deliberately don't have**":
 
 - `.squad/skills/persona-keyed-disclaimer-visibility/SKILL.md` — the L1/L2/L3/L4 pattern.
 - `.squad/skills/outdoor-readability-ios/SKILL.md` — AAA contrast, redundant severity encoding.
-- `.squad/skills/excalidraw-flow-diagrams-via-mcp/SKILL.md` — *(new)* how to draw multi-lane flow diagrams via MCP.
+- `.squad/skills/excalidraw-flow-diagrams-via-mcp/SKILL.md` — *(new)* how to draw multi-lane flow diagrams via MCP. **See its "Export gotcha" section** before re-exporting from MCP — `query_elements` returns a minimal element shape and the raw JSON will not import into excalidraw.com without schema normalisation.
+
+---
+
+## Export history
+
+- **2026-05-19T08:19Z** — Initial export from live MCP canvas (61.7 KB, 146 elements). **Did not import into excalidraw.com** ("Error: invalid file"): MCP's `query_elements` returns only `id, type, x, y, text, fontSize, strokeColor, width, height, strokeWidth, createdAt, updatedAt, version` per element — missing the bulk of the `ExcalidrawElement` schema (most critically, arrows lacked `points`, which causes `isInvisiblySmallElement` to throw inside `restoreElements` before defaults are filled in).
+- **2026-05-19T01:49-07:00** — Re-saved at ~162 KB after normalising every element to the full schema (`seed`, `versionNonce`, `groupIds`, `frameId`, `boundElements`, `isDeleted`, `roundness`, `index`, `roughness`, `opacity`, `angle`, `fillStyle`, `strokeStyle`, `link`, `locked`, `updated`; text adds `fontFamily`, `textAlign`, `verticalAlign`, `containerId`, `originalText`, `lineHeight`, `autoResize`; arrows add `points`, `startBinding`, `endBinding`, `startArrowhead`, `endArrowhead`, `elbowed`, `lastCommittedPoint`). Visual layout, positions, sizes, colors, and text are unchanged — schema-only fix. Verified by running the file through Excalidraw 0.18.1's actual `loadFromBlob` in Node + jsdom (146 elements restored, type counts preserved at 35 rectangles / 99 text / 12 arrows). The previous file is kept on disk as `user-flow-onboarding-main.excalidraw.bak` for one cycle.
 
 ---
 

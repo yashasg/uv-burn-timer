@@ -118,6 +118,72 @@ The MCP tools accept one element per call, so a 146-element scene means 146 roun
    ```
    That JSON can be saved as `.excalidraw` and re-imported into excalidraw.com — making the scene portable beyond the MCP session.
 
+   **⚠️ Export gotcha — MCP `query_elements` returns a MINIMAL element shape.** The JSON wrapper above looks right, but the *elements inside it* are missing the bulk of the `ExcalidrawElement` schema that excalidraw.com's loader requires. The MCP `query_elements` output for a text element looks like this:
+   ```json
+   { "id": "...", "type": "text", "x": 60, "y": 20,
+     "strokeColor": "#1a1a1a", "text": "...", "fontSize": 24,
+     "createdAt": "...", "updatedAt": "...", "version": 1 }
+   ```
+   …whereas excalidraw.com's `restoreElements` reaches for `seed`, `versionNonce`, `groupIds`, `isDeleted`, `fontFamily`, `lineHeight`, `points` (on arrows), and ~20 other fields. **The single most lethal omission is `points` on arrow elements** — `isInvisiblySmallElement(raw)` is called *before* restore fills in defaults, and `e.points.length` throws when `points` is `undefined`. The outer `try/catch` in `loadSceneOrLibraryFromBlob` swallows that error and surfaces the generic **"Error: invalid file"** that the user sees on import.
+
+   **You must normalise every element before export.** Reference Excalidraw source of truth: `packages/element/src/types.ts` (canonical `_ExcalidrawElementBase` + per-type extensions) and `packages/excalidraw/data/restore.ts` (the actual default values). The minimum fields you have to fill in:
+
+   | Scope | Field | Default | Why |
+   |---|---|---|---|
+   | **All elements** | `seed` | `random.randint(1, 2**31 - 1)` | Roughjs uses this for deterministic sketch generation. |
+   | | `versionNonce` | `random.randint(1, 2**31 - 1)` | Collaboration/reconciliation tiebreaker when versions match. |
+   | | `version` | preserve, else `1` | Already present from MCP. |
+   | | `index` | `null` | Fractional z-order index — loader assigns on import. |
+   | | `isDeleted` | `false` | |
+   | | `groupIds` | `[]` | Repair passes touch `.length`. |
+   | | `frameId` | `null` | |
+   | | `boundElements` | `null` | Filled in by `repairContainerElement` during restore. |
+   | | `roundness` | `null` for flow-diagram rects (sharp corners) | `{type: 3}` would auto-round corners — visual regression. |
+   | | `angle` | `0` | Radians. |
+   | | `fillStyle` | `"solid"` | Other options: hachure, cross-hatch, zigzag. |
+   | | `strokeStyle` | `"solid"` | |
+   | | `strokeWidth` | `2` | 1=thin · 2=normal · 3=safety-critical. |
+   | | `roughness` | `1` | 0=smooth · 1=normal · 2=cartoonish. |
+   | | `opacity` | `100` | |
+   | | `backgroundColor` | `"transparent"` if absent | |
+   | | `strokeColor` | `"#1e1e1e"` if absent | |
+   | | `width`, `height` | required for rects/text; for text approximate as `max_line_len * fontSize * 0.55` × `n_lines * fontSize * lineHeight` | Restore tries `detectLineHeight` first, which needs `height`. |
+   | | `link` | `null` | |
+   | | `locked` | `false` | |
+   | | `updated` | epoch-ms (parse `updatedAt` if present) | |
+   | **Text-only** | `fontFamily` | `5` (Excalifont — modern default; `1`=Virgil, `2`=Helvetica, `3`=Cascadia) | Missing → `getLineHeight(undefined)` → font registration → cascading failure. |
+   | | `textAlign` | `"left"` | |
+   | | `verticalAlign` | `"top"` | |
+   | | `containerId` | `null` | Unless the text is inside a rectangle/diamond/ellipse container. |
+   | | `originalText` | mirror of `text` | Used by autoResize logic. |
+   | | `lineHeight` | `1.25` | Unitless. Setting this avoids `detectLineHeight` entirely. |
+   | | `autoResize` | `true` | |
+   | **Arrow-only** | `points` | `[[0,0],[width,height]]` for a straight arrow | **THE LOAD-BEARING FIX** — without this, every import fails. |
+   | | `lastCommittedPoint` | `null` | |
+   | | `startBinding`, `endBinding` | `null` | Unless attached to a specific element ID. |
+   | | `startArrowhead` | `null` | |
+   | | `endArrowhead` | `"arrow"` | |
+   | | `elbowed` | `false` | `true` requires `fixedSegments` and is much more invasive. |
+   | **`appState`** | `gridSize` | `20` (number, not `null`) | `getNormalizedGridSize(null)` returns the default, but be explicit. |
+   | | `viewBackgroundColor` | `"#ffffff"` | |
+
+   **The canonical normaliser lives at:** `.squad/files/excalidraw-normalize.py`. Run it as:
+   ```bash
+   python3 .squad/files/excalidraw-normalize.py user-flow-onboarding-main.excalidraw
+   ```
+   It walks every element, fills in the defaults from the table above (sharp corners, `endArrowhead: "arrow"`, etc.), preserves coordinates and colors exactly, and writes back in place with a `.bak`. **Always normalise the MCP export before handing the file to a human or attaching it to a PR.**
+
+   **Verification (the only way to be sure):** Excalidraw's bundled npm package (`@excalidraw/excalidraw`) ships the same `loadFromBlob` that excalidraw.com calls. Validate the normalised file by running:
+   ```js
+   // Node + jsdom + esbuild-bundled @excalidraw/excalidraw
+   const blob = new window.Blob([fs.readFileSync(file, 'utf8')], {
+     type: 'application/vnd.excalidraw+json',
+   });
+   const { elements } = await loadFromBlob(blob, null, null);
+   assert(elements.length === expectedElementCount);
+   ```
+   The first-pass failure for this diagram surfaced exactly the cascade above — `TypeError: Cannot read properties of undefined (reading 'length')` inside `isInvisiblySmallElement` on the first arrow. After normalisation, `loadFromBlob` returns all 146 elements with their full restored schema.
+
    **Export path convention (this team, 2026-05-19):** `.excalidraw` deliverable files live at the **repo root** (e.g. `{repo_root}/user-flow-onboarding-main.excalidraw`), NOT inside `.squad/files/`. `.squad/files/` is reserved for non-deliverable session artifacts (specs, intermediate JSON, internal notes). Top-level visibility of design artifacts is the rule. Per directive `copilot-directive-2026-05-19T08-34-13Z-excalidraw-at-repo-root`.
 
 ---
