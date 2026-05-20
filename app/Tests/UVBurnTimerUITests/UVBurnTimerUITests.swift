@@ -71,6 +71,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Could not determine your location").exists)
         XCTAssertFalse(staticText(in: app, containing: "Could not reach Apple Weather").exists)
+        assertUnavailableBurnRiskGaugeExists(in: app)
     }
 
     func testWeatherUnavailableShowsRetryAffordance() {
@@ -86,6 +87,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Could not reach Apple Weather").exists)
         XCTAssertTrue(app.buttons["Try again"].exists)
+        assertUnavailableBurnRiskGaugeExists(in: app)
     }
 
     func testScenario4WeatherAttributionFallbackRemainsVisible() {
@@ -164,13 +166,16 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertFalse(gaugeValue == "0%", "Gauge must reflect elapsed burn time, not 0%")
     }
 
-    func testBurnRiskGaugeAbsentWhenNoEstimate() {
-        // Cold launch with no UV data — gauge must not appear (no phantom 0% announcement).
+    func testBurnRiskGaugeShellExistsWhenNoEstimate() {
+        // Cold launch with no UV data — keep the circular shell visible, but label it unavailable
+        // so simulator/development no-location states are testable without fake weather data.
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
         let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
-        XCTAssertFalse(gauge.exists, "BurnRiskGaugeCard must not appear when estimate is unavailable")
+        XCTAssertTrue(gauge.waitForExistence(timeout: 5), "BurnRiskGauge shell must appear without a UV estimate")
+        XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
+        XCTAssertEqual(gauge.value as? String, "Unavailable")
     }
 
     func testCircularGaugePresentOnFreshEstimate() {
@@ -437,6 +442,15 @@ final class UVBurnTimerUITests: XCTestCase {
         }
 
         return element
+    }
+
+    private func assertUnavailableBurnRiskGaugeExists(in app: XCUIApplication) {
+        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
+        XCTAssertTrue(
+            gauge.waitForExistence(timeout: 5), "BurnRiskGauge shell must remain visible when UV is unavailable")
+        XCTAssertTrue(gauge.isHittable, "BurnRiskGauge shell must be visible in unavailable states")
+        XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
+        XCTAssertEqual(gauge.value as? String, "Unavailable")
     }
 
     private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
