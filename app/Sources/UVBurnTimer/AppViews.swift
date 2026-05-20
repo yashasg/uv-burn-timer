@@ -644,8 +644,11 @@ struct HeroTimerCard: View {
                 } label: {
                     Label(ProductCopy.mainVerdictCaveatLinkLabel, systemImage: "info.circle")
                         .font(.footnote.weight(.medium))
+                        .foregroundStyle(.tint)
                 }
+                .buttonStyle(.plain)
                 .accessibilityHint("Opens applicability and photosensitizing medication caveats.")
+                .accessibilityIdentifier("HeroVerdictCaveatLink")
             }
         }
         .padding(24)

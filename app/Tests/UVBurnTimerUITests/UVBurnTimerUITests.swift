@@ -407,6 +407,115 @@ final class UVBurnTimerUITests: XCTestCase {
         )
     }
 
+    /// WI-51 — Suchi `persona-annotations.md:108` (Asha, P4 Accutane):
+    /// **"She taps L3 'Is this estimate for me?' → About at `notForMe` …
+    /// the single most important L3 interaction in the entire app."**
+    ///
+    /// The hero verdict card carries an `info.circle` `Label` reading
+    /// "Meds + conditions can shorten this. Learn more"
+    /// (`ProductCopy.mainVerdictCaveatLinkLabel`) inside a `NavigationLink`
+    /// to `AboutView(highlightEstimateApplicability: true)`, which scrolls
+    /// to the `notForMe` anchor (the "When this estimate may not apply"
+    /// section). Until WI-51 this surface had no XCUI guard — the L1
+    /// deep-link (`DisclaimerSeeAboutLink`) and the photosens banner
+    /// (`PhotosensitizationBanner`) both route to the same About anchor
+    /// and are XCUI-tested, but the **hero-card** route — Asha's
+    /// per-verdict re-anchor every cold launch — was only pinned by a
+    /// unit test on the copy string. A NowView refactor that flattens
+    /// `HeroTimerCard.body` or moves the caveat into a child component
+    /// could silently drop the NavigationLink (or change its destination)
+    /// without any test failing.
+    ///
+    /// This test mirrors the regression-guard profile of
+    /// `testScenario4PhotosensitizationReachBackOpensAboutApplicability`
+    /// (the banner's equivalent guard) but for the hero-card surface:
+    ///   1. The link is exposed through the `HeroVerdictCaveatLink`
+    ///      accessibility identifier so XCUI can target it reliably.
+    ///   2. Its label includes the load-bearing
+    ///      `mainVerdictCaveatLinkLabel` copy.
+    ///   3. Tapping it pushes `AboutView` with the applicability section
+    ///      ("When this estimate may not apply", the `notForMe` anchor)
+    ///      reachable — exactly the deep-link contract from the user-flow
+    ///      spec (LANE 3 row 2 callout #5 — "Verdict-card learn-more
+    ///      deep-link").
+    func testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor() {
+        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
+
+        XCTAssertTrue(
+            app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5),
+            "NowView must render directly when -uiTestLongUncappedEstimate seeds a session and skips onboarding."
+        )
+        XCTAssertTrue(
+            app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5),
+            "Pre-link baseline: -uiTestLongUncappedEstimate must render the hero estimate so the L3 caveat link condition (estimate != nil, rawMinutes.isFinite) is satisfied."
+        )
+
+        let caveatLink = app.buttons["HeroVerdictCaveatLink"]
+        XCTAssertTrue(
+            caveatLink.waitForExistence(timeout: 5),
+            "Hero verdict card must expose the L3 caveat link via the HeroVerdictCaveatLink accessibility identifier — Asha's single most important L3 deep-link per persona-annotations.md:108."
+        )
+        XCTAssertTrue(
+            caveatLink.label.localizedCaseInsensitiveContains("Meds + conditions can shorten this"),
+            "Hero verdict L3 link must surface the ProductCopy.mainVerdictCaveatLinkLabel copy ('Meds + conditions can shorten this. Learn more') for VoiceOver and visual discoverability."
+        )
+
+        // The L3 link sits at the bottom of the hero card, beneath the
+        // burn-risk gauge. With the persistent footer (Recalculate +
+        // disclaimer) occupying the lower ~25% of the viewport, the link
+        // can be off-screen on launch even though it exists in the AX
+        // tree. Scroll the ScrollView until the link becomes hittable so
+        // the synthesized tap lands on the rendered element rather than
+        // off-screen coordinates.
+        let scrollView = app.scrollViews["NowViewScrollView"]
+        var swipes = 0
+        while !caveatLink.isHittable && swipes < 6 {
+            scrollView.swipeUp()
+            swipes += 1
+        }
+        XCTAssertTrue(
+            caveatLink.isHittable,
+            "Hero L3 caveat link must scroll into view so Asha can actually tap it without fighting the persistent footer."
+        )
+
+        // Use tapUntilAppears for iOS 26 hit-point robustness — the hero
+        // card sits inside a ScrollView whose layout can still be settling
+        // when the link first becomes hittable, occasionally producing a
+        // {-1, -1} synthesized hit point that is silently dropped.
+        tapUntilAppears(caveatLink, app.navigationBars["About"])
+
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForExistence(timeout: 5),
+            "Tapping the hero L3 caveat link must push AboutView."
+        )
+
+        // WI-53 — strengthen the deep-link contract: assert the
+        // applicability anchor was actually scrolled into view by
+        // `highlightEstimateApplicability: true`. The notForMe section
+        // ("When this estimate may not apply") lives roughly 1500pt
+        // down the AboutView scroll content — after the "About &
+        // Citations" intro, "How this works", "Skin type
+        // classification" (with three paragraphs of Fitzpatrick
+        // citation text), and "Sunscreen assumptions". Without the
+        // highlight flag, AboutView lands at the top and the section
+        // header is below the fold (`exists` would still be true via
+        // the AX tree, but `isHittable` is false). With the flag, the
+        // `proxy.scrollTo(notForMeAnchor, anchor: .top)` lands it in
+        // the visible viewport and `isHittable` flips true. This
+        // assertion catches a refactor that drops the flag or
+        // short-circuits the .onAppear scroll, which the prior
+        // existence-only check would have missed.
+        let applicabilityHeader = staticText(in: app, containing: "When this estimate may not apply")
+        XCTAssertTrue(
+            applicabilityHeader.exists,
+            "Hero L3 link must route to AboutView with the applicability section materialized — the 'When this estimate may not apply' heading must exist so Asha can re-anchor on photosensitizer caveats per verdict."
+        )
+        XCTAssertTrue(
+            applicabilityHeader.isHittable,
+            "Hero L3 link must route with highlightEstimateApplicability:true — the applicability anchor must scroll into the visible viewport (isHittable). Without the highlight flag, the section is far below the fold and the deep-link contract degrades to a generic 'About' open."
+        )
+    }
+
     func testCircularGaugePresentOnFreshEstimate() {
         // Fresh estimate — not stale, not capped — gauge must be present as the secondary visual cue.
         // Regression guard: gauge must not be silently removed or conditioned on stale state only.
