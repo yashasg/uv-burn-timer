@@ -53,11 +53,18 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(staticText(in: app, containing: "Location access is off").exists)
         XCTAssertTrue(app.buttons["Try again"].exists)
 
-        XCTAssertTrue(app.segmentedControls.buttons["30"].isSelected)
-        XCTAssertFalse(app.segmentedControls.buttons["None"].exists)
-        XCTAssertTrue(app.segmentedControls.buttons["15"].exists)
-        XCTAssertTrue(app.segmentedControls.buttons["50"].exists)
-        XCTAssertTrue(app.segmentedControls.buttons["70+"].exists)
+        // Spec §6: SPF chip on main screen — Menu-style, compact, no "None" option.
+        XCTAssertTrue(spfChipButton(in: app).waitForExistence(timeout: 5))
+        XCTAssertEqual(spfChipButton(in: app).label, "SPF 30")
+        spfChipButton(in: app).tap()
+        XCTAssertTrue(menuOptionButton(in: app, label: "15").waitForExistence(timeout: 3))
+        XCTAssertTrue(menuOptionButton(in: app, label: "30").exists)
+        XCTAssertTrue(menuOptionButton(in: app, label: "50").exists)
+        XCTAssertTrue(menuOptionButton(in: app, label: "70+").exists)
+        XCTAssertFalse(menuOptionButton(in: app, label: "None").exists)
+        menuOptionButton(in: app, label: "15").tap()
+        XCTAssertTrue(spfChipButton(in: app).waitForExistence(timeout: 5))
+        XCTAssertEqual(spfChipButton(in: app).label, "SPF 15")
     }
 
     func testLocationUnavailableShowsLocationSpecificCopy() {
@@ -331,7 +338,7 @@ final class UVBurnTimerUITests: XCTestCase {
 
         XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
-        XCTAssertTrue(app.segmentedControls.buttons["30"].isSelected)
+        XCTAssertEqual(spfChipButton(in: app).label, "SPF 30")
         XCTAssertFalse(app.staticTexts["4+ hr"].exists)
         XCTAssertFalse(app.staticTexts["UV Index 8.0"].exists)
         app.buttons["Settings"].tap()
@@ -356,8 +363,8 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertFalse(app.navigationBars["Choose skin type"].exists)
         XCTAssertFalse(app.staticTexts["Location permission"].exists)
         XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.segmentedControls.buttons["50"].isSelected)
-        XCTAssertFalse(app.segmentedControls.buttons["None"].exists)
+        XCTAssertEqual(spfChipButton(in: app).label, "SPF 50")
+        XCTAssertFalse(app.buttons["None"].exists)
     }
 
     func testMainScreenDoesNotExposeFitzpatrickPickerAfterOnboarding() {
@@ -373,6 +380,80 @@ final class UVBurnTimerUITests: XCTestCase {
 
         // Main screen remains — the UV dashboard is the active surface.
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].exists)
+    }
+
+    func testMainScreenShowsLocationAndSPFInCompactRow() {
+        // Spec §6: "Location + SPF row — compact 44pt controls for `📍 ... ›` and `SPF 30`."
+        // Both chips must coexist in a single row, both ≥44pt tap targets, both reachable
+        // (possibly after scrolling on small/dense layouts), and SPF must not be presented
+        // as a full-width segmented control on the main screen.
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let location = app.buttons["Location"]
+        let spf = spfChipButton(in: app)
+        XCTAssertTrue(location.waitForExistence(timeout: 5), "Location chip must exist on main screen")
+        XCTAssertTrue(spf.waitForExistence(timeout: 5), "SPF chip must exist on main screen")
+
+        scrollInputsRowIntoView(in: app, location: location, spf: spf)
+
+        XCTAssertTrue(location.isHittable, "Location chip must be reachable on the main screen")
+        XCTAssertTrue(spf.isHittable, "SPF chip must be reachable on the main screen")
+
+        XCTAssertGreaterThanOrEqual(location.frame.height, 44, "Location chip must be at least 44pt tall")
+        XCTAssertGreaterThanOrEqual(spf.frame.height, 44, "SPF chip must be at least 44pt tall")
+
+        // Chips share a single horizontal row at standard Dynamic Type sizes.
+        let verticalDistance = abs(location.frame.midY - spf.frame.midY)
+        XCTAssertLessThanOrEqual(
+            verticalDistance,
+            max(location.frame.height, spf.frame.height),
+            "Location and SPF chips must share a single horizontal row, not stacked vertically"
+        )
+
+        // Neither chip occupies the entire screen width — they share the row.
+        let screenWidth = app.windows.firstMatch.frame.width
+        XCTAssertLessThan(
+            location.frame.width,
+            screenWidth * 0.85,
+            "Location chip must not consume the full row width; SPF must sit beside it"
+        )
+        XCTAssertLessThan(
+            spf.frame.width,
+            screenWidth * 0.85,
+            "SPF chip must not consume the full row width; Location must sit beside it"
+        )
+
+        // SPF picker on the main screen must NOT be a segmented control — that pattern
+        // is reserved for Settings. The chip is a Menu trigger.
+        XCTAssertEqual(
+            app.segmentedControls.count, 0,
+            "Main screen must not render a segmented control for SPF; use the compact chip menu"
+        )
+    }
+
+    func testMainScreenSPFChipOpensMenuWithAllFourLevels() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let spf = spfChipButton(in: app)
+        XCTAssertTrue(spf.waitForExistence(timeout: 5))
+        XCTAssertEqual(spf.label, "SPF 30", "Default SPF is 30")
+
+        scrollInputsRowIntoView(in: app, location: app.buttons["Location"], spf: spf)
+        spf.tap()
+        XCTAssertTrue(menuOptionButton(in: app, label: "15").waitForExistence(timeout: 3))
+        XCTAssertTrue(menuOptionButton(in: app, label: "30").exists)
+        XCTAssertTrue(menuOptionButton(in: app, label: "50").exists)
+        XCTAssertTrue(menuOptionButton(in: app, label: "70+").exists)
+        XCTAssertFalse(
+            menuOptionButton(in: app, label: "None").exists,
+            "SPF 'None' must not appear in the main-screen menu"
+        )
+
+        menuOptionButton(in: app, label: "70+").tap()
+        XCTAssertTrue(spfChipButton(in: app).waitForExistence(timeout: 5))
+        XCTAssertEqual(spfChipButton(in: app).label, "SPF 70+")
     }
 
     func testSkinTypePickerInSettingsReusesOnboardingPattern() {
@@ -451,6 +532,34 @@ final class UVBurnTimerUITests: XCTestCase {
 
     private func staticText(in app: XCUIApplication, containing text: String) -> XCUIElement {
         app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+    }
+
+    private func spfChipButton(in app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "SPF ")).firstMatch
+    }
+
+    /// Matches a menu option whose label contains the option text. Picker-in-Menu items
+    /// can be rendered with a "Selected" prefix/suffix on the currently chosen option,
+    /// so an exact match would miss them.
+    private func menuOptionButton(in app: XCUIApplication, label: String) -> XCUIElement {
+        let exact = app.buttons[label]
+        if exact.exists {
+            return exact
+        }
+        return app.buttons.matching(NSPredicate(format: "label MATCHES %@", "(?i)(?:selected,?\\s*)?\(NSRegularExpression.escapedPattern(for: label))(?:,?\\s*selected)?")).firstMatch
+    }
+
+    /// Scrolls the main-screen ScrollView so the compact Location + SPF row enters the
+    /// hit-test region. On dense iPhone simulator layouts the row can land below the fold
+    /// behind the persistent bottom inset before any user gesture.
+    private func scrollInputsRowIntoView(in app: XCUIApplication, location: XCUIElement, spf: XCUIElement) {
+        let scrollView = app.scrollViews.firstMatch
+        guard scrollView.exists else {
+            return
+        }
+        for _ in 0..<6 where !(location.exists && spf.exists && location.isHittable && spf.isHittable) {
+            scrollView.swipeUp()
+        }
     }
 
     private func scrollToStaticText(in app: XCUIApplication, containing text: String) -> XCUIElement {
