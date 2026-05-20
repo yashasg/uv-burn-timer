@@ -63,7 +63,9 @@ select_destination() {
   available_devices="$(xcrun simctl list devices available)"
 
   local xcode_major
-  xcode_major="$(xcodebuild -version | awk '/^Xcode / { split($2, parts, "."); print parts[1]; exit }')"
+  local xcode_version_output
+  xcode_version_output="$(xcodebuild -version)"
+  xcode_major="$(awk '/^Xcode / && !found { split($2, parts, "."); print parts[1]; found = 1 }' <<< "$xcode_version_output")"
 
   local -a preferred_devices
   if [[ -n "$xcode_major" && "$xcode_major" -lt 26 ]]; then
