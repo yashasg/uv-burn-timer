@@ -959,16 +959,29 @@ struct DisclaimerCover: View {
                     Text(ProductCopy.disclaimerBody)
                         .font(.body)
 
-                    Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
-                        .font(.callout.weight(.semibold))
-
                     Button {
                         showAbout = true
                     } label: {
-                        Label("See About: when estimates may not apply", systemImage: "info.circle")
+                        (
+                            Text(ProductCopy.disclaimerSeeAboutInlineLead)
+                                + Text(ProductCopy.disclaimerSeeAboutInlineLinkLabel)
+                                    .foregroundColor(.accentColor)
+                                    .underline()
+                                + Text(ProductCopy.disclaimerSeeAboutInlineTail)
+                        )
+                        .font(.body)
+                        .multilineTextAlignment(.leading)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.bordered)
-                    .accessibilityHint("Opens About with photosensitizing medication and condition caveats.")
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("DisclaimerSeeAboutLink")
+                    .accessibilityLabel(ProductCopy.disclaimerSeeAboutInlinePrompt)
+                    .accessibilityHint("Opens the About sheet at the applicability anchor.")
+                    .accessibilityAddTraits(.isLink)
+
+                    Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
+                        .font(.callout.weight(.semibold))
                 }
                 .padding(32)
                 .frame(maxWidth: .infinity, alignment: .center)

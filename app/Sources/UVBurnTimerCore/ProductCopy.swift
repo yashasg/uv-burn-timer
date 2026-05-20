@@ -33,6 +33,46 @@ public enum ProductCopy {
         "Informational overview: NIH MedlinePlus notes that some medicines can increase sun sensitivity; ask a clinician or pharmacist whether this applies to you."
     public static let childrenDisclaimerLine = "For children, consult a pediatrician."
     public static let photosensitizationBannerLabel = "Meds or photosensitive conditions? Learn more"
+
+    /// In-app deep-link URL routed by `DisclaimerCover`'s `OpenURLAction`
+    /// interceptor. The scheme is intentionally a private app scheme so
+    /// the tap never escapes to the system browser; the host names the
+    /// About anchor (`notForMe` → `aboutEstimateApplicability`).
+    public static let disclaimerSeeAboutLinkURL = URL(string: "uvburntimer://about-applicability")!
+
+    /// Plain-text variant of the inline reach-back prompt. Used by copy
+    /// audits, accessibility-label fallbacks, and any non-Markdown
+    /// rendering path. Mirrors the persona-overlay phrasing in
+    /// `.squad/files/suchi-persona-annotations.md` Screen 1 (Asha row).
+    public static let disclaimerSeeAboutInlinePrompt =
+        "If you take a photosensitizing medication or have a sun-sensitive condition — see About."
+
+    /// Lead prose preceding the inline link span. Together with
+    /// `disclaimerSeeAboutInlineLinkLabel` and
+    /// `disclaimerSeeAboutInlineTail` these compose
+    /// `disclaimerSeeAboutInlinePrompt` for accessibility-stable
+    /// rendering via a `Button` with `.accessibilityIdentifier(
+    /// "DisclaimerSeeAboutLink")`. Splitting the prompt into three
+    /// pieces lets `DisclaimerCover` style the `see About` span with
+    /// the accent color and underline (link affordance) while keeping
+    /// the entire sentence inside a single tappable `Button` that
+    /// XCUITest can find by identifier across all supported iOS
+    /// versions (the previous `Text(LocalizedStringKey:)` Markdown
+    /// rendering's link a11y exposure varied between iOS 17 and
+    /// iOS 18+, which made the test unreliable on the CI runner).
+    public static let disclaimerSeeAboutInlineLead =
+        "If you take a photosensitizing medication or have a sun-sensitive condition — "
+    public static let disclaimerSeeAboutInlineLinkLabel = "see About"
+    public static let disclaimerSeeAboutInlineTail = "."
+
+    /// Markdown variant retained for spec/audit fidelity even though
+    /// `DisclaimerCover` now renders the prompt through a styled
+    /// `Button` rather than `Text(LocalizedStringKey:)`. The link
+    /// target (`disclaimerSeeAboutLinkURL`) still documents the
+    /// deep-link contract so future surfaces can re-use the same URL
+    /// scheme if they need a true Markdown rendering path.
+    public static let disclaimerSeeAboutInlineMarkdown =
+        "If you take a photosensitizing medication or have a sun-sensitive condition — [see About](\(disclaimerSeeAboutLinkURL.absoluteString))."
     public static let locationRationale =
         "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather."
     public static let locationPrivacyLine =
@@ -134,6 +174,7 @@ public enum ProductCopy {
         photosensitizationAuthorityLine,
         childrenDisclaimerLine,
         photosensitizationBannerLabel,
+        disclaimerSeeAboutInlinePrompt,
         locationRationale,
         locationPrivacyLine,
         cacheRetentionLine,

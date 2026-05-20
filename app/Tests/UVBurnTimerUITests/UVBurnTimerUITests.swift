@@ -377,6 +377,71 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(scrollToActionElement(in: app, named: "NIH MedlinePlus sun-sensitivity overview").exists)
     }
 
+    /// WI-13 — Spec §LANE 1 Screen 2 + `suchi-persona-annotations.md`
+    /// (Screen 1 Asha row): the L1 disclaimer cover must surface
+    /// `see About` as an **inline link** inside the sentence
+    /// "If you take a photosensitizing medication or have a sun-sensitive
+    /// condition — see About.", not as a separate bordered button below
+    /// the body. Tapping the link opens AboutView at the applicability
+    /// anchor without dismissing the underlying cover.
+    ///
+    /// The test pins four contracts:
+    ///   1. The pre-WI-13 bordered button copy
+    ///      ("See About: when estimates may not apply") is NOT present.
+    ///   2. The inline prompt is exposed through the
+    ///      `DisclaimerSeeAboutLink` accessibility identifier so
+    ///      XCUITest can find it reliably across iOS 17 / 18 / 26 — the
+    ///      SwiftUI `Text(LocalizedStringKey:)` Markdown link a11y
+    ///      exposure varies by runtime, so `DisclaimerCover` now wraps
+    ///      the prompt in a single styled `Button` that XCUITest
+    ///      addresses by identifier.
+    ///   3. The button's `label` surfaces the full prompt (including
+    ///      "photosensitizing medication" and "see About") for
+    ///      VoiceOver discoverability.
+    ///   4. Tapping the inline link opens AboutView and the cover stays
+    ///      behind it (re-asserted by `acknowledgeButton` still existing
+    ///      after dismissing About).
+    func testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton() {
+        let app = launchApp()
+        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10))
+
+        XCTAssertFalse(
+            app.buttons["See About: when estimates may not apply"].exists,
+            "L1 disclaimer must not render a separate bordered 'See About: when estimates may not apply' button; the deep-link belongs inline in the body sentence."
+        )
+
+        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
+        XCTAssertTrue(
+            inlineSeeAboutLink.waitForExistence(timeout: 5),
+            "L1 disclaimer must expose the inline 'see About' deep-link via the DisclaimerSeeAboutLink accessibility identifier."
+        )
+        XCTAssertTrue(
+            inlineSeeAboutLink.label.localizedCaseInsensitiveContains("photosensitizing medication"),
+            "Inline 'see About' control must surface the photosensitizing-medication prompt for VoiceOver."
+        )
+        XCTAssertTrue(
+            inlineSeeAboutLink.label.localizedCaseInsensitiveContains("see About"),
+            "Inline 'see About' control must include the 'see About' affordance text in its accessibility label."
+        )
+
+        inlineSeeAboutLink.tap()
+
+        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 10))
+        XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
+
+        let aboutDoneButton = app.buttons["Done"]
+        if aboutDoneButton.waitForExistence(timeout: 2) {
+            aboutDoneButton.tap()
+        } else {
+            app.swipeDown(velocity: .fast)
+        }
+
+        XCTAssertTrue(
+            app.buttons["I understand"].waitForExistence(timeout: 5),
+            "After dismissing About, the L1 disclaimer cover must still be present so the user can acknowledge it."
+        )
+    }
+
     /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
     /// photosensitization reach-back is a *banner*, not a chip — it spans
     /// the full row, sits above the hero card, and serves as the L1

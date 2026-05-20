@@ -39,9 +39,9 @@ Six rectangles, each ~240w × 280h. Left edge at x=60, 380, 700, 1020, 1340, 166
 | # | Screen | Fill | Border | Purpose | Key copy |
 |---|---|---|---|---|---|
 | 1 | Cold Launch | light gray | gray | Splash → gated by L1 | "No Fitz persisted — @State only" |
-| 2 | **L1 Disclaimer** (`.fullScreenCover`) | red | red bold | Mandatory acknowledgment | "How accurate is this for you?" + inline *see About* + photosensitizer line + "I understand" |
+| 2 | **L1 Disclaimer** (`.fullScreenCover`) | red | red bold | Mandatory acknowledgment | "How accurate is this for you?" + photosensitizer line + body with **inline *see About* deep-link** rendered via SwiftUI Markdown + `OpenURLAction` interceptor (no separate bordered button — Plunder-reviewed body prose only) + "I understand" |
 | 3 | Skin-Type Picker | light blue | blue | Fitzpatrick I–VI | Header: *"Pick the row that matches what your skin does, not its color"*. **NO default** (D-...-012). Wheeler edited variant. |
-| 4 | Location Permission | light blue | blue | Grant "When in Use"; SPF picker also shown | Privacy rationale BEFORE iOS prompt; CTA in `.safeAreaInset(.bottom)` |
+| 4 | Location Permission | light blue | blue | Grant "When in Use"; SPF lives on main screen + Settings, not on this step | Privacy rationale BEFORE iOS prompt; CTA in `.safeAreaInset(.bottom)` |
 | 5 | **Photo-Sens Awareness** | yellow (passive moment) | orange | NOT a separate screen — three surfaces (a) inside L1, (b) L3 link, (c) L4 About anchor | No "I'm photosensitive" toggle (zero-data architecture) |
 | 6 | First Verdict → Main | light green | dark green | Hand-off into NowView | Animates `.contentTransition(.numericText)`; success haptic |
 
