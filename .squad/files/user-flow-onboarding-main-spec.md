@@ -39,7 +39,7 @@ Six rectangles, each ~240w × 280h. Left edge at x=60, 380, 700, 1020, 1340, 166
 | # | Screen | Fill | Border | Purpose | Key copy |
 |---|---|---|---|---|---|
 | 1 | Cold Launch | light gray | gray | Splash → gated by L1 | "No Fitz persisted — @State only" |
-| 2 | **L1 Disclaimer** (`.fullScreenCover`) | red | red bold | Mandatory acknowledgment | "How accurate is this for you?" + photosensitizer line + body with **inline *see About* deep-link** rendered via SwiftUI Markdown + `OpenURLAction` interceptor (no separate bordered button — Plunder-reviewed body prose only) + "I understand" |
+| 2 | **L1 Disclaimer** (`.fullScreenCover`) | red | red bold | Mandatory acknowledgment | "How accurate is this for you?" + photosensitizer line + body with **inline *see About* reach-back** — a plain-style `Button` composing three `Text` runs (lead + underlined `see About` span + tail); `accessibilityIdentifier("DisclaimerSeeAboutLink")`; `.accessibilityAddTraits(.isLink)`; tap presents `AboutView(highlightEstimateApplicability: true)` as a `.sheet` over the still-present `DisclaimerCover`; no bordered chrome (Plunder-reviewed body-prose intent preserved) + "I understand" |
 | 3 | Skin-Type Picker | light blue | blue | Fitzpatrick I–VI | Header: *"Pick the row that matches what your skin does, not its color"*. **NO default** (D-...-012). Wheeler edited variant. |
 | 4 | Location Permission | light blue | blue | Grant "When in Use"; SPF lives on main screen + Settings, not on this step | Privacy rationale BEFORE iOS prompt; CTA in `.safeAreaInset(.bottom)` |
 | 5 | **Photo-Sens Awareness** | yellow (passive moment) | orange | NOT a separate screen — three surfaces (a) inside L1, (b) L3 link, (c) L4 About anchor | No "I'm photosensitive" toggle (zero-data architecture) |
@@ -48,6 +48,10 @@ Six rectangles, each ~240w × 280h. Left edge at x=60, 380, 700, 1020, 1340, 166
 Arrow labels: "tap I understand" → "deliberate Fitz tap" → "grant location" → *passive moment* (orange) → "UV fetch ok".
 
 The orange arrow between screen 4 and 5 marks that screen 5 is conceptual (a moment, not a hard screen), per Suchi: "**Don't reify an architecture we deliberately don't have.**"
+
+> **Implementation note — Screen 2 inline reach-back (WI-13, merged `90ecf26`):** The original design called for a SwiftUI Markdown link rendered via `Text(LocalizedStringKey:)` with an `OpenURLAction` interceptor. That approach was replaced after iOS 17/18 exposed inconsistent a11y link-trait surfacing across versions, breaking XCUI test reliability. The shipped implementation composes three `Text` segments inside a single `Button(.plain)` — the `see About` span styled with `.foregroundStyle(.link)` and `.underline()`. The `ProductCopy.disclaimerSeeAboutLinkURL` and `disclaimerSeeAboutInlineMarkdown` symbols are retained for audit/spec fidelity but are not rendered at runtime; they are marked AUDIT-ONLY in `ProductCopy.swift`. Plunder's "body prose only" review intent is preserved: the Button has no border chrome and reads visually as inline prose.
+
+
 
 ---
 
@@ -167,3 +171,5 @@ Per Suchi's note "**Don't reify an architecture we deliberately don't have**":
 ---
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
+
+*Last reconciled with code: `2d05a25` — 2026-05-20 (WI-26/WI-29/WI-31; reflects WI-13 inline see-About Button implementation)*
