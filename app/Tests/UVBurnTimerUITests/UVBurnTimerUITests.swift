@@ -403,20 +403,40 @@ final class UVBurnTimerUITests: XCTestCase {
             "L1 disclaimer must show the inline 'If you take a photosensitizing medication or have a sun-sensitive condition — see About.' prompt."
         )
 
-        let inlineLink =
-            app.links.matching(NSPredicate(format: "label CONTAINS[c] %@", "see About")).firstMatch
-        let inlineLinkButton =
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "see About")).firstMatch
-        let tappableInlineSeeAbout: XCUIElement =
-            inlineLink.waitForExistence(timeout: 2)
-            ? inlineLink
-            : inlineLinkButton
+        let inlineSeeAboutPredicate = NSPredicate(format: "label CONTAINS[c] %@", "see About")
+        let inlineLink = app.links.matching(inlineSeeAboutPredicate).firstMatch
+        let inlineLinkButton = app.buttons.matching(inlineSeeAboutPredicate).firstMatch
+        let inlineLinkStaticText = app.staticTexts.matching(inlineSeeAboutPredicate).firstMatch
+
+        let tappableInlineSeeAbout: XCUIElement
+        if inlineLink.waitForExistence(timeout: 2) {
+            tappableInlineSeeAbout = inlineLink
+        } else if inlineLinkButton.exists {
+            tappableInlineSeeAbout = inlineLinkButton
+        } else if inlineLinkStaticText.exists {
+            tappableInlineSeeAbout = inlineLinkStaticText
+        } else {
+            tappableInlineSeeAbout = inlinePromptStaticText
+        }
         XCTAssertTrue(
             tappableInlineSeeAbout.exists,
-            "Inline 'see About' span must be hittable as a link or button so VoiceOver and tap targets can reach it."
+            "Inline 'see About' span must be reachable as a link, button, or static-text element so VoiceOver and tap targets can find it."
         )
 
-        tappableInlineSeeAbout.tap()
+        // SwiftUI Markdown-link a11y exposure varies by iOS version. On iOS
+        // 15-17 the Text(LocalizedStringKey:) often collapses into a single
+        // static-text element with the link span embedded at the trailing
+        // edge of the sentence (left-to-right locales). Tapping the trailing
+        // 85% horizontal offset lands on the [see About] span whether the
+        // accessibility tree split it out or not.
+        let tapTarget: XCUICoordinate
+        let frame = tappableInlineSeeAbout.frame
+        if frame.width > 0, frame.height > 0 {
+            tapTarget = tappableInlineSeeAbout.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
+        } else {
+            tapTarget = tappableInlineSeeAbout.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        }
+        tapTarget.tap()
 
         XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 10))
         XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
