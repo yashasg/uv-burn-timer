@@ -55,7 +55,10 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Cover-chain race: the "Use my location" button sits in a safeAreaInset(.bottom);
+        // iOS 26 activation-point resolver can emit {-1,-1} while the skin-type cover
+        // is still settling. Use tapWithRetry (coordinate-based synthesis on iOS 26+).
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Location access is off").exists)
         XCTAssertTrue(app.buttons["Try again"].exists)
@@ -86,7 +89,8 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Cover-chain race: same as above — tapWithRetry for the safe-area button.
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Could not determine your location").exists)
         XCTAssertFalse(staticText(in: app, containing: "Could not reach Apple Weather").exists)
@@ -105,7 +109,8 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Cover-chain race: same as above — tapWithRetry for the safe-area button.
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Could not reach Apple Weather").exists)
         XCTAssertTrue(app.buttons["Try again"].exists)
@@ -448,16 +453,73 @@ final class UVBurnTimerUITests: XCTestCase {
         )
     }
 
-    /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
-    /// photosensitization reach-back is a *banner*, not a chip — it spans
-    /// the full row, sits above the hero card, and serves as the L1
-    /// reach-back surface for users on photosensitizing meds. The previous
-    /// `Button.buttonStyle(.bordered).tint(.orange)` rendered as an
-    /// orange-tinted chip that was easy to mistake for a regular content
-    /// button. Lock the layout contract:
-    ///   1. The banner is reachable on the main screen with the dedicated
-    ///      `PhotosensitizationBanner` accessibility identifier.
-    ///   2. It spans ≥85% of the screen width.
+    /// WI-35 — Suchi persona-annotations.md Screen 1 + Screen 4 (Asha, P4 Accutane):
+    /// **Asha's visibility loop** — the load-bearing safety architecture for the
+    /// photosensitizer cohort. Asha sees the L1 cover, taps the inline "see About"
+    /// reach-back, reads the photosensitizer cohort list in AboutView (presented as
+    /// a `.sheet` over the still-present L1 cover), dismisses About, returns to the
+    /// still-present L1 cover to complete her "I understand" acknowledgment, and
+    /// then advances normally into onboarding.
+    ///
+    /// This test focuses on the **round-trip contract**: the L1 cover must be
+    /// present both before and after the see-About sheet is presented and dismissed.
+    /// (`testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton` focuses on
+    /// the inline-not-bordered rendering contract; this test focuses on the Asha
+    /// visibility loop as a complete persona flow.)
+    ///
+    /// Per spec.md §LANE 1 Screen 2 implementation note (WI-26): the sheet is
+    /// presented via `Button(action:)` with `accessibilityIdentifier
+    /// ("DisclaimerSeeAboutLink")`, opening `AboutView(highlightEstimateApplicability: true)`.
+    func testDisclaimerL1SeeAboutSheetRoundTripLeavesL1CoverPresent() {
+        // Phase 1 — Cold launch: L1 cover is the first surface shown.
+        let app = launchApp()
+        XCTAssertTrue(
+            app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10),
+            "L1 DisclaimerCover must be the first surface on cold launch (Donatello M1)")
+
+        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
+        XCTAssertTrue(
+            inlineSeeAboutLink.waitForExistence(timeout: 5),
+            "DisclaimerSeeAboutLink must be present on the L1 cover")
+
+        // Phase 2 — Asha taps the inline reach-back.
+        inlineSeeAboutLink.tap()
+
+        // Phase 3 — AboutView presents as a .sheet over the still-present L1 cover.
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForExistence(timeout: 10),
+            "Tapping DisclaimerSeeAboutLink must present AboutView as a .sheet")
+        XCTAssertTrue(
+            staticText(in: app, containing: "When this estimate may not apply").exists,
+            "AboutView must expose the applicability section (highlightEstimateApplicability: true)")
+
+        // Phase 4 — Asha dismisses About after reading the cohort list.
+        let doneButton = app.buttons["Done"]
+        if doneButton.waitForExistence(timeout: 2) {
+            doneButton.tap()
+        } else {
+            app.swipeDown(velocity: .fast)
+        }
+
+        // Phase 5 — L1 cover is STILL present: both the title and the acknowledge
+        // button must be visible. This is the core Asha loop contract — she
+        // completes her visibility check and then acknowledges the cover.
+        XCTAssertTrue(
+            app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5),
+            "L1 cover title must still be visible after dismissing the About sheet — Asha's round-trip must return to L1")
+        XCTAssertTrue(
+            app.buttons["I understand"].waitForExistence(timeout: 5),
+            "I understand must remain tappable after the About round-trip")
+
+        // Phase 6 — Asha completes onboarding normally: the round-trip must not
+        // break the cover-chain progression.
+        acknowledgeDisclaimer(in: app)
+        XCTAssertTrue(
+            app.navigationBars["Choose skin type"].waitForExistence(timeout: 10),
+            "After the see-About round-trip, onboarding must advance normally to the skin-type picker")
+    }
+
+
     ///   3. It sits above the hero `Burn-time estimate` card.
     func testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero() {
         let app = launchApp()
