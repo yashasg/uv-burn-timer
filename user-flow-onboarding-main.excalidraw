@@ -4570,7 +4570,7 @@
       "y": 1144,
       "strokeColor": "#1C1C1E",
       "roughness": 0,
-      "text": "Type III \u203a",
+      "text": "SPF 30",
       "fontSize": 14,
       "createdAt": "2026-05-19T09:09:50.629Z",
       "updatedAt": "2026-05-19T09:09:50.629Z",
@@ -4598,7 +4598,7 @@
       "textAlign": "left",
       "verticalAlign": "top",
       "containerId": null,
-      "originalText": "Type III \u203a",
+      "originalText": "SPF 30",
       "lineHeight": 1.25,
       "autoResize": true
     },

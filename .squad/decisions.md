@@ -2281,3 +2281,718 @@ This is a load-bearing learning — **any future Excalidraw export via MCP must 
 - All meaningful changes require team consensus
 - Document architectural decisions here
 - Keep history focused on work, decisions focused on direction
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T17-22-59-098-07-00-external-ci-webhook-monitoring.md -->
+
+### 2026-05-19T17:22:59.098-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** External CI/CD runs on GitHub and is triggered by GitLab MR webhooks. When an MR is created, monitor the MR for external CI/CD feedback and fix any issues that come from it.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T22-29-07-093-07-00.md -->
+
+### 2026-05-19T22:29:07.093-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** The "Reapply sunscreen every 2 hours" guidance means users should reapply sunscreen at least every 2 hours; enforce this in app logic by keeping the upper limit to 2 hours.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T22-33-50-504-07-00.md -->
+
+### 2026-05-19T22:33:50.504-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** Do not ask the user for skin type and location every time they open the app; save preferences locally in a privacy-safe way.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T22-34-50-179-07-00.md -->
+
+### 2026-05-19T22:34:50.179-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** Remove SPF "none" as a sunscreen option; the app is for users applying sunscreen, and "none" is not sunscreen.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T22-43-49-465-07-00.md -->
+
+### 2026-05-19T22:43:49.465-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** Persist skin type, SPF, and location locally so the user is not asked for any of them on every app launch.
+**Why:** User clarification — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T22-48-46-884-07-00.md -->
+
+### 2026-05-19T22:48:46.884-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** For location, use Apple's coarse/approximate location support where possible; the app does not need precise GPS coordinates.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T22-50-27-684-07-00.md -->
+
+### 2026-05-19T22:50:27.684-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** Display burn/sunscreen duration as hours and minutes instead of raw minutes, so users do not have to do math.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/copilot-directive-2026-05-19T23-03-19-634-07-00.md -->
+
+### 2026-05-19T23:03:19.634-07:00: User directive
+**By:** yashasg (via Copilot)
+**What:** Do not run more than one iOS Simulator at a time. All UI tests must run serially.
+**Why:** User request — captured for team memory
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/gaia-preference-persistence.md -->
+
+# Gaia — User Preference Persistence Architecture
+
+**Date:** 2026-05-19T22:33:50.504-07:00  
+**Owner:** Gaia (Lead/Architect)  
+**Status:** **DECISION — Ready for implementation**  
+**Requested by:** yashasg (user directive via Copilot)
+
+---
+
+## Problem Statement
+
+Current state: Skin type and location preferences are **not persisted** across app launches. Users must re-enter these details every time they open the app, creating friction and preventing the "single-click to get results" UX that personas demand.
+
+User directive: *"Are we saving the user preferences locally? We don't want to ask the user their skin type and location every time they open the app."*
+
+**Question to resolve:** What should be persisted, what should not, what storage mechanism, and how to keep privacy-safe?
+
+---
+
+## Decision: What to Persist
+
+### ✅ PERSIST to UserDefaults (device-local, privacy-safe):
+
+1. **Skin type (Fitzpatrick selection)** — `selectedSkinType: FitzpatrickSkinType?`
+   - **Why:** This is a semi-permanent user attribute that rarely changes. Persisting it reduces cold-launch friction for Devon (PCT, P3) and Greta (r/Ultralight, P1) who want to see results immediately.
+   - **Privacy:** Fitzpatrick type is text-based (e.g., "Type III"), stored locally only. No remote transmission, no health framework integration.
+   - **Key:** `"selectedSkinType"`
+   - **Format:** Codable enum (String representation).
+   - **Example:** `"typeIII"`
+
+2. **SPF level (sunscreen selection)** — `selectedSPF: SPFLevel`
+   - **Why:** Users adjust SPF frequently during a session (e.g., "I need SPF 30 today") but want their last choice remembered across launches (e.g., "I usually use SPF 50").
+   - **Privacy:** SPF is a product type, not health data. Stored locally only.
+   - **Key:** `"selectedSPF"`
+   - **Format:** Codable enum (String representation).
+   - **Example:** `"spf50"`
+
+3. **Last rounded coordinate (location cache)** — `lastRoundedCoordinate: UVCoordinate?` (already @AppStorage)
+   - **Currently:** Partially persisted as a JSON string in `"lastRoundedCoordinate"`.
+   - **Keep as-is:** The rounded-coordinate caching strategy (privacy-safe rounding to 2 decimal places) is already locked. Continue storing this.
+   - **No change:** This remains @AppStorage("lastRoundedCoordinate").
+
+4. **Disclaimer acknowledgment** — `acknowledgedDisclaimer: Bool`
+   - **Currently:** Stored in `@State`, not persisted.
+   - **Decision:** Keep as `@State` (transient). The disclaimer must re-fire on cold launch per D-2026-05-19-011 (L1–L4 layering). This is load-bearing for photosensitization safety (Asha, P4, Accutane use case).
+   - **Why transient:** Re-attestation ensures Asha re-reads photosensitivity warnings if her medication or circumstances change.
+
+### ❌ DO NOT PERSIST:
+
+1. **Location permission status**
+   - **Why:** OS-owned. CLLocationManager manages this. Do not duplicate or cache the OS permission state.
+   - **Current behavior (correct):** Let DeviceLocationProvider handle permission queries.
+
+2. **UV index snapshot**
+   - **Why:** Weather data is time-sensitive. Caching a stale UV index creates liability (user acts on outdated info). Always fetch fresh.
+   - **Current behavior (correct):** `legacyCachedUVSnapshotStorage` is vestigial; continue to ignore it and fetch fresh on every app open.
+
+3. **Transient UI state** (isFetching, statusMessage, nowTime, etc.)
+   - **Why:** These are runtime-only. No reason to persist.
+
+### ⚠️ CONDITIONAL (based on product clarification):
+
+**Location permission rationale acknowledgment** — `LocationPromptGate.hasAcknowledgedRationale`
+   - **Current:** Stored in `@State`, not persisted.
+   - **Question:** Should users see the location rationale card on every cold launch, or only once per app version?
+   - **Recommendation:** Persist to UserDefaults under key `"locationRationaleAcknowledged"` to reduce UI clutter on repeat opens. However, reset this on app update (version bump) to re-educate if location permissions are added to scope.
+
+---
+
+## Storage Mechanism: UserDefaults (AppStorage)
+
+### Rationale:
+
+- **No HealthKit:** Skin type and SPF are not health data per HealthKit spec; they are user preferences. Do not use HealthKit.
+- **No Keychain:** These values are not secrets; they do not require encryption. Keychain is overkill and increases app complexity.
+- **UserDefaults via @AppStorage:** This is the Swift idiomatic choice for lightweight, persistent, user-facing preferences.
+  - Pros: Automatic Codable support, SwiftUI binding-compatible, no extra dependencies.
+  - Cons: Not encrypted (acceptable; these are not secrets). Stored in `~/Library/Preferences/[bundle-id].plist`.
+  - Privacy: Plist is not readable by other apps (sandbox isolation). Data does not leave device.
+
+### Migration Path:
+
+If skin type/SPF currently live in `UVBurnTimerSession` (@State only), migrate them to:
+```swift
+@AppStorage("selectedSkinType") private var persistedSkinType: String?
+@AppStorage("selectedSPF") private var persistedSPF: String?
+```
+
+Then, on app init, restore `session.selectedSkinType` and `session.selectedSPF` from these persisted values. Keep the session object as the in-memory holder during the app lifecycle.
+
+---
+
+## Privacy & Safety Guarantees
+
+1. **No remote transmission:** Skin type, SPF, and location are never sent to cloud, analytics, or third-party servers without explicit user consent (not part of this decision).
+2. **No HealthKit:** These preferences do not enter HealthKit or touch health frameworks.
+3. **Local-only:** All data lives in the app's sandbox plist.
+4. **Clearable:** Users can clear app data via iOS Settings > General > iPhone Storage > [App] > Offload, which wipes the plist.
+5. **Photosensitization safety:** Disclaimer re-attestation is NOT persisted, ensuring Asha (P4) sees L1 re-fire on cold launch even if she has persistent skin type. This preserves the critical safety boundary.
+
+---
+
+## Implementation Handoff for Kwame
+
+### Before coding:
+
+1. **Check:** Is `UVBurnTimerSession` currently holding skin type and SPF in @State only, or are they already partially persisted somewhere?
+2. **Decision:** Will the session object be the "source of truth" during app lifecycle, with @AppStorage as the persistence layer? (Recommended: yes.)
+
+### Implementation steps:
+
+1. **Add @AppStorage properties to RootView:**
+   ```swift
+   @AppStorage("selectedSkinType") private var persistedSkinType: String = ""
+   @AppStorage("selectedSPF") private var persistedSPF: String = "spf30"
+   ```
+
+2. **On app init (UVBurnTimerApp.init):**
+   - Restore `session.selectedSkinType` from `persistedSkinType`.
+   - Restore `session.selectedSPF` from `persistedSPF`.
+
+3. **On user change in UI (SkinTypeView, SPFPicker):**
+   - Update `session.selectedSkinType` and `session.selectedSPF` as normal.
+   - Automatically sync to @AppStorage by adding `.onChange` handlers.
+
+4. **Keep `acknowledgedDisclaimer` as @State** (transient per safety boundary).
+
+5. **Optionally persist `LocationPromptGate.hasAcknowledgedRationale`** if product confirms (see Conditional section).
+
+6. **Test:** 
+   - Close and reopen the app; skin type and SPF should be remembered.
+   - Verify disclaimer still fires on cold launch.
+   - Verify location cache (already @AppStorage) continues to work.
+
+### No UI changes required:
+
+- Skin type, SPF, and location pickers remain the same.
+- Settings sheet remains the same.
+- Onboarding flow remains the same (already shows skin type on first launch; now it'll be pre-filled if returning user).
+
+---
+
+## Acceptance Criteria
+
+1. ✅ Skin type persists across app close/reopen.
+2. ✅ SPF persists across app close/reopen.
+3. ✅ Last rounded coordinate continues to persist (no regression).
+4. ✅ Disclaimer still fires on cold launch (transient, not persisted).
+5. ✅ No HealthKit, no keychain, no remote transmission.
+6. ✅ Returning user sees skin type pre-filled on onboarding; first-time user sees blank (no default, per D-2026-05-19-012).
+
+---
+
+## Persona Impact
+
+| Persona | Impact |
+|---|---|
+| **P1 Greta** (gram-counter) | ✅ **Positive:** Opens app, sees her skin type (Type II) pre-filled. No re-entry friction. Gets to the burn time instantly. |
+| **P2 Maya** (open-water swimmer) | ✅ **Positive:** Her SPF 50 choice persists. One less picker interaction per session. |
+| **P3 Devon** (PCT hiker) | ✅ **Positive:** Mid-hike, closes app. Reopens: skin type (Type I) is there. Can verify burn time immediately. |
+| **P4 Asha** (Accutane, photosensitivity) | ✅ **Safe:** Disclaimer STILL fires on cold launch (transient). Skin type persists, but L1 re-attestation is the load-bearing safety surface. If she changes meds, closing and reopening the app still shows L1. |
+| **P5 Tomás** (trail-run) | ✅ **Positive:** His Type IV/V selection persists. Less chance of under-picking on a casual app open. |
+
+---
+
+## Reference Decisions
+
+- **D-2026-05-19-011** — L1–L4 disclaimer layering (safety boundary; no change).
+- **D-2026-05-19-009/012** — Fitzpatrick no-default, behavior-first text (no change).
+- **D-2026-05-19-013/014** — Onboarding flow (no change).
+
+---
+
+## Open Question: Location Rationale Acknowledgment
+
+**Should `LocationPromptGate.hasAcknowledgedRationale` be persisted?**
+
+- **If YES:** Users see the rationale card once per app version, reducing clutter on return visits.
+- **If NO:** Users see the rationale card on every cold launch (current behavior).
+
+**Recommendation:** Persist it (add to @AppStorage), but reset on app version bump for re-education. Coordinate with Kwame before coding.
+
+---
+
+*Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/iris-gauge-target-ui.md -->
+
+# Iris — Circular Gauge Target UI
+
+**Date:** 2026-05-19T22:27:48-07:00  
+**Owner:** Iris (UI/UX Designer — Apple HIG & Accessibility)  
+**Status:** Proposed design target for Kwame implementation  
+**Requested by:** yashasg
+
+## Source artifacts checked
+
+- `user-flow-onboarding-main.excalidraw` — canonical flow/prototype artifact in repo root. It shows the portrait NowView hero card but does not include a large circular gauge/ring.
+- `.squad/files/user-flow-onboarding-main-spec.md` — textual snapshot of that Excalidraw scene; says main screen focuses on hero verdict + secondary cards/chips.
+- `.squad/decisions/archive/linka-ios-design-spec.md` — specifies a live timer surface with a Gauge/variable-color SF Symbol below the hero number.
+- `prototype/index.html` — old browser prototype; no circular gauge.
+- `app/Sources/UVBurnTimer/AppViews.swift` — current implementation.
+
+No separate screenshot/mock image containing the user's “big circular gauge” was found in repo root, `.squad/files`, or the checked prototype/design artifacts.
+
+## Current implementation gap
+
+`AppViews.swift` currently renders `BurnRiskGaugeCard` as a secondary card inside `HeroTimerCard`, with a SwiftUI `.accessoryCircularCapacity` gauge scaled to 1.8 but laid out in a 72×72 frame. It reads as a small accessory control, not a prominent circular gauge. It also sits below the hero text/tier/context, so on smaller phones or large Dynamic Type it is visually easy to miss.
+
+## Design target for Kwame
+
+The circular gauge should feel like the main visual instrument for the burn window, visually attached to the hero estimate.
+
+- **Placement:** Put the gauge inside the hero verdict card, directly under or beside the `Burn time` / minutes estimate. Do not place it as a separate low-prominence `Burn window` card unless screen width/Dynamic Type forces a reflow.
+- **Prominence:** Treat it as the second-most important element after the minutes number. It should be visible in the first viewport with the hero estimate, tier badge, and medication/caveat link.
+- **Size:** Target an approximately 180–220pt diameter circular ring on standard iPhones. On compact/SE widths, allow ~156–180pt. At AX4/AX5, let it stack below the number and remain at least ~140pt rather than shrinking to accessory size.
+- **Visual form:** Use a thick circular progress ring, not a small accessory gauge. Recommended feel: muted full-ring track + high-contrast progress arc tinted by tier (`SeverityLong`, `SeverityModerate`, `SeverityShort`) + centered numeric percent or remaining-time label. The ring must read outdoors in glare; no delicate hairline strokes.
+- **Labels:** Visible label should say `Burn window` or `Burn risk window`, with supporting copy like `47 min estimate · 18% elapsed` or `18% of burn window elapsed`. The hero minutes remain the primary decision text; the ring explains elapsed risk visually.
+- **Empty/unavailable state:** Preserve the gauge footprint so the user learns where the instrument lives. Show a neutral gray ring with center `—` and copy: `Fetch UV to start burn window` / `No active burn window: UV index is 0` / `Apple Weather unavailable` as applicable. Do not hide the gauge entirely except in onboarding before the Home surface exists.
+- **Window-elapsed state:** Ring should be complete and visually alarming, paired with the existing elapsed safety card/copy: `Estimated window elapsed. Cover up, reapply, or move to shade.`
+- **Accessibility:** VoiceOver label must include state + percent elapsed + remaining/elapsed interpretation, not just the percent. Example: `Burn window gauge, 18 percent elapsed. Estimated 39 minutes remaining before burn window ends.` Use `accessibilityDifferentiateWithoutColor` to add visible text/symbol redundancy, and do not rely on color alone. Dynamic Type must avoid clipping; Reduce Motion should remove decorative animation but allow value updates.
+
+## Location/Settings UX issue
+
+There is a UX issue beyond the code bug report: a button visibly labeled `Location` currently opens the general Settings sheet and its accessibility hint says `Opens Settings.` That creates an expectation mismatch. Either rename the chip to make the route explicit (`Location settings`, `Location in Settings`) or route it to a location-specific surface/action. A plain `Location` button should not feel like it accidentally opened Settings.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/iris-gauge-visibility.md -->
+
+# Iris — Circular Gauge Visibility Audit
+
+- **Date:** 2026-05-19T20:34:41.561-07:00
+- **Owner:** Iris (UI/UX, Apple HIG & Accessibility)
+- **Status:** proposed implementation recommendation
+- **Requested by:** yashasg
+- **Input artifacts:** `app/Sources/UVBurnTimer/AppViews.swift`, `app/Sources/UVBurnTimer/UVBurnTimerApp.swift`
+
+## Finding
+
+The circular burn-risk gauge is implemented as `BurnRiskGaugeCard` and is inserted in `RootView` immediately after `HeroTimerCard` and before `UVIndexCard`.
+
+It is **not visible in every default state**. It appears only when all of these are true:
+
+1. `estimate` exists, which requires selected skin type + UV index.
+2. `fetchedAt` exists.
+3. `estimate.tier != .none`.
+4. `estimate.rawMinutes.isFinite`.
+
+This is correct for no-estimate and no-UV states, but it means a user on first launch, before location/UV fetch, will not see a gauge.
+
+## iPhone 17 Pro discoverability assessment
+
+Assuming the iPhone 17 Pro remains in the Pro-class 6.3-inch layout family, the gauge is present but easy to miss:
+
+- The screen uses a large-title `NavigationStack`, then a `ScrollView` with 20pt vertical spacing.
+- The top of the content always includes the photosensitization banner.
+- Until the user acknowledges the rationale, `LocationRationaleCard` also appears before the hero.
+- `HeroTimerCard` is visually dominant and can grow tall: large hero number, tier badge, context line, caveat link, and optional safety cards.
+- The persistent bottom safe-area footer + primary action reduces the usable viewport.
+- At accessibility Dynamic Type sizes, the hero estimate can wrap to 2 lines and the gauge card is more likely to fall below the fold.
+
+Result: after a valid estimate, the gauge is technically placed high in the hierarchy, but it is not visually attached to the primary estimate. A user can read the hero number and stop before scrolling far enough to notice the separate gauge card.
+
+## Contrast / accessibility assessment
+
+Pass with caveats:
+
+- Uses native `Gauge` with `.accessoryCircularCapacity` rather than custom drawing.
+- Has text label/value: `Burn risk`, current percent, explicit accessibility label/value.
+- Does not rely on color alone; `differentiateWithoutColor` adds visible percent text.
+- Uses severity asset colors through a gradient.
+
+Caveat: the separate card uses `.thinMaterial`. Outdoors, material backgrounds can be lower-contrast than a solid grouped background under glare. The gauge is a secondary cue, so this is not a blocker, but the card should not be the only way users understand risk.
+
+## Recommendation for Kwame
+
+Make a small structural change: move the gauge presentation **inside `HeroTimerCard`** or visually dock it to the hero card as the right-side/under-title secondary cue when an estimate exists.
+
+Preferred pattern:
+
+1. Keep the hero time as the dominant element.
+2. Show a compact circular gauge within the hero card, near the tier badge/context line.
+3. Keep the same `BurnRiskGauge` semantics and accessibility label/value.
+4. Keep hiding the gauge when no estimate/UV exists.
+5. At accessibility Dynamic Type sizes, stack the gauge below the hero number but still inside the hero card, before the caveat link.
+6. Prefer a solid system grouped/background surface over `.thinMaterial` if the gauge remains a standalone card.
+
+This preserves the approved hierarchy: hero estimate first, circular gauge second, UV/source third — while making the gauge discoverable without requiring an extra scroll.
+
+## Decision
+
+The gauge should be visible by default **after a valid estimate is available**, but not before the app has enough data to compute risk. Current implementation meets existence/accessibility requirements but falls short on glance discoverability. Kwame should integrate or dock the gauge with the hero estimate instead of leaving it as a separate card below the hero.
+
+*Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-approximate-location-2026-05-19T23-31-00-07-00.md -->
+
+# Kwame — Approximate Location Directive Implementation
+
+**Date:** 2026-05-19T23:31:00-07:00  
+**Owner:** Kwame  
+**Status:** Implemented in active location persistence branch
+
+## Decision
+
+UV Burn Timer should request and retain only approximate/coarse location data needed for Apple Weather UV and burn-time estimates. It should not ask for temporary full accuracy or preserve precise GPS coordinates.
+
+## Implementation Notes
+
+- CoreLocation requests use `kCLLocationAccuracyReduced` on iOS 14+ and kilometer accuracy fallback on older OS behavior.
+- Coordinates are rounded before leaving `DeviceLocationProvider` and again at WeatherKit/storage boundaries.
+- `CachedRoundedCoordinate` now normalizes any input coordinate to the app's rounded weather coordinate before encoding, preventing accidental precise persistence.
+- User-facing location copy and the When In Use usage description now say approximate location.
+
+## Validation
+
+- Debug build succeeded.
+- Swift Testing core suite passed 62/62, including a new regression test ensuring cached coordinate JSON does not contain precise coordinate strings.
+- UI automation was retried but blocked by simulator/device-state automation failures after launch; no compile or core-test regression was found.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-ci-validation.md -->
+
+# Decision Inbox: kwame-ci-validation
+
+**Date:** 2026-05-19  
+**Author:** Kwame (iOS Developer)  
+**Branch:** `squad/4-approved-redesign-paraphrasing`  
+**Commit:** `738da12`
+
+---
+
+## Summary
+
+Validated, committed, and pushed all branch work. Local `./build.sh` clean pass. No GitLab CI pipeline configured for this repo.
+
+---
+
+## Action Items for Team
+
+### 1. Gitignore `excalidraw.log` (Low-priority, non-blocking)
+
+`excalidraw.log` is currently **tracked by git** but contains only MCP server runtime noise (start/connect/listing timestamps). It accumulates with every session and should not be committed.
+
+**Proposed fix:** Add to `.gitignore`:
+```
+excalidraw.log
+```
+
+Owner: any team member. Recommend doing in a cleanup commit.
+
+---
+
+### 2. No GitLab CI configured (Non-blocking, awareness item)
+
+There is no `.gitlab-ci.yml` in the repo. The two existing GitLab pipelines (`main`, `squad/fix-app-icon-catalog`) failed on external infra — not related to this branch.
+
+Local validation via `./build.sh` (xcodebuild Debug build + test + Release build, warnings-as-errors) is the current validation gate. This is sufficient for a team-only repo, but if GitLab CI automation is desired, a `.gitlab-ci.yml` would need to be added.
+
+**No action required** unless the team wants automated CI on GitLab.
+
+---
+
+## Validation Results (local)
+
+| Step | Result |
+|------|--------|
+| `xcodebuild Debug build` | ✅ PASSED |
+| `xcodebuild test` | ✅ PASSED (all tests including new `uncappedLongEstimateStillExpiresAtTwoHourRefreshInterval`) |
+| `xcodebuild Release build` | ✅ PASSED |
+| Warnings-as-errors | ✅ Clean (0 warnings) |
+| Push to origin | ✅ `squad/4-approved-redesign-paraphrasing` pushed |
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-ci-xcode16-simulator-traits.md -->
+
+# Kwame CI note — Xcode 16 simulator trait warning
+
+**Date:** 2026-05-19T23:10:55.677-07:00
+**Owner:** Kwame
+
+GitHub macOS 15/Xcode 16.4 runners can list iPhone 17 Pro (`iPhone18,1`) simulators with an iOS 26 runtime, but `actool` emits `Could not get trait set for device iPhone18,1`. Treat this as an unsupported Xcode/device-runtime pairing: prefer iPhone 16/15 on Xcode <26 rather than filtering warnings, so real warnings remain fatal.
+
+UI tests should remain serial (`-parallel-testing-enabled NO`) and long accessibility-copy assertions should use NSPredicate-based helpers instead of direct `app.staticTexts[longString]` queries, which hit XCTest's 128-character identifier limit.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-duration-format.md -->
+
+### 2026-05-19T22:50:27.684-07:00: Burn duration display format
+**By:** Kwame
+**What:** Display burn/sunscreen windows as compact duration labels (`1 hr 35 min`, `45 min`, `Up to 2 hr`, `4+ hr`) rather than raw long minute counts or clock-like `hours :: minutes`.
+**Why:** Users should not have to convert minutes mentally, and clock-style separators could be misread as time-of-day. The underlying MED math and 120-minute sunscreen cap are unchanged.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-external-ci-monitoring.md -->
+
+# Decision: External CI Project Path and Build Script Contract
+
+**Date:** 2026-05-20  
+**Author:** Kwame  
+**Branch:** squad/4-approved-redesign-paraphrasing  
+**MR:** !3
+
+## Context
+
+External CI runs on GitHub Actions, triggered via GitLab MR webhooks (Cloudflare Worker → `repository_dispatch`). The CI workflow lives on `github/main` (NOT the GitLab branch). Xcode project was renamed from `VCA.xcodeproj` to `app.xcodeproj` on the GitLab side, but `github/main`'s `ci.yml` still referenced the old name.
+
+## Decisions
+
+### 1. GitHub CI workflow must be updated when Xcode project is renamed
+**Decision:** When renaming the Xcode project or restructuring the `app/` directory, `github/main`'s `.github/workflows/ci.yml` must be updated in the same session. The GitLab branch and GitHub main are not the same repo and do not auto-sync.
+
+**Affected paths in ci.yml:**
+- `awk ... app/VCA.xcodeproj/project.pbxproj` (Set build metadata step)
+- `hashFiles('app/VCA.xcodeproj/...')` (cache key expressions)
+- `cd app && ./build.sh` (incorrect path; `build.sh` lives at repo root)
+
+### 2. `build.sh` must accept CI env vars
+**Decision:** `build.sh` (at repo root) supports both local dev mode and CI mode:
+- **CI mode** (when `CONFIGURATION` env var is set): runs only the specified configuration + tests if `RUN_TESTS=true`
+- **Local dev mode** (no `CONFIGURATION`): runs full cycle — Debug build → tests → Release build
+- Supported vars: `CONFIGURATION`, `TEST_CONFIGURATION`, `DERIVED_DATA_PATH`, `RUN_TESTS`, `PLATFORM_MODE`
+- Legacy vars still work: `UV_BURN_TIMER_DESTINATION`, `UV_BURN_TIMER_DERIVED_DATA_PATH`
+
+### 3. `.swift-format` config must exist for CI lint gate
+**Decision:** A `.swift-format` file must be present at the repo root. CI runs `xcrun swift-format lint --configuration .swift-format --strict`. Without it, the lint step fails immediately.
+
+**Settings:** 4-space indentation, 120-char line length (matches codebase conventions).
+
+### 4. XCUITest teardown pattern for Xcode 26 / Swift 6
+**Decision:** Do NOT override `tearDownWithError()` to terminate `XCUIApplication` when using `@MainActor` test classes. The override is implicitly `nonisolated` (inherits from `XCTestCase` which is not `@MainActor`), so accessing `@MainActor` properties causes a Swift 6 compile error.
+
+**Correct pattern:**
+```swift
+private func launchApp(arguments: [String] = []) -> XCUIApplication {
+    XCUIApplication().terminate()  // explicit pre-launch cleanup
+    let app = XCUIApplication()
+    app.launchArguments = ["-uiTestResetDefaults"] + arguments
+    app.launch()
+    return app
+}
+```
+
+### 5. Concurrency race with webhook-triggered CI
+**Decision:** The CI workflow uses `concurrency: cancel-in-progress: true`. When GitLab sends push + MR events simultaneously for the same branch, one run may cancel the other before posting status back to GitLab. If the GitLab pipeline shows no result for the latest commit, an empty re-trigger commit resolves this.
+
+## Impact
+
+- Team: Any agent touching the Xcode project name or `app/` layout must also update `github/main`'s `ci.yml`.
+- CI: `build.sh` is now the canonical build entry point for both local dev and CI.
+- iOS: UI test pattern established for Xcode 26 strict concurrency.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-gauge-location-ui.md -->
+
+# Kwame — Gauge prominence and Location chip routing
+
+- Date: 2026-05-19T22:27:48.170-07:00
+- Owner: Kwame
+- Status: proposed
+
+## Decision
+
+The main-screen Location chip routes to the same location/UV request flow as the primary location CTA. It must not open Settings; Settings remains available only from the gear button.
+
+The burn-risk gauge is a large, centered circular SwiftUI ring in the hero card for both valid estimates and honest unavailable states. Unavailable states keep the gauge shell visible without fabricating WeatherKit data; the accessibility value remains "Unavailable" until real UV data exists.
+
+## Rationale
+
+Users expected the Location affordance to start the location flow, and the small accessory gauge was still too visually subtle compared with the shared design direction. A custom SwiftUI circular ring keeps the safety cue prominent while preserving WeatherKit/CoreLocation honesty.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-gauge-visibility.md -->
+
+# Kwame — Gauge Visibility Fix
+
+- **Date:** 2026-05-19T20:34:41.561-07:00
+- **Owner:** Kwame
+- **Status:** proposed
+
+## Decision
+
+Render the circular `BurnRiskGaugeCard` inside `HeroTimerCard` immediately below the estimate inputs instead of as a separate main-screen sibling card.
+
+## Why
+
+On iPhone 17 Pro, the separate sibling card appeared below the large hero card and was partially covered by the persistent footer/safe-area inset at first paint. Users saw at most a clipped arc, which made the circular gauge effectively invisible. Keeping it inside the hero preserves the intended secondary-cue relationship while making it visible without scrolling.
+
+## Scope
+
+- `app/Sources/UVBurnTimer/AppViews.swift`
+- `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`
+
+The existing gauge data guard, health caveat copy, and accessibility label/value remain intact.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-persist-user-preferences.md -->
+
+# Kwame — Persist user preferences locally
+
+**Date:** 2026-05-19T22:43:49.465-07:00  
+**Status:** Implemented on `squad/fix-location-gauge-ui`
+
+- Skin type and SPF are restored from device-local UserDefaults and kept in sync through the SwiftUI app session.
+- SPF persistence rejects invalid or legacy unprotected/"none" values and falls back to SPF 30, preserving the no user-facing SPF none rule.
+- Location persistence stays privacy-safe: exact device permission state is OS-managed, exact coordinates are not stored by the app, and the existing rounded last coordinate plus local location-rationale/mode acknowledgement are stored locally only.
+- Disclaimer acknowledgement remains transient so the safety attestation still appears on cold launch.
+- Added core preference restoration tests and a UI regression for returning users with saved skin type, SPF, and rounded location.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-remove-spf-none.md -->
+
+### 2026-05-19T22:34:50.179-07:00: SPF product options are sunscreen-only
+**By:** Kwame
+**What:** Removed SPF "None" from user-facing product choices. The app assumes sunscreen use, so selectable SPF values are now 15, 30, 50, and 70+ only; the unprotected calculation remains only as an internal/reference math path.
+**Why:** User clarified that "SPF none" is not sunscreen and does not fit the app's product premise.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-run-script.md -->
+
+# Kwame — Run script addition
+
+Added a root-level `run.sh` convention for local iOS launch. It delegates building to `./build.sh`, pins local run output to ignored `.build/DerivedData`, targets iPhone 17 Pro, and uses `simctl` to boot/install/launch. This keeps local run flow aligned with the canonical build script instead of introducing a second build path.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-simulator-gauge-fallback.md -->
+
+# Kwame — Simulator gauge fallback
+
+- Date: 2026-05-19T21:34:24.682-07:00
+- Decision: Keep the circular burn-window gauge shell visible when no live UV estimate is available, including simulator no-location and WeatherKit-unavailable states.
+- Rationale: The gauge was easy to miss in development because it only rendered after CoreLocation and WeatherKit succeeded. Showing an explicitly unavailable shell makes the UI testable without silently injecting fake weather data.
+- Guardrail: Production users still see honest location/weather error copy. No sample UV value is used in release or simulator fallback states.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/kwame-sunscreen-two-hour-cap.md -->
+
+### 2026-05-19T22:29:07.093-07:00: Sunscreen two-hour cap implemented
+**By:** Kwame
+**What:** SPF/sunscreen-protected burn-window estimates are capped at 120 minutes for display, elapsed-window logic, and gauge progress; raw MED math is preserved internally for medical honesty.
+**Why:** User clarified “Reapply sunscreen every 2 hours” means at least every 2 hours, so SPF must not imply a safe sunscreen window longer than two hours.
+**Notes:** Unprotected-reference estimates remain uncapped by sunscreen reapplication timing. UI copy uses “at least every 2 hours” and labels the cap as a sunscreen reapplication limit.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/ma-ti-duration-format-tests.md -->
+
+### 2026-05-19T22:50:27.684-07:00: Duration formatting test contract
+**By:** Ma-Ti
+**What:** Duration estimates should use compact hours/minutes copy once they reach an hour: `~1 hr`, `~1 hr 20 min`, `~2 hr 47 min`, and sunscreen cap `Up to 2 hr`; sub-hour estimates stay in minutes, and unavailable estimates stay non-duration (`No UV` / ready state). Accessibility summaries use spoken units such as `1 hour 40 minutes`.
+**Why:** Users should not have to convert raw minute counts, while sub-hour and unavailable states remain clearer without artificial `0 hr` wording.
+
+
+---
+
+<!-- Source: .squad/decisions/inbox/wheeler-sunscreen-two-hour-cap.md -->
+
+# Wheeler — Sunscreen two-hour cap recommendation
+
+**Date:** 2026-05-19T22:29:07.093-07:00  
+**Owner:** Wheeler (Skin Science Expert)  
+**Status:** Recommendation for Kwame  
+
+## Verdict
+
+Yes — cap any sunscreen-protected user-facing burn/safe-window estimate at 2 hours.
+
+The existing footer language ("Reapply sunscreen every 2 hours regardless of timer") should be treated as an upper-bound safety/product constraint, not merely boilerplate. Public-health guidance is consistent: sunscreen should be reapplied if staying in the sun for more than 2 hours, and sooner after swimming, sweating, or toweling. FDA also cautions that SPF should not be interpreted as a direct time multiplier that grants many hours of sun exposure.
+
+## Implementation constraint for Kwame
+
+Apply the cap only when sunscreen is selected:
+
+```swift
+let sunscreenCapMinutes = ProductTiming.sunscreenReapplicationIntervalSeconds / 60 // 120
+let displayMinutes = spf == .none ? rawModelMinutes : min(rawModelMinutes, sunscreenCapMinutes)
+let isCappedByReapplication = spf != .none && rawModelMinutes > sunscreenCapMinutes
+```
+
+Required behavior:
+
+1. Keep calculating the raw SPF-adjusted model internally if useful for tests/diagnostics.
+2. Do not display a sunscreen-protected estimate above 120 minutes.
+3. If the raw estimate exceeds 120 minutes, display the 2-hour cap and a message such as: "Reapply sunscreen by 2 hours; the SPF model estimate is longer, but sunscreen guidance caps this window."
+4. Continue to mark the estimate elapsed at the earlier of raw burn time and 2 hours.
+5. Leave `SPF none` estimates uncapped by the sunscreen rule; those are governed by the burn model and existing long-estimate caveats.
+
+## Copy nuance
+
+Avoid copy that implies sunscreen protects for longer than the reapplication interval. Prefer "by 2 hours" / "at least every 2 hours" / "sooner after swimming, sweating, or toweling" over a bare "every 2 hours" when space allows.
+
+## Source posture
+
+- CDC Sun Safety: "Sunscreen wears off. Put it on again if you stay out in the sun for more than 2 hours and after swimming, sweating, or toweling off."
+- FDA sunscreen guidance: SPF is not directly related to time of solar exposure; SPF should not be read as "SPF × normal burn time" permission for prolonged exposure.
+
+
+---
+

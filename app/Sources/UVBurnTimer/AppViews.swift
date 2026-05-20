@@ -875,51 +875,54 @@ struct DisclaimerCover: View {
     @State private var showAbout = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.orange)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 24) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.orange)
 
-                Text(ProductCopy.disclaimerTitle)
-                    .font(.title.bold())
-                    .multilineTextAlignment(.center)
-                    .accessibilityAddTraits(.isHeader)
+                    Text(ProductCopy.disclaimerTitle)
+                        .font(.title.bold())
+                        .multilineTextAlignment(.center)
+                        .accessibilityAddTraits(.isHeader)
 
-                Label(ProductCopy.photosensitizerDisclaimerLine, systemImage: "exclamationmark.triangle")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.orange)
-                    .accessibilityElement(children: .combine)
+                    Label(ProductCopy.photosensitizerDisclaimerLine, systemImage: "exclamationmark.triangle")
+                        .font(.callout.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        .accessibilityElement(children: .combine)
 
-                Text(ProductCopy.disclaimerBody)
-                    .font(.body)
+                    Text(ProductCopy.disclaimerBody)
+                        .font(.body)
 
-                Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
-                    .font(.callout.weight(.semibold))
+                    Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
+                        .font(.callout.weight(.semibold))
 
-                Button {
-                    showAbout = true
-                } label: {
-                    Label("See About: when estimates may not apply", systemImage: "info.circle")
+                    Button {
+                        showAbout = true
+                    } label: {
+                        Label("See About: when estimates may not apply", systemImage: "info.circle")
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityHint("Opens About with photosensitizing medication and condition caveats.")
                 }
-                .buttonStyle(.bordered)
-                .accessibilityHint("Opens About with photosensitizing medication and condition caveats.")
+                .padding(32)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .padding(32)
-            .frame(maxWidth: .infinity, alignment: .center)
+
+            Button(action: onAcknowledge) {
+                Text("I understand")
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding()
+            .background(.bar)
+            .accessibilityHint(
+                "Acknowledges the informational-only disclaimer and continues to skin type selection.")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial)
-        .safeAreaInset(edge: .bottom) {
-            Button("I understand", action: onAcknowledge)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(.bar)
-                .accessibilityHint(
-                    "Acknowledges the informational-only disclaimer and continues to skin type selection.")
-        }
         .sheet(isPresented: $showAbout) {
             NavigationStack {
                 AboutView(highlightEstimateApplicability: true)
@@ -935,38 +938,19 @@ struct SkinTypeOnboardingView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    ForEach(FitzpatrickSkinType.allCases) { skinType in
-                        SkinTypePickerRow(
-                            skinType: skinType,
-                            isSelected: draft.pendingSkinType == skinType
-                        ) {
-                            draft.select(skinType)
+            SkinTypePickerList(
+                selection: Binding(
+                    get: { draft.pendingSkinType },
+                    set: { selectedSkinType in
+                        if let selectedSkinType {
+                            draft.select(selectedSkinType)
                         }
-                        .accessibilityHint(
-                            draft.pendingSkinType == skinType
-                                ? "Selected. Tap Continue to confirm." : "Selects this skin type.")
                     }
-                } header: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(ProductCopy.skinTypePickerPrompt)
-                            .textCase(nil)
-                            .font(.headline)
-                        Text(ProductCopy.skinTypePickerSubtext)
-                            .textCase(nil)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
-                } footer: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(ProductCopy.skinTypeSourcePointer)
-                            .font(.footnote.weight(.medium))
-                        Text(ProductCopy.skinTypePickerFooter)
-                    }
-                }
-            }
+                ),
+                footerText: ProductCopy.skinTypePickerFooter,
+                selectedAccessibilityHint: "Selected. Tap Continue to confirm.",
+                unselectedAccessibilityHint: "Selects this skin type."
+            )
             .navigationTitle("Choose skin type")
             .safeAreaInset(edge: .bottom) {
                 Button {
@@ -1070,36 +1054,12 @@ struct SkinTypeEditView: View {
     @State private var pendingSelection: FitzpatrickSkinType?
 
     var body: some View {
-        List {
-            Section {
-                ForEach(FitzpatrickSkinType.allCases) { skinType in
-                    SkinTypePickerRow(
-                        skinType: skinType,
-                        isSelected: pendingSelection == skinType
-                    ) {
-                        pendingSelection = skinType
-                    }
-                }
-            } header: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(ProductCopy.skinTypePickerPrompt)
-                        .textCase(nil)
-                        .font(.headline)
-                    Text(ProductCopy.skinTypePickerSubtext)
-                        .textCase(nil)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            } footer: {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(ProductCopy.skinTypeSourcePointer)
-                        .font(.footnote.weight(.medium))
-                    Text(ProductCopy.skinTypeSettingsFooter)
-                        .font(.footnote)
-                }
-            }
-        }
+        SkinTypePickerList(
+            selection: $pendingSelection,
+            footerText: ProductCopy.skinTypeSettingsFooter,
+            selectedAccessibilityHint: "Selected. Saves this skin type.",
+            unselectedAccessibilityHint: "Selects this skin type."
+        )
         .navigationTitle("Skin type")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1115,6 +1075,51 @@ struct SkinTypeEditView: View {
         }
         .onAppear {
             pendingSelection = session.selectedSkinType
+        }
+    }
+}
+
+struct SkinTypePickerList: View {
+    @Binding var selection: FitzpatrickSkinType?
+    let footerText: String
+    let selectedAccessibilityHint: String
+    let unselectedAccessibilityHint: String
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(FitzpatrickSkinType.allCases) { skinType in
+                    SkinTypePickerRow(
+                        skinType: skinType,
+                        isSelected: selection == skinType
+                    ) {
+                        selection = skinType
+                    }
+                    .accessibilityHint(selection == skinType ? selectedAccessibilityHint : unselectedAccessibilityHint)
+                }
+            } header: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(ProductCopy.skinTypePickerPrompt)
+                        .textCase(nil)
+                        .font(.headline)
+                    Text(ProductCopy.skinTypePickerSubtext)
+                        .textCase(nil)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            } footer: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(ProductCopy.skinTypeSourcePointer)
+                        .font(.footnote.weight(.medium))
+                    NavigationLink("Open About & Citations") {
+                        AboutView()
+                    }
+                    .font(.footnote.weight(.medium))
+                    Text(footerText)
+                        .font(.footnote)
+                }
+            }
         }
     }
 }
@@ -1266,6 +1271,11 @@ struct AboutView: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(ProductCopy.aboutModelLimitations)
 
+                    Text("What this app does not do")
+                        .font(.title3.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
+                    Text(ProductCopy.whatTheAppDoesNotDo)
+
                     Text("Children and severe symptoms")
                         .font(.title3.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
@@ -1296,6 +1306,12 @@ struct AboutView: View {
                         .accessibilityAddTraits(.isHeader)
                     Text(ProductCopy.pricingLine)
 
+                    Text("Version")
+                        .font(.title3.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
+                    Text(versionLine)
+                    Text(ProductCopy.lastUpdatedLine)
+
                     WeatherAttributionView()
                 }
                 .padding()
@@ -1318,6 +1334,12 @@ struct AboutView: View {
             }
         }
         .navigationTitle("About")
+    }
+
+    private var versionLine: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+        return "Version \(version) (build \(build))."
     }
 }
 

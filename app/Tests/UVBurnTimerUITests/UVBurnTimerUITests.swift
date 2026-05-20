@@ -294,6 +294,9 @@ final class UVBurnTimerUITests: XCTestCase {
         app.buttons["About & Citations"].tap()
         XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Citations").exists)
+        XCTAssertTrue(scrollToStaticText(in: app, containing: "What this app does not do").exists)
+        XCTAssertTrue(scrollToStaticText(in: app, containing: "Version 1.0").exists)
+        XCTAssertTrue(scrollToStaticText(in: app, containing: "Last updated: 2026-05-20").exists)
         XCTAssertTrue(scrollToActionElement(in: app, named: "WHO Global Solar UV Index practical guide").exists)
         app.navigationBars["About"].buttons.firstMatch.tap()
 
@@ -385,26 +388,26 @@ final class UVBurnTimerUITests: XCTestCase {
             app.cells["Skin type"].firstMatch.exists
             ? app.cells["Skin type"].firstMatch
             : app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Skin type")).firstMatch
-        if skinTypeRow.exists {
-            skinTypeRow.tap()
-            // All six Fitzpatrick rows must be reachable. Scroll down if needed —
-            // the sheet may start at medium detent, placing later rows below the fold.
-            for numeral in ["I", "II", "III", "IV", "V", "VI"] {
-                let rowButton = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type \(numeral)"))
-                    .firstMatch
-                for _ in 0..<3 where !rowButton.exists {
-                    app.swipeUp()
-                }
-                XCTAssertTrue(
-                    rowButton.waitForExistence(timeout: 5),
-                    "Type \(numeral) row missing in Settings skin-type selector"
-                )
+        XCTAssertTrue(skinTypeRow.waitForExistence(timeout: 5))
+        skinTypeRow.tap()
+
+        // All six Fitzpatrick rows must be reachable. Scroll down if needed —
+        // the sheet may start at medium detent, placing later rows below the fold.
+        for numeral in ["I", "II", "III", "IV", "V", "VI"] {
+            let rowButton = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type \(numeral)"))
+                .firstMatch
+            for _ in 0..<3 where !rowButton.exists {
+                app.swipeUp()
             }
-        } else {
-            // Skin type editing not yet exposed in Settings — record as known gap.
-            XCTExpectFailure("Settings Skin type edit path not yet implemented (Iris spec §2 gap)")
-            XCTAssertTrue(false, "Settings does not expose a Skin type selection affordance")
+            XCTAssertTrue(
+                rowButton.waitForExistence(timeout: 5),
+                "Type \(numeral) row missing in Settings skin-type selector"
+            )
         }
+
+        scrollToActionElement(in: app, named: "Open About & Citations").tap()
+        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
+        XCTAssertTrue(staticText(in: app, containing: "Citations").exists)
     }
 
     private func launchApp(arguments: [String] = []) -> XCUIApplication {
@@ -439,10 +442,10 @@ final class UVBurnTimerUITests: XCTestCase {
     private func acknowledgeDisclaimer(in app: XCUIApplication) {
         let acknowledgeButton = app.buttons["I understand"]
         XCTAssertTrue(acknowledgeButton.waitForExistence(timeout: 10))
-        acknowledgeButton.tap()
+        tapWithRetry(acknowledgeButton)
 
-        if !app.navigationBars["Choose skin type"].waitForExistence(timeout: 5), acknowledgeButton.exists {
-            acknowledgeButton.tap()
+        if !app.navigationBars["Choose skin type"].waitForExistence(timeout: 8), acknowledgeButton.exists {
+            tapWithRetry(acknowledgeButton)
         }
     }
 
@@ -502,5 +505,41 @@ final class UVBurnTimerUITests: XCTestCase {
         }
 
         return element.exists && element.isEnabled
+    }
+
+    private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if element.exists && element.isHittable {
+                return true
+            }
+
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+
+        return element.exists && element.isHittable
+    }
+
+    /// XCUITest on iOS 26 occasionally computes hit point {-1, -1} for views
+    /// mid-presentation animation, swallowing the tap. Retry with a short
+    /// settle delay before giving up so transient layout races do not produce
+    /// flaky failures in the chained disclaimer → onboarding flow.
+    private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
+        _ = waitForHittable(element, timeout: 5)
+        for _ in 0..<retries {
+            if element.exists && element.isHittable {
+                let frame = element.frame
+                if frame.width > 0 && frame.height > 0 {
+                    element.tap()
+                    return
+                }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        }
+
+        if element.exists {
+            element.tap()
+        }
     }
 }

@@ -338,6 +338,17 @@ import Testing
     #expect(estimate.displayText == "Up to 2 hr")
 }
 
+@Test func longUnprotectedEstimateAtFourHoursShowsApprovedDisplayCap() {
+    let estimate = BurnTimeEstimate(rawMinutes: 240, tier: .long, isSunscreenProtected: false)
+
+    #expect(estimate.rawMinutes == 240)
+    #expect(estimate.isCappedForDisplay)
+    #expect(estimate.effectiveWindowMinutes == 240)
+    #expect(estimate.roundedDisplayMinutes == 240)
+    #expect(estimate.displayText == "4+ hr")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 4 or more hours.")
+}
+
 @Test func approvedMainScreenSafetyCopyIsCaptured() {
     #expect(ProductCopy.burnTimeEstimateTitle == "Burn-time estimate")
     #expect(ProductCopy.photosensitizerDisclaimerLine.contains("Photosensitizing"))
@@ -432,6 +443,7 @@ import Testing
         + " " + ProductCopy.aboutWeatherVariability
         + " " + ProductCopy.aboutSunscreenAssumptions
         + " " + ProductCopy.aboutModelLimitations
+        + " " + ProductCopy.whatTheAppDoesNotDo
         + " " + ProductCopy.pediatricAndEscalationGuidance
 
     #expect(aboutCopy.localizedCaseInsensitiveContains("certain medications"))
@@ -471,6 +483,10 @@ import Testing
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("modeled as SPF 50"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("capped at 2 hours"))
     #expect(ProductCopy.aboutSunscreenAssumptions.localizedCaseInsensitiveContains("at least every 2 hours"))
+    #expect(ProductCopy.whatTheAppDoesNotDo.localizedCaseInsensitiveContains("does not diagnose"))
+    #expect(ProductCopy.whatTheAppDoesNotDo.localizedCaseInsensitiveContains("does not track"))
+    #expect(ProductCopy.whatTheAppDoesNotDo.localizedCaseInsensitiveContains("does not send alerts"))
+    #expect(ProductCopy.lastUpdatedLine == "Last updated: 2026-05-20.")
     #expect(ProductCopy.outdoorReadabilityTip.localizedCaseInsensitiveContains("Increase Contrast"))
 }
 
