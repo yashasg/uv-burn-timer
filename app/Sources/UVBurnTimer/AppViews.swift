@@ -74,6 +74,7 @@ struct RootView: View {
                 }
                 .padding()
             }
+            .accessibilityIdentifier("NowViewScrollView")
             .refreshable {
                 await refreshUV()
             }
@@ -332,6 +333,13 @@ struct RootView: View {
             return
         }
 
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-uiTestRefreshableEcho") {
+            applyUITestRefreshableEchoIfNeeded()
+            return
+        }
+        #endif
+
         do {
             guard session.selectedSkinType != nil else {
                 throw UVBurnTimerWorkflowError.missingSkinType
@@ -526,6 +534,33 @@ struct RootView: View {
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
         locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
         statusMessage = "Seeded long estimate for UI testing."
+        #endif
+    }
+
+    /// WI-47 — Maya pull-to-refresh test seam (Suchi persona-annotations.md:118).
+    /// When `-uiTestRefreshableEcho` is passed, `refreshUV()` short-circuits the
+    /// live WeatherKit + location stack and deterministically mutates the UV
+    /// snapshot to a sentinel value distinct from every other `-uiTest*` seed.
+    /// That lets an XCUI test observe — via the `UV Index 4.0` re-render — that
+    /// the `.refreshable { await refreshUV() }` closure on the NowView
+    /// ScrollView actually ran in response to a pull-down gesture, without
+    /// depending on simulator-level location grants or WeatherKit availability.
+    private func applyUITestRefreshableEchoIfNeeded() {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("-uiTestRefreshableEcho") else {
+            return
+        }
+
+        isFetching = true
+        defer { isFetching = false }
+        locationFailureMessage = nil
+        weatherFailureMessage = nil
+        uvIndex = 4.0
+        fetchedAt = Date()
+        roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
+        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+        now = Date()
+        statusMessage = "UV index fetched from Apple Weather."
         #endif
     }
 
