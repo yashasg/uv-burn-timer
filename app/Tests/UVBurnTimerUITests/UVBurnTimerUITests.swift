@@ -340,10 +340,30 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
-        XCTAssertTrue(gauge.waitForExistence(timeout: 5), "BurnRiskGauge shell must appear without a UV estimate")
+        let gauge = app.descendants(matching: .any)["BurnRiskGaugePlaceholder"]
+        XCTAssertTrue(gauge.waitForExistence(timeout: 5), "BurnRiskGaugePlaceholder shell must appear without a UV estimate")
         XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
         XCTAssertEqual(gauge.value as? String, "Unavailable")
+    }
+
+    func testBurnRiskGaugePlaceholderHasDistinctIdentifier() {
+        // WI-42: BurnRiskGaugeCard (real data) and BurnRiskGaugeUnavailableCard (placeholder)
+        // must use distinct accessibility identifiers so XCUI queries are unambiguous.
+        // Cold-launch without seeded estimate → placeholder must be present, real gauge absent.
+        let app = launchApp(arguments: ["-uiTestResetDefaults"])
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let placeholder = app.descendants(matching: .any)["BurnRiskGaugePlaceholder"]
+        let realGauge = app.descendants(matching: .any)["BurnRiskGauge"]
+
+        XCTAssertTrue(
+            placeholder.waitForExistence(timeout: 5),
+            "BurnRiskGaugePlaceholder must exist when no UV estimate is available"
+        )
+        XCTAssertFalse(
+            realGauge.exists,
+            "BurnRiskGauge (real data) must NOT exist without a seeded UV estimate — identifiers must be distinct"
+        )
     }
 
     func testCircularGaugePresentOnFreshEstimate() {
@@ -1040,10 +1060,10 @@ final class UVBurnTimerUITests: XCTestCase {
     }
 
     private func assertUnavailableBurnRiskGaugeExists(in app: XCUIApplication) {
-        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
+        let gauge = app.descendants(matching: .any)["BurnRiskGaugePlaceholder"]
         XCTAssertTrue(
-            gauge.waitForExistence(timeout: 5), "BurnRiskGauge shell must remain visible when UV is unavailable")
-        XCTAssertTrue(gauge.isHittable, "BurnRiskGauge shell must be visible in unavailable states")
+            gauge.waitForExistence(timeout: 5), "BurnRiskGaugePlaceholder must remain visible when UV is unavailable")
+        XCTAssertTrue(gauge.isHittable, "BurnRiskGaugePlaceholder must be visible in unavailable states")
         XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
         XCTAssertEqual(gauge.value as? String, "Unavailable")
     }

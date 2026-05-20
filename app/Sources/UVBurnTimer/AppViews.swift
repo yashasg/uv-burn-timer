@@ -1734,7 +1734,7 @@ struct BurnRiskGaugeUnavailableCard: View {
         .accessibilityLabel("Burn risk gauge unavailable. \(message)")
         .accessibilityValue("Unavailable")
         .accessibilityHint("Fetch location and Apple Weather UV before relying on burn timing.")
-        .accessibilityIdentifier("BurnRiskGauge")
+        .accessibilityIdentifier("BurnRiskGaugePlaceholder")
     }
 }
 
