@@ -452,6 +452,15 @@ import Testing
     #expect(copy.localizedCaseInsensitiveContains("shade"))
 }
 
+/// AUDIT-ONLY — validates ProductCopy constants that are NOT rendered at runtime.
+/// `DisclaimerCover` ships the see-About reach-back as a styled Button (WI-13,
+/// merged 90ecf26); the Markdown + OpenURLAction path was retired due to iOS
+/// 17/18 a11y instability. `disclaimerSeeAboutLinkURL` and
+/// `disclaimerSeeAboutInlineMarkdown` are retained in ProductCopy for spec/audit
+/// fidelity only; this test ensures they remain consistent with each other and
+/// with the plain-text `disclaimerSeeAboutInlinePrompt` that IS rendered.
+/// See spec.md §LANE 1 Screen 2 implementation note for full rationale.
+///
 /// Spec §LANE 1 Screen 2 and `suchi-persona-annotations.md` (Screen 1 — Asha):
 /// the L1 disclaimer must surface "see About" as an **inline** deep-link
 /// inside a short sentence about photosensitizing medications and
@@ -466,12 +475,10 @@ import Testing
 ///      `see About` reach-back text so screen-readers and copy audits
 ///      see continuous prose.
 ///   2. The Markdown variant embeds `see About` as a `[see About](...)`
-///      Markdown link that SwiftUI's `Text(LocalizedStringKey:)` will
-///      render as a tappable inline link.
+///      Markdown link that SwiftUI's `Text(LocalizedStringKey:)` would
+///      render as a tappable inline link (AUDIT-ONLY; not currently rendered).
 ///   3. The link target uses the in-app `uvburntimer://about-applicability`
-///      route so the `openURL` interceptor in `DisclaimerCover` can route
-///      the tap to the About sheet without exposing the URL to the system
-///      browser.
+///      route documenting the deep-link contract.
 ///   4. The inline prompt is part of the audited copy surfaces so any
 ///      future copy drift is caught by `productCopyAvoidsBannedClinicalClaims`
 ///      and the monetization-drift guard.

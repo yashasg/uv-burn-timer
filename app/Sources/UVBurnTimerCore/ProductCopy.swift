@@ -34,10 +34,12 @@ public enum ProductCopy {
     public static let childrenDisclaimerLine = "For children, consult a pediatrician."
     public static let photosensitizationBannerLabel = "Meds or photosensitive conditions? Learn more"
 
-    /// In-app deep-link URL routed by `DisclaimerCover`'s `OpenURLAction`
-    /// interceptor. The scheme is intentionally a private app scheme so
-    /// the tap never escapes to the system browser; the host names the
-    /// About anchor (`notForMe` → `aboutEstimateApplicability`).
+    /// AUDIT-ONLY — not used at runtime. In-app deep-link URL that documents the
+    /// deep-link contract for the inline see-About reach-back. The scheme is
+    /// intentionally a private app scheme so the tap would never escape to the
+    /// system browser; the host names the About anchor
+    /// (`notForMe` → `aboutEstimateApplicability`). `DisclaimerCover` currently
+    /// opens `AboutView` via a `.sheet` (Button path) rather than routing this URL.
     public static let disclaimerSeeAboutLinkURL = URL(string: "uvburntimer://about-applicability")!
 
     /// Plain-text variant of the inline reach-back prompt. Used by copy
@@ -65,12 +67,15 @@ public enum ProductCopy {
     public static let disclaimerSeeAboutInlineLinkLabel = "see About"
     public static let disclaimerSeeAboutInlineTail = "."
 
-    /// Markdown variant retained for spec/audit fidelity even though
+    /// AUDIT-ONLY — not rendered at runtime. Retained for spec/audit fidelity even though
     /// `DisclaimerCover` now renders the prompt through a styled
     /// `Button` rather than `Text(LocalizedStringKey:)`. The link
     /// target (`disclaimerSeeAboutLinkURL`) still documents the
     /// deep-link contract so future surfaces can re-use the same URL
     /// scheme if they need a true Markdown rendering path.
+    /// See `disclaimerSurfacesInlineSeeAboutDeepLinkForPhotosensitiveCohort`
+    /// in `BurnTimeCalculatorTests` for the audit test that validates
+    /// these constants without depending on them being rendered.
     public static let disclaimerSeeAboutInlineMarkdown =
         "If you take a photosensitizing medication or have a sun-sensitive condition — [see About](\(disclaimerSeeAboutLinkURL.absoluteString))."
     public static let locationRationale =
