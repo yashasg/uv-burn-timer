@@ -1079,17 +1079,20 @@ final class UVBurnTimerUITests: XCTestCase {
         }
     }
 
-    /// Picks the most reliable tap path for the current iOS runtime:
-    /// the coordinate-based path on iOS 26+ (where the activation-point
-    /// resolver bug fires) and the standard activation-point path on
-    /// every older runtime (where coordinate-based taps regress bordered
-    /// button hit-testing on iOS 17 / 18).
+    /// Uses coordinate-based tap synthesis, which is reliable across all iOS
+    /// versions: on iOS 26+ it bypasses the activation-point resolver bug that
+    /// returns {-1, -1}; on iOS 17/18 it bypasses XCUITest's scroll-to-visible
+    /// pre-flight (kAXScrollToVisibleAction) that fails for buttons placed in
+    /// non-scrollable safeAreaInset / footer containers with kAXErrorCannotComplete.
     private func tapViaSafestPath(_ element: XCUIElement, frame: CGRect) {
-        if #available(iOS 26.0, *) {
-            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        } else {
-            element.tap()
-        }
+        // Always use coordinate-based synthesis to bypass XCUITest's
+        // scroll-to-visible pre-flight (kAXScrollToVisibleAction), which
+        // returns kAXErrorCannotComplete for buttons placed in non-scrollable
+        // safeAreaInset / footer containers and can fail a tap even when the
+        // element is fully visible. coordinate(withNormalizedOffset:).tap()
+        // computes the point directly from the element's frame and does not
+        // attempt AX scrolling first — it is safe on iOS 17, 18, and 26+.
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     /// Re-taps `trigger` until `target` appears, the trigger disappears, or
