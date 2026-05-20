@@ -55,7 +55,10 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Cover-chain race: the "Use my location" button sits in a safeAreaInset(.bottom);
+        // iOS 26 activation-point resolver can emit {-1,-1} while the skin-type cover
+        // is still settling. Use tapWithRetry (coordinate-based synthesis on iOS 26+).
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Location access is off").exists)
         XCTAssertTrue(app.buttons["Try again"].exists)
@@ -86,7 +89,8 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Cover-chain race: same as above — tapWithRetry for the safe-area button.
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Could not determine your location").exists)
         XCTAssertFalse(staticText(in: app, containing: "Could not reach Apple Weather").exists)
@@ -105,7 +109,8 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Cover-chain race: same as above — tapWithRetry for the safe-area button.
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "Could not reach Apple Weather").exists)
         XCTAssertTrue(app.buttons["Try again"].exists)
@@ -447,6 +452,88 @@ final class UVBurnTimerUITests: XCTestCase {
             "After dismissing About, the L1 disclaimer cover must still be present so the user can acknowledge it."
         )
     }
+
+    /// WI-35 — Suchi persona-annotations.md Screen 1 + Screen 4 (Asha, P4 Accutane):
+    /// **Asha's visibility loop** — the load-bearing safety architecture for the
+    /// photosensitizer cohort. Asha sees the L1 cover, taps the inline "see About"
+    /// reach-back, reads the photosensitizer cohort list in AboutView (presented as
+    /// a `.sheet` over the still-present L1 cover), dismisses About, returns to the
+    /// still-present L1 cover to complete her "I understand" acknowledgment, and
+    /// then advances normally into onboarding.
+    ///
+    /// This test focuses on the **round-trip contract**: the L1 cover must be
+    /// present both before and after the see-About sheet is presented and dismissed.
+    /// (`testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton` focuses on
+    /// the inline-not-bordered rendering contract; this test focuses on the Asha
+    /// visibility loop as a complete persona flow.)
+    ///
+    /// Per spec.md §LANE 1 Screen 2 implementation note (WI-26): the sheet is
+    /// presented via `Button(action:)` with `accessibilityIdentifier
+    /// ("DisclaimerSeeAboutLink")`, opening `AboutView(highlightEstimateApplicability: true)`.
+    func testDisclaimerL1SeeAboutSheetRoundTripLeavesL1CoverPresent() {
+        // Phase 1 — Cold launch: L1 cover is the first surface shown.
+        let app = launchApp()
+        XCTAssertTrue(
+            app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10),
+            "L1 DisclaimerCover must be the first surface on cold launch (Donatello M1)")
+
+        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
+        XCTAssertTrue(
+            inlineSeeAboutLink.waitForExistence(timeout: 5),
+            "DisclaimerSeeAboutLink must be present on the L1 cover")
+
+        // Phase 2 — Asha taps the inline reach-back.
+        inlineSeeAboutLink.tap()
+
+        // Phase 3 — AboutView presents as a .sheet over the still-present L1 cover.
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForExistence(timeout: 10),
+            "Tapping DisclaimerSeeAboutLink must present AboutView as a .sheet")
+        XCTAssertTrue(
+            staticText(in: app, containing: "When this estimate may not apply").exists,
+            "AboutView must expose the applicability section (highlightEstimateApplicability: true)")
+
+        // Phase 4 — Asha dismisses About after reading the cohort list.
+        // The About sheet from DisclaimerCover has a Done button (added because
+        // .interactiveDismissDisabled(true) on the outer DisclaimerCover prevents
+        // swipe-down on nested sheets on some iOS runtime versions).
+        let doneButton = app.buttons["Done"]
+        XCTAssertTrue(
+            doneButton.waitForExistence(timeout: 5),
+            "About sheet presented from DisclaimerCover must have a Done button")
+        doneButton.tap()
+        // Wait for the sheet to be fully gone before inspecting the L1 cover.
+        // Post-sheet-dismiss, the AX hierarchy can be transiently inconsistent;
+        // scrollToVisible on elements in the L1 cover returns kAXErrorCannotComplete
+        // until the presentation graph settles. waitForNonExistence gives the
+        // runtime enough time to tear down the sheet's accessibility tree.
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForNonExistence(timeout: 5),
+            "About sheet must be fully dismissed before proceeding")
+
+        // Phase 5 — L1 cover is STILL present: both the title and the acknowledge
+        // button must be visible and hittable. This is the core Asha loop contract —
+        // she completes her visibility check and then acknowledges the cover.
+        XCTAssertTrue(
+            app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5),
+            "L1 cover title must still be visible after dismissing the About sheet — Asha's round-trip must return to L1")
+        let acknowledgeBtn = app.buttons["I understand"]
+        XCTAssertTrue(
+            acknowledgeBtn.waitForExistence(timeout: 5),
+            "I understand must remain tappable after the About round-trip")
+        // Give the AX tree one more moment to mark the button hittable after
+        // sheet teardown, so tapUntilAppears in acknowledgeDisclaimer doesn't
+        // spend its budget on the transient {-1,-1} window.
+        _ = waitForHittable(acknowledgeBtn, timeout: 5)
+
+        // Phase 6 — Asha completes onboarding normally: the round-trip must not
+        // break the cover-chain progression.
+        acknowledgeDisclaimer(in: app)
+        XCTAssertTrue(
+            app.navigationBars["Choose skin type"].waitForExistence(timeout: 10),
+            "After the see-About round-trip, onboarding must advance normally to the skin-type picker")
+    }
+
 
     /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
     /// photosensitization reach-back is a *banner*, not a chip — it spans
@@ -1004,17 +1091,20 @@ final class UVBurnTimerUITests: XCTestCase {
         }
     }
 
-    /// Picks the most reliable tap path for the current iOS runtime:
-    /// the coordinate-based path on iOS 26+ (where the activation-point
-    /// resolver bug fires) and the standard activation-point path on
-    /// every older runtime (where coordinate-based taps regress bordered
-    /// button hit-testing on iOS 17 / 18).
+    /// Uses coordinate-based tap synthesis, which is reliable across all iOS
+    /// versions: on iOS 26+ it bypasses the activation-point resolver bug that
+    /// returns {-1, -1}; on iOS 17/18 it bypasses XCUITest's scroll-to-visible
+    /// pre-flight (kAXScrollToVisibleAction) that fails for buttons placed in
+    /// non-scrollable safeAreaInset / footer containers with kAXErrorCannotComplete.
     private func tapViaSafestPath(_ element: XCUIElement, frame: CGRect) {
-        if #available(iOS 26.0, *) {
-            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        } else {
-            element.tap()
-        }
+        // Always use coordinate-based synthesis to bypass XCUITest's
+        // scroll-to-visible pre-flight (kAXScrollToVisibleAction), which
+        // returns kAXErrorCannotComplete for buttons placed in non-scrollable
+        // safeAreaInset / footer containers and can fail a tap even when the
+        // element is fully visible. coordinate(withNormalizedOffset:).tap()
+        // computes the point directly from the element's frame and does not
+        // attempt AX scrolling first — it is safe on iOS 17, 18, and 26+.
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
     /// Re-taps `trigger` until `target` appears, the trigger disappears, or

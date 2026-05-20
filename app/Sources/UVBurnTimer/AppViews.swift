@@ -1003,6 +1003,11 @@ struct DisclaimerCover: View {
         .sheet(isPresented: $showAbout) {
             NavigationStack {
                 AboutView(highlightEstimateApplicability: true)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showAbout = false }
+                        }
+                    }
             }
         }
         .interactiveDismissDisabled(true)
