@@ -62,7 +62,7 @@ The desktop-shaped 7-region grid is gone. LANE 2 now centers one portrait phone 
 1. **Status bar** — `9:41` on the left, `signal · wifi · battery` on the right. Annotated only; not pixel-perfect.
 2. **Large Title nav bar** — left-aligned `UV Burn Timer` + trailing ⚙︎ gear (SettingsSheet entry point).
 3. **Photosensitization loop banner** (yellow, 320×40) — `Taking photosensitizing meds? →`; this is the L1 reach-back surface when the loop is active, not a separate screen.
-4. **Hero verdict card** (amber, 320×224) — label `Burn-time estimate`, hero `47 min`, verdict `Moderate`, and inline caveat `Meds + conditions can shorten this. Learn more →`. The card label is the unambiguous long form (`ProductCopy.burnTimeEstimateTitle`); earlier drafts used the shorter `Burn time`, but the longer form makes the noun explicit so the dominant number reads as a "burn-time estimate" rather than a literal countdown. The caveat preserves the `notForMe` deep-link pattern without reintroducing a desktop sub-panel.
+4. **Hero verdict card** (amber, 320×224) — label `Burn-time estimate`, hero `47 min`, verdict `Moderate`, and inline caveat `Meds + conditions can shorten this. Learn more` (rendered as a SwiftUI `Label` with `info.circle` SF Symbol; the design arrow `→` was a spec-time link indicator, not a literal rendered character — `ProductCopy.mainVerdictCaveatLinkLabel`). The card label is the unambiguous long form (`ProductCopy.burnTimeEstimateTitle`); earlier drafts used the shorter `Burn time`, but the longer form makes the noun explicit so the dominant number reads as a "burn-time estimate" rather than a literal countdown. The caveat preserves the `notForMe` deep-link pattern without reintroducing a desktop sub-panel.
 5. **UV Index secondary card** (neutral, 320×96) — `UV Index 6.2` + `Source: Apple Weather`. This attribution stays visible in the portrait viewport.
 6. **Location + SPF row** — compact 44pt controls for `📍 San Francisco ›` and `SPF 30`. Location refreshes the UV lookup; SPF stays directly adjustable on the main screen. Fitzpatrick selection is intentionally kept in onboarding and Settings, not on the repeated-use main surface.
 7. **L1 disclaimer link** — inline bottom-of-content link: `Informational only. Not medical advice. →`.
@@ -172,4 +172,4 @@ Per Suchi's note "**Don't reify an architecture we deliberately don't have**":
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
 
-*Last reconciled with code: `2d05a25` — 2026-05-20 (WI-26/WI-29/WI-31; reflects WI-13 inline see-About Button implementation)*
+*Last reconciled with code: `8a3406a` — 2026-05-20 (WI-35: hero-caveat spec arrow `→` clarified as design-time link indicator; WI-26/WI-29/WI-31 WI-13 inline see-About Button implementation)*
