@@ -27,3 +27,5 @@ Team approvals and implementations completed for approved redesign and paraphras
 
 All inbox decisions merged into decisions.md.
 
+
+- 2026-05-19T22:50:27.684-07:00 (duration formatting tests): Aligned duration-format coverage with Kwame’s in-progress hours/minutes implementation. Core tests now cover under-1-hour minutes, exact 1 hour, over-1-hour burn estimates, the sunscreen 2-hour cap, and No UV unavailable display/accessibility. UI expectations now target compact hero strings such as `Up to 2 hr` and `~1 hr 20 min`. SwiftPM core tests pass (62/0); full Xcode build/test was attempted with project-local DerivedData but did not complete before timeout, so simulator UI validation remains blocked.
