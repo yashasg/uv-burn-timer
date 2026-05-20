@@ -76,9 +76,9 @@ final class DeviceLocationProvider: NSObject, ObservableObject, CLLocationManage
         }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+    nonisolated func locationManager(_: CLLocationManager, didFailWithError _: Error) {
         Task { @MainActor in
-            finish(with: .failure(error))
+            finish(with: .failure(DeviceLocationError.unavailable))
         }
     }
 

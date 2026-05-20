@@ -29,6 +29,8 @@
 		010101010101010101010117 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010106 /* AppIntents.framework */; };
 		010101010101010101010118 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010106 /* AppIntents.framework */; };
 		010101010101010101010119 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010106 /* AppIntents.framework */; };
+		010101010101010101010120 /* UVBurnTimerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101010F /* UVBurnTimerUITests.swift */; };
+		010101010101010101010121 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010106 /* AppIntents.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +47,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 050101010101010101010102;
 			remoteInfo = UVBurnTimerCore;
+		};
+		040101010101010101010103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 090101010101010101010101 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 050101010101010101010101;
+			remoteInfo = UVBurnTimer;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -77,12 +86,14 @@
 		02010101010101010101010C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		02010101010101010101010D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		02010101010101010101010E /* UVBurnTimerShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVBurnTimerShortcuts.swift; sourceTree = "<group>"; };
+		02010101010101010101010F /* UVBurnTimerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVBurnTimerUITests.swift; sourceTree = "<group>"; };
 		030101010101010101010101 /* UVBurnTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = UVBurnTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		030101010101010101010102 /* UVBurnTimerCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = UVBurnTimerCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		030101010101010101010103 /* UVBurnTimerCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UVBurnTimerCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		030101010101010101010104 /* WeatherKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WeatherKit.framework; path = System/Library/Frameworks/WeatherKit.framework; sourceTree = SDKROOT; };
 		030101010101010101010105 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		030101010101010101010106 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		030101010101010101010107 /* UVBurnTimerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UVBurnTimerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,6 +125,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		070101010101010101010104 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				010101010101010101010121 /* AppIntents.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -122,6 +141,7 @@
 			children = (
 				080101010101010101010102 /* Sources */,
 				080101010101010101010105 /* Tests */,
+				080101010101010101010108 /* UVBurnTimerUITests */,
 				080101010101010101010107 /* Frameworks */,
 				080101010101010101010106 /* Products */,
 			);
@@ -177,6 +197,7 @@
 				030101010101010101010101 /* UVBurnTimer.app */,
 				030101010101010101010102 /* UVBurnTimerCore.framework */,
 				030101010101010101010103 /* UVBurnTimerCoreTests.xctest */,
+				030101010101010101010107 /* UVBurnTimerUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,6 +210,14 @@
 				030101010101010101010106 /* AppIntents.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		080101010101010101010108 /* UVBurnTimerUITests */ = {
+			isa = PBXGroup;
+			children = (
+				02010101010101010101010F /* UVBurnTimerUITests.swift */,
+			);
+			path = Tests/UVBurnTimerUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -246,6 +275,23 @@
 			productReference = 030101010101010101010103 /* UVBurnTimerCoreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		050101010101010101010104 /* UVBurnTimerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100101010101010101010104 /* Build configuration list for PBXNativeTarget "UVBurnTimerUITests" */;
+			buildPhases = (
+				110101010101010101010104 /* Sources */,
+				070101010101010101010104 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				120101010101010101010103 /* PBXTargetDependency */,
+			);
+			name = UVBurnTimerUITests;
+			productName = UVBurnTimerUITests;
+			productReference = 030101010101010101010107 /* UVBurnTimerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -265,6 +311,10 @@
 					050101010101010101010103 = {
 						CreatedOnToolsVersion = 26.0;
 					};
+					050101010101010101010104 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 050101010101010101010101;
+					};
 				};
 			};
 			buildConfigurationList = 100101010101010101010100 /* Build configuration list for PBXProject "UVBurnTimer" */;
@@ -283,6 +333,7 @@
 				050101010101010101010101 /* UVBurnTimer */,
 				050101010101010101010102 /* UVBurnTimerCore */,
 				050101010101010101010103 /* UVBurnTimerCoreTests */,
+				050101010101010101010104 /* UVBurnTimerUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -333,6 +384,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		110101010101010101010104 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				010101010101010101010120 /* UVBurnTimerUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -345,6 +404,11 @@
 			isa = PBXTargetDependency;
 			target = 050101010101010101010102 /* UVBurnTimerCore */;
 			targetProxy = 040101010101010101010102 /* PBXContainerItemProxy */;
+		};
+		120101010101010101010103 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 050101010101010101010101 /* UVBurnTimer */;
+			targetProxy = 040101010101010101010103 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -521,6 +585,40 @@
 			};
 			name = Release;
 		};
+		130101010101010101010108 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @loader_path/Frameworks @executable_path/Frameworks";
+				OTHER_SWIFT_FLAGS = "$(inherited) -warnings-as-errors";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yashasgujjar.uvburntimer.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = UVBurnTimer;
+			};
+			name = Debug;
+		};
+		130101010101010101010109 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @loader_path/Frameworks @executable_path/Frameworks";
+				OTHER_SWIFT_FLAGS = "$(inherited) -warnings-as-errors";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yashasgujjar.uvburntimer.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_TREAT_WARNINGS_AS_ERRORS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = UVBurnTimer;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -556,6 +654,15 @@
 			buildConfigurations = (
 				130101010101010101010106 /* Debug */,
 				130101010101010101010107 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		100101010101010101010104 /* Build configuration list for PBXNativeTarget "UVBurnTimerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				130101010101010101010108 /* Debug */,
+				130101010101010101010109 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

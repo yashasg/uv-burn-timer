@@ -18,7 +18,21 @@
                BlueprintIdentifier = "050101010101010101010101"
                BuildableName = "UVBurnTimer.app"
                BlueprintName = "UVBurnTimer"
-               ReferencedContainer = "container:UVBurnTimer.xcodeproj">
+               ReferencedContainer = "container:app.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "050101010101010101010104"
+               BuildableName = "UVBurnTimerUITests.xctest"
+               BlueprintName = "UVBurnTimerUITests"
+               ReferencedContainer = "container:app.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -38,7 +52,18 @@
                BlueprintIdentifier = "050101010101010101010103"
                BuildableName = "UVBurnTimerCoreTests.xctest"
                BlueprintName = "UVBurnTimerCoreTests"
-               ReferencedContainer = "container:UVBurnTimer.xcodeproj">
+               ReferencedContainer = "container:app.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "050101010101010101010104"
+               BuildableName = "UVBurnTimerUITests.xctest"
+               BlueprintName = "UVBurnTimerUITests"
+               ReferencedContainer = "container:app.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -60,7 +85,7 @@
             BlueprintIdentifier = "050101010101010101010101"
             BuildableName = "UVBurnTimer.app"
             BlueprintName = "UVBurnTimer"
-            ReferencedContainer = "container:UVBurnTimer.xcodeproj">
+            ReferencedContainer = "container:app.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -77,7 +102,7 @@
             BlueprintIdentifier = "050101010101010101010101"
             BuildableName = "UVBurnTimer.app"
             BlueprintName = "UVBurnTimer"
-            ReferencedContainer = "container:UVBurnTimer.xcodeproj">
+            ReferencedContainer = "container:app.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

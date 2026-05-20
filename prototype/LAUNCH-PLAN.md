@@ -188,16 +188,16 @@ Estimated minutes to skin reddening — based on UV index, Fitzpatrick type, and
 - The persona has explicitly documented they *deleted* the subscription app.
 - Category evidence: QSun's subscription is the documented pain; Sunscreen (Apium Co.) and dminder Pro have held one-time pricing for years. The category does NOT successfully support subscriptions.
 
-### 90-Day No-IAP / No-Subscription Rule
+### Paid Download / No In-App Monetization Rule
 
-**Karai's explicit add — non-negotiable for first 90 days post-launch:**
+**Karai's explicit add — non-negotiable for launch and first 90 days post-launch:**
 
 The iOS dev team is **forbidden** from adding any of the following for the first 90 days after App Store launch:
-- Any in-app purchase (IAP) — e.g., "$0.99 daily-log feature"
+- Any in-app purchase or StoreKit product — e.g., "$0.99 daily-log feature"
 - Any subscription — e.g., "$2.99/yr forecast alerts"
 - Any tip jar
 
-**Rationale:** Any IAP or subscription added in the first 90 days flips the brand promise from "no subscription" to "well, mostly no subscription" — which is the same anti-positioning QSun has. The one-time $2.99 price IS the marketing wedge. Eroding it in the first 90 days destroys the wedge before it has time to compound.
+**Rationale:** Any in-app monetization added in the first 90 days flips the brand promise from "no subscription" to "well, mostly no subscription" — which is the same anti-positioning QSun has. The paid App Store download at $2.99 IS the marketing wedge. Eroding it in the first 90 days destroys the wedge before it has time to compound.
 
 After 90 days: pricing review permitted. Karai must be consulted before any monetization change.
 
@@ -206,7 +206,7 @@ After 90 days: pricing review permitted. Karai must be consulted before any mone
 After 90 days, the following questions should be revisited with actual sales data:
 - Is $2.99 leaving money on the table? (dminder Pro holds $3.99 in the same category)
 - Has QSun or UV Lens changed their subscription gate? (escalation trigger — see Time-Sensitive Notes)
-- Does the "no subscription ever" brand promise hold, or is there a non-IAP expansion path (e.g., one-time $1.99 widget add-on) that doesn't break the positioning?
+- Does the no-subscription brand promise hold, and can any expansion remain outside in-app monetization without breaking the positioning?
 
 ---
 
@@ -259,7 +259,7 @@ Secondary: `spf timer`, `sun safety app`, `outdoor uv calculator`, `hiker sun ex
 2. **🚨 Quarterly QSun + UV Lens pricing monitoring — first 90 days:**
    - Monitor QSun and UV Lens pricing **quarterly** for the first 90 days post-launch.
    - **Escalation trigger:** if QSun drops their subscription gate (moves burn-time to free tier) OR UV Lens adds a comparable one-time purchase, the wedge narrows or evaporates.
-   - **Escalation path:** Flag immediately to Karai. Do not alter pricing or add IAP without Karai sign-off.
+   - **Escalation path:** Flag immediately to Karai. Do not alter pricing or add any in-app monetization without Karai sign-off.
    - *(Michelangelo's flagged risk, Stage 1; carried into Stage 8 mitigation)*
 
 3. **Re-share window:** Early March (thru-hike planning season). Second re-share: late August (late-season hikers).
@@ -271,8 +271,8 @@ Secondary: `spf timer`, `sun safety app`, `outdoor uv calculator`, `hiker sun ex
 The following are **explicitly out of scope** for v1 and the first 90 days post-launch:
 
 - ❌ No push notifications of any kind
-- ❌ No IAP for any feature for 90+ days post-launch
-- ❌ No subscription — EVER (this would destroy the wedge)
+- ❌ No in-app purchases or StoreKit products for any feature for 90+ days post-launch
+- ❌ No subscription (this would destroy the wedge)
 - ❌ No medical / clinical / FDA / health-claim language anywhere
 - ❌ No health-condition targeting (no asthma, no immunocompromised, no condition-specific messaging)
 - ❌ No HealthKit integration (Apple HealthKit storage would trigger Health-category review scrutiny we don't want — Donatello explicit)
@@ -292,7 +292,7 @@ The following are **explicitly out of scope** for v1 and the first 90 days post-
 - **Persistence:**
   - **Skin type + SPF:** `@State` SwiftUI properties only — **NOT `@AppStorage`, NOT `UserDefaults`**. This is the iOS-side enforcement of Donatello M7 + Raphael Art.9 special-category-data mitigation. Skin type and SPF must live in app memory only — equivalent to URL-hash in the web prototype.
   - **Last-used coordinates:** `UserDefaults` — rounded to 2 decimal places. This is location data, not health data; `UserDefaults` is acceptable.
-- **Monetization:** StoreKit 2 non-consumable IAP at $2.99 (one-time, no subscription, no free tier with locked feature)
+- **Monetization:** Paid App Store download at $2.99. No StoreKit products, no in-app purchases, no subscriptions, no tip jar, and no free tier with locked features.
 - **First-launch disclaimer modal:** `.sheet(isPresented:)` that re-fires on every cold launch. Implement via a `@State` flag reset on `scenePhase` becoming `.active` after a previous `.background`. No "Don't Show Again" option.
 - **NO HealthKit integration.** Storing Fitzpatrick skin type in HealthKit would classify the app as handling sensitive health data and invite Health-category App Store review scrutiny. Skin type stays in-process only.
 - **NO third-party SDKs.** No Crashlytics, no Sentry, no Firebase, no Mixpanel. Zero-data architecture is mandatory.

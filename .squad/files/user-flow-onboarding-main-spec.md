@@ -59,7 +59,7 @@ The desktop-shaped 7-region grid is gone. LANE 2 now centers one portrait phone 
 2. **Large Title nav bar** — left-aligned `UV Burn Timer` + trailing ⚙︎ gear (SettingsSheet entry point).
 3. **Photosensitization loop banner** (yellow, 320×40) — `Taking photosensitizing meds? →`; this is the L1 reach-back surface when the loop is active, not a separate screen.
 4. **Hero verdict card** (amber, 320×224) — label `Burn time`, hero `47 min`, verdict `Moderate`, and inline caveat `Meds + conditions can shorten this. Learn more →`. The caveat preserves the `notForMe` deep-link pattern without reintroducing a desktop sub-panel.
-5. **UV Index secondary card** (neutral, 320×96) — `UV Index 6.2` + `Source: Apple WeatherKit`. This attribution stays visible in the portrait viewport.
+5. **UV Index secondary card** (neutral, 320×96) — `UV Index 6.2` + `Source: Apple Weather`. This attribution stays visible in the portrait viewport.
 6. **Location + skin row** — two compact 44pt chips: `📍 San Francisco ›` and `Type III ›`. Both imply a hop into settings rather than a separate dashboard panel.
 7. **L1 disclaimer link** — inline bottom-of-content link: `Informational only. Not medical advice. →`.
 8. **Home indicator** — thin bottom pill for safe-area completeness.
