@@ -43,3 +43,8 @@ Team approvals and implementations completed for approved redesign and paraphras
 
 All inbox decisions merged into decisions.md.
 
+### 2026-05-19T22:29:07.093-07:00 — Sunscreen two-hour cap science/product check
+
+- **Finding:** "Reapply sunscreen every 2 hours" is an upper-bound cadence, not a permission to rely on SPF-modeled burn protection beyond two hours. CDC/FDA/AAD-style guidance treats reapplication as at least every 2 hours and sooner after swimming, sweating, or toweling.
+- **Implementation handoff:** For any estimate where SPF is not `.none`, the user-facing burn/safe-window should be capped at `ProductTiming.sunscreenReapplicationIntervalSeconds` (120 minutes). If the raw SPF-adjusted burn model exceeds 120 minutes, display a 2-hour/reapply-capped result and copy that explains the model exceeded the sunscreen reapplication window rather than implying sunscreen protects longer.
+- **Nuance:** Keep unprotected (`SPF none`) estimates governed by the burn model; the 2-hour cap is a sunscreen-use claim bound, not a universal erythema threshold.

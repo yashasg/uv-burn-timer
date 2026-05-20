@@ -26,7 +26,7 @@ final class UVBurnTimerUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen every 2 hours").exists)
+        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen at least every 2 hours").exists)
         XCTAssertTrue(staticText(in: app, containing: "Not medical advice").exists)
     }
 
@@ -36,9 +36,11 @@ final class UVBurnTimerUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Location permission"].waitForExistence(timeout: 5))
         XCTAssertTrue(
-            app.staticTexts[
-                "Coordinates are rounded to 2 decimals for Apple Weather and only the last rounded coordinate may be saved on this device."
-            ].exists)
+            staticText(
+                in: app,
+                containing:
+                    "Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
+            ).exists)
         XCTAssertTrue(app.buttons["Continue to location request"].exists)
 
         app.buttons["Continue to location request"].tap()
@@ -52,7 +54,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Try again"].exists)
 
         XCTAssertTrue(app.segmentedControls.buttons["30"].isSelected)
-        XCTAssertTrue(app.segmentedControls.buttons["None"].exists)
+        XCTAssertFalse(app.segmentedControls.buttons["None"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["15"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["50"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["70+"].exists)
@@ -129,7 +131,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Estimate window elapsed"].exists)
         XCTAssertTrue(app.buttons["Recalculate"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["Short burn-time tier — critical"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen every 2 hours").exists)
+        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen at least every 2 hours").exists)
     }
 
     func testScenario8ForegroundAfterElapsedEstimateReattestsDisclaimer() {
@@ -147,17 +149,19 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestCappedEstimate"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["240+ min"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Up to 2 hr"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Sunscreen reapplication limit"].exists)
+        XCTAssertTrue(staticText(in: app, containing: "capped at 2 hours").exists)
         XCTAssertTrue(app.staticTexts["Long estimate caveat"].exists)
         XCTAssertTrue(staticText(in: app, containing: "does not mean prolonged sun exposure is safe").exists)
-        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen every 2 hours").exists)
+        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen at least every 2 hours").exists)
     }
 
     func testLongUncappedEstimateStillRendersSafetyCaveat() {
         let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["~80 min"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Long estimate caveat"].exists)
         XCTAssertTrue(
             app.descendants(matching: .any)["Long burn-time tier — longer estimate, not safe exposure"].exists)
@@ -199,7 +203,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["~80 min"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5))
 
         let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
         XCTAssertTrue(
@@ -225,7 +229,7 @@ final class UVBurnTimerUITests: XCTestCase {
 
         // Hero estimate visible as the dominant element.
         XCTAssertTrue(
-            app.staticTexts["~80 min"].waitForExistence(timeout: 5),
+            app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5),
             "Hero time estimate must be visible — it is the primary cue, not the gauge"
         )
 
@@ -325,7 +329,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["30"].isSelected)
-        XCTAssertFalse(app.staticTexts["240+ min"].exists)
+        XCTAssertFalse(app.staticTexts["4+ hr"].exists)
         XCTAssertFalse(app.staticTexts["UV Index 8.0"].exists)
         app.buttons["Settings"].tap()
 
@@ -337,6 +341,20 @@ final class UVBurnTimerUITests: XCTestCase {
 
         XCTAssertTrue(app.buttons["Location"].waitForExistence(timeout: 5))
         XCTAssertFalse(staticText(in: app, containing: "Approx. 37.77, -122.42").exists)
+    }
+
+    func testSavedPreferencesRestoreAfterDisclaimerWithoutRepeatingPrompts() {
+        let app = launchApp(arguments: ["-uiTestSavedPreferences"])
+
+        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5))
+        app.buttons["I understand"].tap()
+
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.navigationBars["Choose skin type"].exists)
+        XCTAssertFalse(app.staticTexts["Location permission"].exists)
+        XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.segmentedControls.buttons["50"].isSelected)
+        XCTAssertFalse(app.segmentedControls.buttons["None"].exists)
     }
 
     func testMainScreenDoesNotExposeFitzpatrickPickerAfterOnboarding() {

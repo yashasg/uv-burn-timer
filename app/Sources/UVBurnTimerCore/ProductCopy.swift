@@ -24,7 +24,7 @@ public enum ProductCopy {
     public static let locationRationale =
         "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather."
     public static let locationPrivacyLine =
-        "Coordinates are rounded to 2 decimals for Apple Weather and only the last rounded coordinate may be saved on this device."
+        "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
     public static let cacheRetentionLine =
         "The app stores only the last rounded coordinate for location context; it does not save UV values, burn estimates, skin type, or SPF."
     public static let clearSavedLocationButtonTitle = "Clear saved location"
@@ -40,8 +40,10 @@ public enum ProductCopy {
         "Recalculate before relying on this estimate. Sunscreen should still be reapplied every 2 hours."
     public static let longEstimateHedge =
         "A long estimate does not mean prolonged sun exposure is safe; conditions and skin response can change."
+    public static let sunscreenCapHedge =
+        "SPF math may estimate a longer burn threshold, but sunscreen-protected windows are capped at 2 hours because sunscreen should be reapplied at least that often."
     public static let reapplicationFooter =
-        "Cover up if skin reddens. Reapply sunscreen every 2 hours regardless of timer. Informational only. Not medical advice. Skin response varies."
+        "Cover up if skin reddens. Reapply sunscreen at least every 2 hours regardless of timer. Informational only. Not medical advice. Skin response varies."
     public static let mainVerdictCaveatLinkLabel = "Meds + conditions can shorten this. Learn more"
     public static let skinTypePickerPrompt = "Choose by how your skin burns and tans, not by how it looks."
     public static let skinTypePickerSubtext =
@@ -59,9 +61,9 @@ public enum ProductCopy {
     public static let aboutEstimateApplicability =
         "The estimate may overstate your burn window if you take certain medications known to increase sun sensitivity, including some retinoid acne treatments, tetracycline-class antibiotics, autoimmune-disease medications, diuretics, heart-rhythm medications, or antifungals; have photosensitive conditions such as lupus, vitiligo, albinism, or porphyria; have had recent skin treatments such as laser, chemical peel, microneedling, or retinoid therapy; are pregnant; or are unsure whether UV exposure guidance applies to you. Fitzpatrick IV–VI estimates carry wider uncertainty because published MED values are commonly represented as ranges. Consult a dermatologist before using this estimate to plan sun exposure."
     public static let aboutHowThisWorks =
-        "How this works: the app estimates minutes to one minimal erythemal dose by combining your selected Fitzpatrick skin type, your SPF selection, and the current UV index. Higher UV shortens the estimate; SPF lengthens the model estimate only when sunscreen is applied correctly and reapplied. SPF 70+ is conservatively modeled as SPF 50."
+        "How this works: the app estimates minutes to one minimal erythemal dose by combining your selected Fitzpatrick skin type, your SPF selection, and the current UV index. Higher UV shortens the estimate; SPF lengthens the model estimate only when sunscreen is applied correctly and reapplied, and sunscreen-protected displayed windows are capped at 2 hours. SPF 70+ is conservatively modeled as SPF 50."
     public static let aboutSunscreenAssumptions =
-        "The estimate assumes sunscreen remains correctly applied. Water, sweat, and toweling can remove sunscreen; reapply sooner when the label or your situation calls for it."
+        "The estimate assumes sunscreen remains correctly applied. Reapply at least every 2 hours, and sooner when water, sweat, toweling, the label, or your situation calls for it."
     public static let aboutWeatherVariability =
         "Why this number changes with weather: UV can pass through clouds, haze, and reflected glare, and the UV index can change quickly with time of day and conditions. Recalculate before relying on an older estimate."
     public static let aboutModelLimitations =
@@ -69,7 +71,7 @@ public enum ProductCopy {
     public static let pediatricAndEscalationGuidance =
         "Children need pediatric guidance. Seek urgent care for severe sunburn symptoms such as blistering, fever, chills, dizziness, confusion, dehydration, or feeling very unwell."
     public static let aboutPrivacy =
-        "Skin type and SPF stay in app memory only. Rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. No accounts, analytics, ads, crash SDKs, or third-party tracking."
+        "Skin type and SPF stay in app memory only. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. No accounts, analytics, ads, crash SDKs, or third-party tracking."
     public static let outdoorReadabilityTip =
         "Bright sunlight? Try Settings → Accessibility → Display & Text Size → Increase Contrast."
     public static let weatherAttributionServiceName = "Apple Weather"
@@ -126,6 +128,7 @@ public enum ProductCopy {
         weatherUnavailableMessage,
         estimateElapsedWarning,
         longEstimateHedge,
+        sunscreenCapHedge,
         reapplicationFooter,
         mainVerdictCaveatLinkLabel,
         skinTypePickerPrompt,
@@ -152,6 +155,7 @@ public enum ProductCopy {
 
 public enum ProductTiming {
     public static let sunscreenReapplicationIntervalSeconds: TimeInterval = 2 * 60 * 60
+    public static let sunscreenReapplicationIntervalMinutes: Double = sunscreenReapplicationIntervalSeconds / 60
 }
 
 public enum EstimateContextLine {

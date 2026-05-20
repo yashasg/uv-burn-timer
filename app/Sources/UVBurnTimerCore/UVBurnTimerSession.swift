@@ -46,6 +46,61 @@ public struct SkinTypeOnboardingDraft: Equatable, Sendable {
     }
 }
 
+public enum UserPreferenceStorage {
+    public static let selectedSkinTypeKey = "selectedSkinType"
+    public static let selectedSPFKey = "selectedSPF"
+    public static let locationRationaleAcknowledgedKey = "locationRationaleAcknowledged"
+    public static let unsetSkinTypeRawValue = 0
+
+    public static func restoredSession(
+        from defaults: UserDefaults = .standard,
+        acknowledgedDisclaimer: Bool = false
+    ) -> UVBurnTimerSession {
+        UVBurnTimerSession(
+            selectedSkinType: restoredSkinType(from: defaults),
+            selectedSPF: restoredSPF(from: defaults),
+            acknowledgedDisclaimer: acknowledgedDisclaimer
+        )
+    }
+
+    public static func restoredSkinType(from defaults: UserDefaults = .standard) -> FitzpatrickSkinType? {
+        guard defaults.object(forKey: selectedSkinTypeKey) != nil else {
+            return nil
+        }
+
+        return FitzpatrickSkinType(rawValue: defaults.integer(forKey: selectedSkinTypeKey))
+    }
+
+    public static func restoredSPF(from defaults: UserDefaults = .standard) -> SPFLevel {
+        guard defaults.object(forKey: selectedSPFKey) != nil,
+            let spf = SPFLevel(rawValue: defaults.integer(forKey: selectedSPFKey)),
+            spf.isSunscreen
+        else {
+            return .spf30
+        }
+
+        return spf
+    }
+
+    public static func persist(skinType: FitzpatrickSkinType?, to defaults: UserDefaults = .standard) {
+        if let skinType {
+            defaults.set(skinType.rawValue, forKey: selectedSkinTypeKey)
+        } else {
+            defaults.removeObject(forKey: selectedSkinTypeKey)
+        }
+    }
+
+    public static func persist(spf: SPFLevel, to defaults: UserDefaults = .standard) {
+        defaults.set((spf.isSunscreen ? spf : .spf30).rawValue, forKey: selectedSPFKey)
+    }
+
+    public static func clearStoredPreferences(from defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: selectedSkinTypeKey)
+        defaults.removeObject(forKey: selectedSPFKey)
+        defaults.removeObject(forKey: locationRationaleAcknowledgedKey)
+    }
+}
+
 public enum DisclaimerReattestationPolicy {
     public static func shouldPresentOnForeground(
         returnedFromBackground: Bool,

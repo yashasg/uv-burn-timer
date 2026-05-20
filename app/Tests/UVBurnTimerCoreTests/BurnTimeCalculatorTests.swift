@@ -3,10 +3,10 @@ import Testing
 
 @testable import UVBurnTimerCore
 
-@Test func typeOneWithoutSPFAtUVTenIsShortWindow() throws {
+@Test func unprotectedReferenceAtUVTenIsShortWindow() throws {
     let estimate = try BurnTimeCalculator.estimate(
         skinType: .typeI,
-        spf: .none,
+        spf: .unprotectedReference,
         uvIndex: 10
     )
 
@@ -15,7 +15,7 @@ import Testing
     #expect(estimate.displayText == "~13 min")
 }
 
-@Test func typeThreeWithSPFThirtyAtUVEightCapsDisplayButKeepsRawModel() throws {
+@Test func typeThreeWithSPFThirtyAtUVEightCapsSunscreenWindowButKeepsRawModel() throws {
     let estimate = try BurnTimeCalculator.estimate(
         skinType: .typeIII,
         spf: .spf30,
@@ -24,8 +24,52 @@ import Testing
 
     #expect(estimate.rawMinutes == 750)
     #expect(estimate.tier == .long)
+    #expect(estimate.isSunscreenProtected)
+    #expect(estimate.isCappedForSunscreenReapplication)
     #expect(estimate.isCappedForDisplay)
-    #expect(estimate.displayText == "240+ min")
+    #expect(estimate.effectiveWindowMinutes == 120)
+    #expect(estimate.roundedDisplayMinutes == 120)
+    #expect(estimate.displayText == "Up to 2 hr")
+    #expect(estimate.accessibilitySummary.localizedCaseInsensitiveContains("up to 2 hours"))
+    #expect(estimate.accessibilitySummary.localizedCaseInsensitiveContains("reapply sunscreen at least every 2 hours"))
+}
+
+@Test func sunscreenEstimateUnderTwoHoursIsNotCapped() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeI,
+        spf: .spf15,
+        uvIndex: 20
+    )
+
+    #expect(estimate.rawMinutes == 100)
+    #expect(estimate.isSunscreenProtected)
+    #expect(!estimate.isCappedForSunscreenReapplication)
+    #expect(estimate.effectiveWindowMinutes == 100)
+    #expect(estimate.displayText == "~1 hr 40 min")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 1 hour 40 minutes.")
+}
+
+@Test func exactOneHourEstimateDoesNotShowRawSixtyMinutes() {
+    let estimate = BurnTimeEstimate(rawMinutes: 60, tier: .long, isSunscreenProtected: false)
+
+    #expect(estimate.roundedDisplayMinutes == 60)
+    #expect(estimate.displayText == "~1 hr")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 1 hour.")
+}
+
+@Test func unprotectedReferenceEstimateOverTwoHoursKeepsUnprotectedWindow() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeVI,
+        spf: .unprotectedReference,
+        uvIndex: 4
+    )
+
+    #expect(estimate.rawMinutes > 120)
+    #expect(!estimate.isSunscreenProtected)
+    #expect(!estimate.isCappedForSunscreenReapplication)
+    #expect(estimate.effectiveWindowMinutes == estimate.rawMinutes)
+    #expect(estimate.displayText == "~2 hr 47 min")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 2 hours 47 minutes.")
 }
 
 @Test func zeroUVProducesNoUVState() throws {
@@ -45,7 +89,7 @@ import Testing
 @Test func moderateBurnWindowHasExpectedDisplayAndAccessibilitySummary() throws {
     let estimate = try BurnTimeCalculator.estimate(
         skinType: .typeIII,
-        spf: .none,
+        spf: .unprotectedReference,
         uvIndex: 6
     )
 
@@ -75,7 +119,7 @@ import Testing
 @Test func fractionalUVValuesRoundDisplayWithoutChangingTier() throws {
     let estimate = try BurnTimeCalculator.estimate(
         skinType: .typeIII,
-        spf: .none,
+        spf: .unprotectedReference,
         uvIndex: 6.2
     )
 
@@ -154,8 +198,8 @@ import Testing
     let fetchedAt = Date(timeIntervalSince1970: 1_000)
     let estimate = try BurnTimeCalculator.estimate(
         skinType: .typeII,
-        spf: .none,
-        uvIndex: 10
+        spf: .spf15,
+        uvIndex: 200
     )
 
     tracker.recordBackgroundEntry()
@@ -250,15 +294,22 @@ import Testing
 }
 
 @Test func spfContextLabelsAreHumanReadable() {
-    #expect(SPFLevel.none.contextLabel == "none")
+    #expect(SPFLevel.unprotectedReference.contextLabel == "unprotected reference")
     #expect(SPFLevel.spf15.contextLabel == "15")
     #expect(SPFLevel.spf30.contextLabel == "30")
     #expect(SPFLevel.spf50.contextLabel == "50")
     #expect(SPFLevel.spf70Plus.contextLabel == "70+")
 }
 
+@Test func spfUserFacingCasesAreOnlySunscreenProducts() {
+    #expect(SPFLevel.allCases == [.spf15, .spf30, .spf50, .spf70Plus])
+    #expect(!SPFLevel.allCases.contains(.unprotectedReference))
+    #expect(SPFLevel.allCases.map(\.isSunscreen) == [true, true, true, true])
+    #expect(UVBurnTimerSession().selectedSPF == .spf30)
+}
+
 @Test func spfRawValuesMatchMultiplierContract() throws {
-    #expect(SPFLevel.none.rawValue == 1)
+    #expect(SPFLevel.unprotectedReference.rawValue == 1)
     #expect(SPFLevel.spf15.rawValue == 15)
     #expect(SPFLevel.spf30.rawValue == 30)
     #expect(SPFLevel.spf50.rawValue == 50)
@@ -267,7 +318,7 @@ import Testing
 
     let unprotected = try BurnTimeCalculator.estimate(
         skinType: .typeII,
-        spf: .none,
+        spf: .unprotectedReference,
         uvIndex: 7
     )
 
@@ -284,7 +335,7 @@ import Testing
     let unprotectedMinutes = 250.0 / (10.0 * 0.025) / 60.0
 
     #expect(estimate.rawMinutes == unprotectedMinutes * 50)
-    #expect(estimate.displayText == "240+ min")
+    #expect(estimate.displayText == "Up to 2 hr")
 }
 
 @Test func approvedMainScreenSafetyCopyIsCaptured() {
@@ -298,6 +349,7 @@ import Testing
         ProductCopy.locationRationale
             == "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather.")
     #expect(ProductCopy.locationPrivacyLine.contains("2 decimals"))
+    #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("approximate location"))
     #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("last rounded coordinate"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("last rounded coordinate"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("does not save UV values"))
@@ -312,7 +364,8 @@ import Testing
     #expect(ProductCopy.weatherUnavailableMessage.localizedCaseInsensitiveContains("Apple Weather"))
     #expect(ProductCopy.weatherUnavailableMessage.localizedCaseInsensitiveContains("try again"))
     #expect(ProductCopy.estimateElapsedWarning.contains("Recalculate"))
-    #expect(ProductCopy.reapplicationFooter.contains("Reapply sunscreen every 2 hours"))
+    #expect(ProductCopy.reapplicationFooter.contains("Reapply sunscreen at least every 2 hours"))
+    #expect(ProductCopy.sunscreenCapHedge.localizedCaseInsensitiveContains("capped at 2 hours"))
     #expect(ProductCopy.reapplicationFooter.localizedCaseInsensitiveContains("cover up"))
     #expect(ProductCopy.reapplicationFooter.localizedCaseInsensitiveContains("skin reddens"))
     #expect(ProductCopy.mainVerdictCaveatLinkLabel == "Meds + conditions can shorten this. Learn more")
@@ -416,6 +469,8 @@ import Testing
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("SPF"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("70+"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("modeled as SPF 50"))
+    #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("capped at 2 hours"))
+    #expect(ProductCopy.aboutSunscreenAssumptions.localizedCaseInsensitiveContains("at least every 2 hours"))
     #expect(ProductCopy.outdoorReadabilityTip.localizedCaseInsensitiveContains("Increase Contrast"))
 }
 
@@ -436,6 +491,7 @@ import Testing
 
 @Test func aboutPrivacyCopyDescribesRoundedCoordinatesToAppleWeather() {
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("rounded coordinates"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("approximate location"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("Apple Weather"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("skin type and SPF"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("app memory only"))
@@ -573,15 +629,15 @@ import Testing
     #expect(
         EstimateContextLine.text(
             skinType: .typeI,
-            spf: .none,
+            spf: .spf15,
             uvIndex: 10
-        ) == "Fitzpatrick I · SPF none · UV index 10.0")
+        ) == "Fitzpatrick I · SPF 15 · UV index 10.0")
 }
 
 @Test func heroAccessibilitySummaryCombinesSafetyCriticalVerdictContext() throws {
     let estimate = try BurnTimeCalculator.estimate(
         skinType: .typeIII,
-        spf: .none,
+        spf: .unprotectedReference,
         uvIndex: 6
     )
 
@@ -807,6 +863,34 @@ import Testing
     #expect(draft.canContinue)
     #expect(draft.commit(to: &session))
     #expect(session.selectedSkinType == .typeIII)
+}
+
+@Test func userPreferenceStorageRestoresSkinTypeSPFAndSafeDefaults() throws {
+    let defaults = try #require(UserDefaults(suiteName: "UVBurnTimerPreferenceStorageTests"))
+    defaults.removePersistentDomain(forName: "UVBurnTimerPreferenceStorageTests")
+
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSkinType == nil)
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30)
+
+    UserPreferenceStorage.persist(skinType: .typeIV, to: defaults)
+    UserPreferenceStorage.persist(spf: .spf50, to: defaults)
+
+    var restoredSession = UserPreferenceStorage.restoredSession(from: defaults)
+    #expect(restoredSession.selectedSkinType == .typeIV)
+    #expect(restoredSession.selectedSPF == .spf50)
+    #expect(!restoredSession.acknowledgedDisclaimer)
+
+    defaults.set(SPFLevel.unprotectedReference.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+    restoredSession = UserPreferenceStorage.restoredSession(from: defaults)
+    #expect(restoredSession.selectedSPF == .spf30)
+
+    defaults.set(999, forKey: UserPreferenceStorage.selectedSPFKey)
+    restoredSession = UserPreferenceStorage.restoredSession(from: defaults)
+    #expect(restoredSession.selectedSPF == .spf30)
+
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSkinType == nil)
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30)
 }
 
 private func appRootURL() throws -> URL {

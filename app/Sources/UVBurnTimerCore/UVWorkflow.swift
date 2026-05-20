@@ -37,7 +37,7 @@ public struct CachedRoundedCoordinate: Codable, Equatable, Sendable {
     public let roundedCoordinate: UVCoordinate
 
     public init(roundedCoordinate: UVCoordinate) {
-        self.roundedCoordinate = roundedCoordinate
+        self.roundedCoordinate = roundedCoordinate.roundedForWeatherRequest
     }
 
     public init(snapshot: UVSnapshot) {

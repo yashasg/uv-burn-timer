@@ -16,6 +16,12 @@ struct RootView: View {
     @Binding var showDisclaimer: Bool
     @AppStorage("lastRoundedCoordinate") private var cachedRoundedCoordinateStorage = ""
     @AppStorage("lastUVSnapshot") private var legacyCachedUVSnapshotStorage = ""
+    @AppStorage(UserPreferenceStorage.selectedSkinTypeKey) private var persistedSkinTypeRawValue =
+        UserPreferenceStorage.unsetSkinTypeRawValue
+    @AppStorage(UserPreferenceStorage.selectedSPFKey) private var persistedSPFRawValue = SPFLevel.spf30.rawValue
+    @AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey) private
+        var persistedLocationRationaleAcknowledged =
+        false
     @StateObject private var locationProvider = DeviceLocationProvider()
     @State private var showSettings = false
     @State private var uvIndex: Double?
@@ -117,6 +123,12 @@ struct RootView: View {
             }
             .onChange(of: statusMessage) { _, newValue in
                 announceStatusForAccessibility(newValue)
+            }
+            .onChange(of: session.selectedSkinType) { _, selectedSkinType in
+                persist(skinType: selectedSkinType)
+            }
+            .onChange(of: session.selectedSPF) { _, selectedSPF in
+                persist(spf: selectedSPF)
             }
             .sheet(isPresented: $showSettings) {
                 SettingsSheet(
@@ -261,7 +273,7 @@ struct RootView: View {
                 throw UVBurnTimerWorkflowError.missingSkinType
             }
 
-            guard locationPromptGate.allowSystemPromptOrAcknowledgeRationale() else {
+            guard allowLocationRequestOrPersistRationale() else {
                 statusMessage = "Location rationale reviewed. Tap Use my location to continue."
                 return
             }
@@ -339,10 +351,39 @@ struct RootView: View {
     }
 
     private func handleAppear() {
+        syncPreferenceStorageFromSession()
+        restoreLocationPromptChoice()
         restoreSavedRoundedCoordinate()
         applyUITestStaleEstimateSeedIfNeeded()
         applyUITestCappedEstimateSeedIfNeeded()
         applyUITestLongUncappedEstimateSeedIfNeeded()
+    }
+
+    private func syncPreferenceStorageFromSession() {
+        persist(skinType: session.selectedSkinType)
+        persist(spf: session.selectedSPF)
+    }
+
+    private func persist(skinType: FitzpatrickSkinType?) {
+        persistedSkinTypeRawValue = skinType?.rawValue ?? UserPreferenceStorage.unsetSkinTypeRawValue
+    }
+
+    private func persist(spf: SPFLevel) {
+        persistedSPFRawValue = (spf.isSunscreen ? spf : .spf30).rawValue
+    }
+
+    private func restoreLocationPromptChoice() {
+        guard persistedLocationRationaleAcknowledged else {
+            return
+        }
+
+        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+    }
+
+    private func allowLocationRequestOrPersistRationale() -> Bool {
+        let isAllowed = locationPromptGate.allowSystemPromptOrAcknowledgeRationale()
+        persistedLocationRationaleAcknowledged = locationPromptGate.hasAcknowledgedRationale
+        return isAllowed
     }
 
     private func restoreSavedRoundedCoordinate() {
@@ -358,6 +399,7 @@ struct RootView: View {
             {
                 roundedCoordinate = restoredCoordinate
                 locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+                persistedLocationRationaleAcknowledged = true
             }
         } catch {
             cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
@@ -368,6 +410,7 @@ struct RootView: View {
         do {
             cachedRoundedCoordinateStorage = try CachedRoundedCoordinateStorage.storageValue(for: snapshot)
             legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
+            persistedLocationRationaleAcknowledged = true
         } catch {
             cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         }
@@ -386,7 +429,7 @@ struct RootView: View {
             return
         }
 
-        uvIndex = 10
+        uvIndex = 200
         fetchedAt = Date().addingTimeInterval(-15 * 60)
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
         locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
@@ -414,7 +457,7 @@ struct RootView: View {
             return
         }
 
-        uvIndex = 2.5
+        uvIndex = 37.5
         fetchedAt = Date()
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
         locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
@@ -478,6 +521,13 @@ struct HeroTimerCard: View {
                         title: "Long estimate caveat",
                         message: ProductCopy.longEstimateHedge,
                         systemImage: "shield.lefthalf.filled"
+                    )
+                }
+                if estimate.isCappedForSunscreenReapplication {
+                    SafetyStatusCard(
+                        title: "Sunscreen reapplication limit",
+                        message: ProductCopy.sunscreenCapHedge,
+                        systemImage: "clock.badge.exclamationmark"
                     )
                 }
             } else {
@@ -1448,7 +1498,7 @@ struct BurnRiskGaugeCard: View {
         .frame(width: gaugeDiameter, height: gaugeDiameter)
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Burn risk gauge. \(percentText) of estimated burn window elapsed.")
+        .accessibilityLabel("Burn risk gauge. \(percentText) \(gaugeAccessibilityWindowDescription) elapsed.")
         .accessibilityValue(percentText)
         .accessibilityHint("Secondary risk indicator. The hero timer card shows the full estimate.")
         .accessibilityIdentifier("BurnRiskGauge")
@@ -1456,10 +1506,7 @@ struct BurnRiskGaugeCard: View {
 
     private var burnFraction: Double {
         let elapsedSeconds = now.timeIntervalSince(fetchedAt)
-        let burnWindowSeconds = min(
-            estimate.rawMinutes * 60,
-            ProductTiming.sunscreenReapplicationIntervalSeconds
-        )
+        let burnWindowSeconds = estimate.effectiveWindowMinutes * 60
         return min(1.0, max(0.0, elapsedSeconds / burnWindowSeconds))
     }
 
@@ -1468,7 +1515,19 @@ struct BurnRiskGaugeCard: View {
     }
 
     private var supportingText: String {
-        "\(percentText) of burn window elapsed"
+        if estimate.isCappedForSunscreenReapplication {
+            return "\(percentText) of 2-hour sunscreen reapplication window elapsed"
+        }
+
+        return "\(percentText) of burn window elapsed"
+    }
+
+    private var gaugeAccessibilityWindowDescription: String {
+        if estimate.isCappedForSunscreenReapplication {
+            return "of 2-hour sunscreen reapplication window"
+        }
+
+        return "of estimated burn window"
     }
 
     private var tierColor: Color {

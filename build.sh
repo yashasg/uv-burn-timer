@@ -7,7 +7,7 @@
 #   TEST_CONFIGURATION   Configuration used for the test run (default: Debug)
 #   DERIVED_DATA_PATH    DerivedData path (default: UV_BURN_TIMER_DERIVED_DATA_PATH or mktemp)
 #   RUN_TESTS            "true"/"false" — whether to run the test suite (default: true)
-#   PLATFORM_MODE        "iphone" selects iPhone 17 Pro simulator (default)
+#   PLATFORM_MODE        "iphone" selects the default stable iPhone simulator
 #   RUN_ANALYZE          reserved, not yet used
 #   RUN_SWIFT_FORMAT     reserved; swift-format is handled separately by CI
 #
@@ -40,18 +40,61 @@ run_tests="${RUN_TESTS:-true}"
 # ---------------------------------------------------------------------------
 
 select_destination() {
-  local preferred_device="iPhone 17 Pro"
-  local available_devices
-  available_devices="$(xcrun simctl list devices available)"
   local device_id
+  local booted_devices
+  booted_devices="$(xcrun simctl list devices booted)"
 
-  if grep -Fq "$preferred_device (" <<< "$available_devices"; then
-    device_id="$(grep -F "$preferred_device (" <<< "$available_devices" | head -n 1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+  if [[ "$booted_devices" =~ "^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)" ]]; then
+    device_id="$(
+      awk '
+        /^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)/ && !found {
+          if (match($0, /\([0-9A-F-]{36}\)/)) {
+            print substr($0, RSTART + 1, 36)
+            found = 1
+          }
+        }
+      ' <<< "$booted_devices"
+    )"
     echo "platform=iOS Simulator,id=$device_id,arch=arm64"
     return
   fi
 
-  echo "platform=iOS Simulator,name=$preferred_device,OS=latest"
+  local available_devices
+  available_devices="$(xcrun simctl list devices available)"
+
+  local xcode_major
+  local xcode_version_output
+  xcode_version_output="$(xcodebuild -version)"
+  xcode_major="$(awk '/^Xcode / && !found { split($2, parts, "."); print parts[1]; found = 1 }' <<< "$xcode_version_output")"
+
+  local -a preferred_devices
+  if [[ -n "$xcode_major" && "$xcode_major" -lt 26 ]]; then
+    # Xcode 16.4 on GitHub's macOS 15 image can list iPhone 17 Pro
+    # (iPhone18,1/iOS 26) but actool cannot resolve that device's trait set.
+    preferred_devices=("iPhone 16 Pro" "iPhone 16" "iPhone 15")
+  else
+    preferred_devices=("iPhone 17 Pro" "iPhone 16 Pro" "iPhone 16" "iPhone 15")
+  fi
+
+  local preferred_device
+  for preferred_device in "${preferred_devices[@]}"; do
+    if [[ "$available_devices" == *"$preferred_device ("* ]]; then
+      device_id="$(
+        awk -v device="$preferred_device" '
+          index($0, device " (") && !found {
+            if (match($0, /\([0-9A-F-]{36}\)/)) {
+              print substr($0, RSTART + 1, 36)
+              found = 1
+            }
+          }
+        ' <<< "$available_devices"
+      )"
+      echo "platform=iOS Simulator,id=$device_id,arch=arm64"
+      return
+    fi
+  done
+
+  echo "platform=iOS Simulator,name=${preferred_devices[-1]},OS=latest"
 }
 
 destination="${UV_BURN_TIMER_DESTINATION:-$(select_destination)}"
@@ -110,6 +153,7 @@ if [[ -n "$ci_configuration" ]]; then
         -scheme UVBurnTimer \
         -configuration "$test_configuration" \
         -destination "$destination" \
+        -parallel-testing-enabled NO \
         SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
         GCC_TREAT_WARNINGS_AS_ERRORS=YES \
         OTHER_SWIFT_FLAGS="-warnings-as-errors" \
@@ -134,6 +178,7 @@ else
       -scheme UVBurnTimer \
       -configuration Debug \
       -destination "$destination" \
+      -parallel-testing-enabled NO \
       SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
       GCC_TREAT_WARNINGS_AS_ERRORS=YES \
       OTHER_SWIFT_FLAGS="-warnings-as-errors" \
