@@ -26,7 +26,7 @@ public enum ProductCopy {
     public static let locationPrivacyLine =
         "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
     public static let cacheRetentionLine =
-        "The app stores only the last rounded coordinate for location context; it does not save UV values, burn estimates, skin type, or SPF."
+        "The app stores skin type, SPF, the location-rationale acknowledgment, and the last rounded coordinate on this device; it does not save UV values, burn estimates, or disclaimer acknowledgments between launches."
     public static let clearSavedLocationButtonTitle = "Clear saved location"
     public static let locationDeniedEmptyState =
         "Location access is off. You can adjust SPF and skin type now; enable When In Use access in Settings, then tap Use my location again."
@@ -71,7 +71,7 @@ public enum ProductCopy {
     public static let pediatricAndEscalationGuidance =
         "Children need pediatric guidance. Seek urgent care for severe sunburn symptoms such as blistering, fever, chills, dizziness, confusion, dehydration, or feeling very unwell."
     public static let aboutPrivacy =
-        "Skin type and SPF stay in app memory only. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. No accounts, analytics, ads, crash SDKs, or third-party tracking."
+        "Skin type, SPF, and the location-rationale acknowledgment persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. UV values, burn estimates, and disclaimer acknowledgments are not retained between launches. No accounts, analytics, ads, crash SDKs, or third-party tracking."
     public static let whatTheAppDoesNotDo =
         "UV Burn Timer does not diagnose, prevent, or treat sunburn; does not replace professional medical advice; does not track your exposure over time; does not send alerts or timers; and does not account for shade, clothing, altitude, reflected glare, water, sweat, toweling, or changing weather after the UV value is fetched."
     public static let lastUpdatedLine = "Last updated: 2026-05-20."
