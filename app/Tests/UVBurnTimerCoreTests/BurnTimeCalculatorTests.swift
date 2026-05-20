@@ -452,6 +452,47 @@ import Testing
     #expect(copy.localizedCaseInsensitiveContains("shade"))
 }
 
+/// Spec §LANE 1 Screen 2 and `suchi-persona-annotations.md` (Screen 1 — Asha):
+/// the L1 disclaimer must surface "see About" as an **inline** deep-link
+/// inside a short sentence about photosensitizing medications and
+/// conditions, NOT as a separate bordered button below the body. Asha
+/// (P4, Accutane) reads "If you take a photosensitizing medication or
+/// have a sun-sensitive condition — see About", taps the inline link,
+/// reads the cohort list in About at the `notForMe` anchor, returns to
+/// the still-present cover, and taps `I understand`.
+///
+/// This test pins:
+///   1. The plain-text variant exposes both the cohort framing and the
+///      `see About` reach-back text so screen-readers and copy audits
+///      see continuous prose.
+///   2. The Markdown variant embeds `see About` as a `[see About](...)`
+///      Markdown link that SwiftUI's `Text(LocalizedStringKey:)` will
+///      render as a tappable inline link.
+///   3. The link target uses the in-app `uvburntimer://about-applicability`
+///      route so the `openURL` interceptor in `DisclaimerCover` can route
+///      the tap to the About sheet without exposing the URL to the system
+///      browser.
+///   4. The inline prompt is part of the audited copy surfaces so any
+///      future copy drift is caught by `productCopyAvoidsBannedClinicalClaims`
+///      and the monetization-drift guard.
+@Test func disclaimerSurfacesInlineSeeAboutDeepLinkForPhotosensitiveCohort() {
+    let prompt = ProductCopy.disclaimerSeeAboutInlinePrompt
+    let markdown = ProductCopy.disclaimerSeeAboutInlineMarkdown
+
+    #expect(prompt.localizedCaseInsensitiveContains("photosensitizing medication"))
+    #expect(prompt.localizedCaseInsensitiveContains("sun-sensitive condition"))
+    #expect(prompt.localizedCaseInsensitiveContains("see About"))
+    #expect(!prompt.contains("["))
+    #expect(!prompt.contains("]("))
+
+    #expect(markdown.contains("[see About]("))
+    #expect(markdown.contains(ProductCopy.disclaimerSeeAboutLinkURL.absoluteString))
+    #expect(ProductCopy.disclaimerSeeAboutLinkURL.scheme == "uvburntimer")
+    #expect(ProductCopy.disclaimerSeeAboutLinkURL.host == "about-applicability")
+
+    #expect(ProductCopy.auditCopySurfaces.contains(prompt))
+}
+
 @Test func skinTypeCaveatIsConsistentAcrossEntryPoints() {
     for copy in [ProductCopy.skinTypePickerFooter, ProductCopy.skinTypeSettingsFooter] {
         #expect(copy.localizedCaseInsensitiveContains("self-assessment"))

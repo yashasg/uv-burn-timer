@@ -959,16 +959,27 @@ struct DisclaimerCover: View {
                     Text(ProductCopy.disclaimerBody)
                         .font(.body)
 
+                    Text(LocalizedStringKey(ProductCopy.disclaimerSeeAboutInlineMarkdown))
+                        .font(.body)
+                        .tint(.accentColor)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .environment(
+                            \.openURL,
+                            OpenURLAction { url in
+                                if url == ProductCopy.disclaimerSeeAboutLinkURL {
+                                    showAbout = true
+                                    return .handled
+                                }
+                                return .systemAction
+                            }
+                        )
+                        .accessibilityLabel(ProductCopy.disclaimerSeeAboutInlinePrompt)
+                        .accessibilityHint("Opens About with photosensitizing medication and condition caveats.")
+                        .accessibilityAddTraits(.isLink)
+
                     Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
                         .font(.callout.weight(.semibold))
-
-                    Button {
-                        showAbout = true
-                    } label: {
-                        Label("See About: when estimates may not apply", systemImage: "info.circle")
-                    }
-                    .buttonStyle(.bordered)
-                    .accessibilityHint("Opens About with photosensitizing medication and condition caveats.")
                 }
                 .padding(32)
                 .frame(maxWidth: .infinity, alignment: .center)

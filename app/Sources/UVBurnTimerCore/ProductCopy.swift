@@ -33,6 +33,28 @@ public enum ProductCopy {
         "Informational overview: NIH MedlinePlus notes that some medicines can increase sun sensitivity; ask a clinician or pharmacist whether this applies to you."
     public static let childrenDisclaimerLine = "For children, consult a pediatrician."
     public static let photosensitizationBannerLabel = "Meds or photosensitive conditions? Learn more"
+
+    /// In-app deep-link URL routed by `DisclaimerCover`'s `OpenURLAction`
+    /// interceptor. The scheme is intentionally a private app scheme so
+    /// the tap never escapes to the system browser; the host names the
+    /// About anchor (`notForMe` → `aboutEstimateApplicability`).
+    public static let disclaimerSeeAboutLinkURL = URL(string: "uvburntimer://about-applicability")!
+
+    /// Plain-text variant of the inline reach-back prompt. Used by copy
+    /// audits, accessibility-label fallbacks, and any non-Markdown
+    /// rendering path. Mirrors the persona-overlay phrasing in
+    /// `.squad/files/suchi-persona-annotations.md` Screen 1 (Asha row).
+    public static let disclaimerSeeAboutInlinePrompt =
+        "If you take a photosensitizing medication or have a sun-sensitive condition — see About."
+
+    /// Markdown variant rendered inline by `Text(LocalizedStringKey:)` in
+    /// `DisclaimerCover`. SwiftUI treats the `[see About](...)` span as a
+    /// tappable inline link; `DisclaimerCover` installs an `OpenURLAction`
+    /// that recognizes `disclaimerSeeAboutLinkURL` and opens the About
+    /// sheet at the applicability anchor instead of handing the URL to
+    /// the system.
+    public static let disclaimerSeeAboutInlineMarkdown =
+        "If you take a photosensitizing medication or have a sun-sensitive condition — [see About](\(disclaimerSeeAboutLinkURL.absoluteString))."
     public static let locationRationale =
         "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather."
     public static let locationPrivacyLine =
@@ -134,6 +156,7 @@ public enum ProductCopy {
         photosensitizationAuthorityLine,
         childrenDisclaimerLine,
         photosensitizationBannerLabel,
+        disclaimerSeeAboutInlinePrompt,
         locationRationale,
         locationPrivacyLine,
         cacheRetentionLine,

@@ -368,6 +368,72 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(scrollToActionElement(in: app, named: "NIH MedlinePlus sun-sensitivity overview").exists)
     }
 
+    /// WI-13 — Spec §LANE 1 Screen 2 + `suchi-persona-annotations.md`
+    /// (Screen 1 Asha row): the L1 disclaimer cover must surface
+    /// `see About` as an **inline link** inside the sentence
+    /// "If you take a photosensitizing medication or have a sun-sensitive
+    /// condition — see About.", not as a separate bordered button below
+    /// the body. Tapping the link opens AboutView at the applicability
+    /// anchor without dismissing the underlying cover.
+    ///
+    /// The test pins three contracts:
+    ///   1. The inline prompt sentence is rendered as a hittable element
+    ///      on the cover (XCUITest exposes SwiftUI inline links as
+    ///      `links` / `buttons` with the link's label as their `label`).
+    ///   2. The pre-WI-13 bordered button copy
+    ///      ("See About: when estimates may not apply") is NOT present.
+    ///   3. Tapping the inline link opens AboutView and the cover stays
+    ///      behind it (re-asserted by `acknowledgeButton` still existing
+    ///      after dismissing About).
+    func testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton() {
+        let app = launchApp()
+        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10))
+
+        XCTAssertFalse(
+            app.buttons["See About: when estimates may not apply"].exists,
+            "L1 disclaimer must not render a separate bordered 'See About: when estimates may not apply' button; the deep-link belongs inline in the body sentence."
+        )
+
+        let inlinePromptStaticText = staticText(
+            in: app,
+            containing: "If you take a photosensitizing medication"
+        )
+        XCTAssertTrue(
+            inlinePromptStaticText.waitForExistence(timeout: 5),
+            "L1 disclaimer must show the inline 'If you take a photosensitizing medication or have a sun-sensitive condition — see About.' prompt."
+        )
+
+        let inlineLink =
+            app.links.matching(NSPredicate(format: "label CONTAINS[c] %@", "see About")).firstMatch
+        let inlineLinkButton =
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "see About")).firstMatch
+        let tappableInlineSeeAbout: XCUIElement =
+            inlineLink.waitForExistence(timeout: 2)
+            ? inlineLink
+            : inlineLinkButton
+        XCTAssertTrue(
+            tappableInlineSeeAbout.exists,
+            "Inline 'see About' span must be hittable as a link or button so VoiceOver and tap targets can reach it."
+        )
+
+        tappableInlineSeeAbout.tap()
+
+        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 10))
+        XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
+
+        let aboutDoneButton = app.buttons["Done"]
+        if aboutDoneButton.waitForExistence(timeout: 2) {
+            aboutDoneButton.tap()
+        } else {
+            app.swipeDown(velocity: .fast)
+        }
+
+        XCTAssertTrue(
+            app.buttons["I understand"].waitForExistence(timeout: 5),
+            "After dismissing About, the L1 disclaimer cover must still be present so the user can acknowledge it."
+        )
+    }
+
     /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
     /// photosensitization reach-back is a *banner*, not a chip — it spans
     /// the full row, sits above the hero card, and serves as the L1
