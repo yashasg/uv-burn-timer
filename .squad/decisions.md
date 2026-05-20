@@ -4206,3 +4206,13 @@ No work-in-progress MRs are open. The next loop starts cleanly.
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
 ---
+
+### 2026-05-20T20:35Z: D-2026-05-20-001 — L2 footer string re-lock (WI-57)
+**By:** Plunder (legal) — coordinator dispatch
+**What:** The L2 (always-visible safe-area-inset footer) string is hereby re-locked from D-2026-05-19-011's earlier draft to the consolidated form currently shipped in `ProductCopy.reapplicationFooter`:
+
+> "Cover up if skin reddens. Reapply sunscreen at least every 2 hours regardless of timer. Informational only. Not medical advice. Skin response varies."
+
+**Why:** The shipped string adds the redden-cover guidance and skin-variance qualifier required by Wheeler's source set, and the "at least" intensifier required by reapplication guidance. All four required L2 elements (redden cover, reapply cadence, informational-only, not-medical-advice) remain present; the new string is the canonical version. Future regression audits should compare verbatim against this lock, not against D-2026-05-19-011.
+
+**Supersedes:** D-2026-05-19-011 L2 layer wording only (L1/L3/L4 layers unaffected).
