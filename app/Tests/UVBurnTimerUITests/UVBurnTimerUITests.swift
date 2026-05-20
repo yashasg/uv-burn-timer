@@ -500,16 +500,27 @@ final class UVBurnTimerUITests: XCTestCase {
         } else {
             app.swipeDown(velocity: .fast)
         }
+        // Wait for the sheet to be fully gone before inspecting the L1 cover.
+        // Post-sheet-dismiss, the AX hierarchy can be transiently inconsistent;
+        // scrollToVisible on elements in the L1 cover returns kAXErrorCannotComplete
+        // until the presentation graph settles. waitForNonExistence gives the
+        // runtime enough time to tear down the sheet's accessibility tree.
+        _ = app.navigationBars["About"].waitForNonExistence(timeout: 5)
 
         // Phase 5 — L1 cover is STILL present: both the title and the acknowledge
-        // button must be visible. This is the core Asha loop contract — she
-        // completes her visibility check and then acknowledges the cover.
+        // button must be visible and hittable. This is the core Asha loop contract —
+        // she completes her visibility check and then acknowledges the cover.
         XCTAssertTrue(
             app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5),
             "L1 cover title must still be visible after dismissing the About sheet — Asha's round-trip must return to L1")
+        let acknowledgeBtn = app.buttons["I understand"]
         XCTAssertTrue(
-            app.buttons["I understand"].waitForExistence(timeout: 5),
+            acknowledgeBtn.waitForExistence(timeout: 5),
             "I understand must remain tappable after the About round-trip")
+        // Give the AX tree one more moment to mark the button hittable after
+        // sheet teardown, so tapUntilAppears in acknowledgeDisclaimer doesn't
+        // spend its budget on the transient {-1,-1} window.
+        _ = waitForHittable(acknowledgeBtn, timeout: 5)
 
         // Phase 6 — Asha completes onboarding normally: the round-trip must not
         // break the cover-chain progression.
