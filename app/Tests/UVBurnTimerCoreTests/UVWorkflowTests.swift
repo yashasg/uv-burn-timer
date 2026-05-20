@@ -126,6 +126,64 @@ import Testing
     #expect(!estimate.isElapsed(fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval(7_200)))
 }
 
+/// WI-12 / Plunder ADR (`plunder-rationale-ack-clear-coord-decision.md`):
+/// `Settings → Clear saved location` clears the cached rounded coordinate
+/// (and the legacy UV snapshot key) but must NOT clear the persisted
+/// location-rationale acknowledgement. The rationale-ack and the saved
+/// coordinate describe orthogonal facts (informed-consent state vs. last
+/// known data point) and have independent reset triggers. Uninstall is the
+/// universal escape hatch for clearing both.
+///
+/// This test pins the storage-layer contract that `RootView.clearSavedRoundedCoordinate`
+/// relies on (it writes `CachedRoundedCoordinateStorage.clearedStorageValue`
+/// to the two coordinate keys via `@AppStorage` and never touches the
+/// rationale-ack key).
+@Test func clearingCachedCoordinateDoesNotClearRationaleAcknowledgment() throws {
+    let suiteName = "WI12-clearCoord-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suiteName))
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    let cachedRoundedCoordinateKey = "lastRoundedCoordinate"
+    let legacyCachedUVSnapshotKey = "lastUVSnapshot"
+
+    let snapshot = UVSnapshot(
+        uvIndex: 6,
+        fetchedAt: Date(timeIntervalSince1970: 1_000),
+        roundedCoordinate: UVCoordinate(latitude: 37.77, longitude: -122.42)
+    )
+    let storageValue = try CachedRoundedCoordinateStorage.storageValue(for: snapshot)
+    defaults.set(storageValue, forKey: cachedRoundedCoordinateKey)
+    defaults.set(storageValue, forKey: legacyCachedUVSnapshotKey)
+    defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+    defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+    defaults.set(SPFLevel.spf50.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+
+    // Simulate Settings → Clear saved location, which only touches the two
+    // coordinate-keyed AppStorage values in RootView.clearSavedRoundedCoordinate.
+    defaults.set(CachedRoundedCoordinateStorage.clearedStorageValue, forKey: cachedRoundedCoordinateKey)
+    defaults.set(CachedRoundedCoordinateStorage.clearedStorageValue, forKey: legacyCachedUVSnapshotKey)
+
+    // The cached coordinate is now cleared.
+    #expect(defaults.string(forKey: cachedRoundedCoordinateKey) == "")
+    #expect(defaults.string(forKey: legacyCachedUVSnapshotKey) == "")
+
+    // The rationale ack must survive — that is the contract Plunder ratifies.
+    #expect(defaults.bool(forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey) == true)
+
+    // The other persisted preferences (skin type + SPF) must also survive.
+    let restored = UserPreferenceStorage.restoredSession(from: defaults)
+    #expect(restored.selectedSkinType == .typeIII)
+    #expect(restored.selectedSPF == .spf50)
+
+    // The escape hatch — `UserPreferenceStorage.clearStoredPreferences`, which
+    // is what app uninstall effectively does to the sandbox — clears all
+    // three preference keys together.
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+    #expect(defaults.object(forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey) == nil)
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSkinType == nil)
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30)
+}
+
 private enum ProviderFailure: Error, Equatable {
     case offline
 }
