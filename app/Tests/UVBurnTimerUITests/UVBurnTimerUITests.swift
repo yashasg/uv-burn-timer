@@ -520,6 +520,16 @@ final class UVBurnTimerUITests: XCTestCase {
     }
 
 
+    /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
+    /// photosensitization reach-back is a *banner*, not a chip — it spans
+    /// the full row, sits above the hero card, and serves as the L1
+    /// reach-back surface for users on photosensitizing meds. The previous
+    /// `Button.buttonStyle(.bordered).tint(.orange)` rendered as an
+    /// orange-tinted chip that was easy to mistake for a regular content
+    /// button. Lock the layout contract:
+    ///   1. The banner is reachable on the main screen with the dedicated
+    ///      `PhotosensitizationBanner` accessibility identifier.
+    ///   2. It spans ≥85% of the screen width.
     ///   3. It sits above the hero `Burn-time estimate` card.
     func testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero() {
         let app = launchApp()
