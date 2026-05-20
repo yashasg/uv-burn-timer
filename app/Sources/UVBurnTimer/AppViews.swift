@@ -34,6 +34,7 @@ struct RootView: View {
     @State private var weatherFailureMessage: String?
     @State private var locationPromptGate = LocationPromptGate()
     @State private var reattestationTracker = ForegroundReattestationTracker()
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         NavigationStack {
@@ -68,8 +69,7 @@ struct RootView: View {
                     } else {
                         UVIndexPlaceholderCard(sourceLine: ProductCopy.uvSourceLine)
                     }
-                    contextChipRow
-                    spfCard
+                    mainInputsRow
                 }
                 .padding()
             }
@@ -169,13 +169,30 @@ struct RootView: View {
         .accessibilityHint("Opens About with medication, condition, pregnancy, and recent skin-treatment caveats.")
     }
 
-    private var contextChipRow: some View {
+    @ViewBuilder
+    private var mainInputsRow: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 12) {
+                locationChip
+                spfChip
+            }
+        } else {
+            HStack(spacing: 12) {
+                locationChip
+                spfChip
+            }
+        }
+    }
+
+    private var locationChip: some View {
         Button {
             Task {
                 await refreshUV()
             }
         } label: {
             Label(locationChipTitle, systemImage: "location")
+                .lineLimit(1)
+                .truncationMode(.middle)
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.bordered)
@@ -183,17 +200,25 @@ struct RootView: View {
         .accessibilityLabel("Location")
         .accessibilityValue(locationChipAccessibilityValue)
         .accessibilityHint(primaryActionPresentation.accessibilityHint)
+        .accessibilityIdentifier("LocationChip")
     }
 
-    private var spfCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("SPF")
-                .font(.headline)
-
-            SPFPicker(selection: $session.selectedSPF)
+    private var spfChip: some View {
+        Menu {
+            Picker("SPF", selection: $session.selectedSPF) {
+                ForEach(SPFLevel.allCases) { level in
+                    Text(level.displayName).tag(level)
+                }
+            }
+        } label: {
+            Label("SPF \(session.selectedSPF.displayName)", systemImage: "sun.dust")
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, minHeight: 44)
         }
-        .padding()
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .menuOrder(.fixed)
+        .buttonStyle(.bordered)
+        .accessibilityHint("Changes the assumed SPF level. SPF 70+ is modeled as SPF 50.")
+        .accessibilityIdentifier("SPFChip")
     }
 
     private var locationChipTitle: String {
