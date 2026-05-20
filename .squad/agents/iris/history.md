@@ -35,5 +35,23 @@ Linka was the original UI/UX designer on this project. She was fired on 2026-05-
 ## Learnings
 
 - **2026-05-19** — Redrew the canonical LANE 2 main screen as a centered 360×780 portrait iPhone frame inside the existing swimlane band; preserved LANE 1 and LANE 4, and only re-anchored the affected LANE 3 arrows.
-- **2026-05-19** — The reliable iOS flow-diagram pattern here is: status bar → Large Title nav → optional safety banner → hero verdict card → UV attribution card → 44pt settings chips → inline disclaimer link → home indicator, with HIG/AX notes outside the phone rather than inside it.
+- **2026-05-19** — The reliable iOS flow-diagram pattern here is: status bar → Large Title nav → optional safety banner → hero verdict card → UV attribution card → 44pt settings chips → inline disclaimer link → home indicator, with HIC/AX notes outside the phone rather than inside it.
 - **2026-05-19** — Excalidraw MCP canvas first, export second: redraw live, wrap the queried elements in the `.excalidraw` JSON envelope, then run `.squad/files/excalidraw-normalize.py` before validation and commit.
+- **2026-05-19T19:38:59Z (Cross-agent)** — Xcode project container path is now `app/app.xcodeproj` (D-2026-05-19-015). App/product/scheme names remain `UVBurnTimer`. See `.squad/decisions.md` for details.
+- **2026-05-19 (Redesign audit, squad/4)** — By the time I audited, the implementation was further along than expected: skin type chip already removed from main, `SkinTypePickerRow` already a shared component, `SettingsSheet` already uses `NavigationLink` → `SkinTypeEditView`. Always read the full current file before writing blockers. The only structural gap left is the circular gauge.
+- **2026-05-19 (Redesign audit, squad/4)** — `skinTypePickerPrompt` is used as a section header *headline* with `skinTypePickerSubtext` providing the detailed explanation below it. The prompt should be a short action-oriented headline ("Choose by how your skin burns and tans, not by how it looks."); the subtext carries the range-of-tones and sun-exposure framing.
+- **2026-05-19 (Redesign audit, squad/4)** — When `SkinTypeOnboardingView` applies `.accessibilityHint(...)` directly on a `SkinTypePickerRow`, it overrides the row's built-in hint — this is the correct pattern for context-specific hints (onboarding vs. settings). The `SkinTypePickerRow` base hint is the settings default; onboarding overrides it to say "Tap Continue to confirm."
+- **2026-05-19 (Redesign audit, squad/4)** — The `SkinTypePickerRow` already has `accessibilityLabel("Type N. [behavior+appearance]. Selected/Not selected.")` — explicit label pattern suppressing the redundant leading roman-numeral Text child. This is the canonical row label pattern for all Fitzpatrick pickers.
+
+### 2026-05-20T00:01:47Z: Team Decision
+
+**Scribe Log Entry**
+
+Team approvals and implementations completed for approved redesign and paraphrasing initiatives:
+- Wheeler: Paraphrase traceability review (conditional accept, fixes noted)
+- Ma-Ti: Redesign tests passing + gauge guard tests verified
+- Iris: HIG/accessibility audit passed
+- Kwame: Implementation and circular gauge both passing
+
+All inbox decisions merged into decisions.md.
+

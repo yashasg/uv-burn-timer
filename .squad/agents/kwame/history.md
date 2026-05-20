@@ -9,3 +9,112 @@
 ## Learnings
 
 <!-- Append learnings below -->
+
+- 2026-05-19T12:15:11.894-07:00 — Renamed the Xcode project container path to `app/app.xcodeproj`; product/module/scheme naming remains `UVBurnTimer`, and build/test references target the new container path.
+- 2026-05-19T16:30:05-07:00 — Implemented approved redesign (work item #4, branch squad/4-approved-redesign-paraphrasing):
+  - Fitzpatrick selector is now a single shared `SkinTypePickerRow` component; used by both `SkinTypeOnboardingView` (first-run, draft+Continue) and `SkinTypeEditView` (Settings, draft+Save). No duplicated picker code.
+  - `SettingsSheet` now has a NavigationLink → `SkinTypeEditView` replacing the inline 6-row picker section. The "Skin type" row shows current selection or "Not set".
+  - Main screen `contextChipRow` now renders location chip only; Fitzpatrick chip removed per Iris/Gaia spec (Scope 2).
+  - `ProductCopy` gained `skinTypePickerSubtext` (Wheeler §3.1 helper text) and `skinTypeSourcePointer` (Plunder §2.3 inline citation pointer); both added to `auditCopySurfaces`.
+  - `AboutView` gained "Skin type classification" section with Fitzpatrick TB (1988) + Ward & Farma NCBI Bookshelf NBK481857 bibliographic strings.
+  - Skin type persistence remains @State-only (transient; Gaia Guardrail 1 confirmed this is the v1 design).
+  - All 16 UI tests pass. `testSkinTypePickerInSettingsReusesOnboardingPattern` required a scroll fix: medium-detent sheet clips rows IV–VI below the fold; `swipeUp()` loop added before `waitForExistence`.
+- 2026-05-19T16:47:52-07:00 — Implemented `BurnRiskGaugeCard` (circular gauge) on main screen:
+  - `Gauge` with `.accessoryCircularCapacity` style, placed between `HeroTimerCard` and `UVIndexCard`.
+  - Data: `burnFraction = clamp(0, elapsed / min(rawMinutes*60, 2h), 1)` — same window as `isElapsed`.
+  - Guard: only shown when `estimate != nil && tier != .none && rawMinutes.isFinite`; hidden otherwise so VoiceOver never announces a phantom "0%".
+  - Accessibility: `accessibilityLabel("Burn risk gauge. N% elapsed.")`, `accessibilityValue("N%")`, `accessibilityIdentifier("BurnRiskGauge")`. Percentage text in `currentValueLabel` ensures color is never the sole differentiator.
+  - Reduce Motion: no `.animation` on appear — static arc.
+  - Differentiate Without Color: extra `Text(percentText)` rendered (VoiceOver-hidden).
+  - Tint: `Gradient` from `tier.color.opacity(0.5)` to `tier.color` using existing `SeverityLong/Moderate/Short` assets.
+  - 2 new UI tests (`testBurnRiskGaugeExistsAndIsMeaningful...`, `testBurnRiskGaugeAbsentWhenNoEstimate`); 3 additional tests already present from Ma-Ti. Build + test build: PASSED.
+
+
+### 2026-05-20T00:01:47Z: Team Decision
+
+**Scribe Log Entry**
+
+Team approvals and implementations completed for approved redesign and paraphrasing initiatives:
+- Wheeler: Paraphrase traceability review (conditional accept, fixes noted)
+- Ma-Ti: Redesign tests passing + gauge guard tests verified
+- Iris: HIG/accessibility audit passed
+- Kwame: Implementation and circular gauge both passing
+
+All inbox decisions merged into decisions.md.
+
+
+
+### 2026-05-19T17:14Z: Commit, push, and CI validation
+
+**Branch:** `squad/4-approved-redesign-paraphrasing`
+**Commit:** `738da12`
+
+**Files committed (9):**
+- `.squad/files/user-flow-onboarding-main-spec.md` — attribution paraphrasing: "Apple WeatherKit" → "Apple Weather"
+- `app/Sources/UVBurnTimer/UVBurnTimerApp.swift` — explicit `showSkinTypeOnboarding` @State flag; onAppear + onChange guards; Task @MainActor double-check; onDismiss wired through `disclaimerPresentation`
+- `app/Sources/UVBurnTimer/WeatherLocationServices.swift` — suppress unused-param warnings on `locationManager(_:didFailWithError:)`
+- `app/Tests/UVBurnTimerCoreTests/UVWorkflowTests.swift` — added `uncappedLongEstimateStillExpiresAtTwoHourRefreshInterval` test
+- `build.sh` — prefer iPhone 17 Pro simulator; shared `derived_data_path`; capture-then-cat log pattern to preserve exit code separately from warning scan
+- `prototype/LAUNCH-PLAN.md` — monetization language: "90-Day No-IAP" → "Paid Download / No In-App Monetization" paraphrasing throughout
+- `user-flow-onboarding-main.excalidraw` + `.bak` + `.kwame-fix.excalidraw` — excalidraw attribution and compliance notes updated
+
+**File skipped (1):**
+- `excalidraw.log` — pure MCP server runtime log (timestamps + "Listing available tools" noise); no semantic content; should be gitignored
+
+**Validation:** `./build.sh` — Debug build ✅, test suite ✅, Release build ✅ (all warnings-as-errors, iPhone 17 Pro simulator)
+
+**Push:** `origin/squad/4-approved-redesign-paraphrasing` — new branch, pushed successfully
+
+**GitLab CI:** No `.gitlab-ci.yml` in repo → no pipeline triggered. Two pre-existing failed pipelines on unrelated branches (`main`, `squad/fix-app-icon-catalog`). CI is not blocking.
+
+**Learning:** `excalidraw.log` should be added to `.gitignore` — currently tracked but is pure runtime noise. Recommend team decision.
+
+
+### 2026-05-20T01:26Z: External CI monitoring — MR !3 fixed and green
+
+**Task:** Monitor GitLab MR !3 for external CI/CD feedback and fix failures.
+
+**CI system:** GitHub Actions triggered via GitLab webhook → Cloudflare Worker → `repository_dispatch`.  
+The CI workflow lives on `github/main` (not on the GitLab branch).
+
+**Failures found and fixed (4 separate CI runs):**
+
+1. **Run 26133538471 — `Set build metadata` failed (exit code 2)**
+   - Root cause: CI workflow referenced `app/VCA.xcodeproj/project.pbxproj` which doesn't exist; project is `app/app.xcodeproj`
+   - Also: `cd app && ./build.sh` — no `app/build.sh`, script is at repo root
+   - Fix: Updated `github/main`'s `.github/workflows/ci.yml` (pushed to `github main`):
+     - `app/VCA.xcodeproj` → `app/app.xcodeproj` (4 occurrences incl. cache hashFiles keys)
+     - Removed `cd app &&`; `./build.sh` now runs from repo root
+   - Also added CI env var support to `build.sh` (CONFIGURATION, DERIVED_DATA_PATH, RUN_TESTS, TEST_CONFIGURATION, PLATFORM_MODE)
+   - Created `.swift-format` config (required by CI lint step)
+   - Commits: `470f893` + `c5266e4` → pushed to `origin/squad/4-approved-redesign-paraphrasing`
+
+2. **Run 26133786055 — `Lint (swift-format --strict)` failed**
+   - Root cause: `.swift-format` config set 2-space indentation; codebase uses 4-space
+   - Fix: Changed config to 4 spaces; ran `xcrun swift-format format --in-place` on `app/Sources` + `app/Tests`
+   - Fixed: Indentation, TrailingComma, NoAccessLevelOnExtensionDeclaration, AddLines, LineLength violations
+   - Commit: `c5266e4`
+
+3. **Run 26133857651 — `Build & Test` failed — "Failed to terminate"**
+   - Error: `UVBurnTimerUITests.swift:153: Failed to terminate com.yashasgujjar.uvburntimer:47707`
+   - Root cause: `XCUIApplication.launch()` tries to terminate prior instance; prior test left app in terminated/zombie state, termination failed
+   - Fix attempt 1 (b185932): Added `tearDownWithError` + `runningApp` property — failed with Swift 6 actor isolation errors
+   - Fix attempt 2 (21b5676): Added explicit `XCUIApplication().terminate()` before each `launchApp()` call — correct approach, no actor isolation issues
+
+4. **Run 26134524947 — Swift 6 actor isolation compile error**
+   - Error: `tearDownWithError()` override (nonisolated) accessing `@MainActor` property `runningApp`
+   - Fix: Reverted tearDown+runningApp; used pre-launch explicit terminate instead
+   - Commit: `21b5676`
+
+5. **Run 26135131773 — cancelled (concurrency race)**
+   - Webhook sent duplicate events; run cancelled before posting status to GitLab
+   - Fix: Empty re-trigger commit `2bb02ab`
+
+**Final result:** Run 26135229688 — ✅ **Build & Test PASSED** (10m21s)  
+GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
+
+**Learnings:**
+- The GitHub CI workflow (`github/main:.github/workflows/ci.yml`) is decoupled from the GitLab branch. When renaming the Xcode project, CI must also be updated. The two repos must stay in sync on project paths.
+- `build.sh` must support CI env vars (`CONFIGURATION`, `DERIVED_DATA_PATH`, etc.) — the CI bridge passes these for selective build/test control.
+- Swift 6 strict concurrency on Xcode 26: `tearDownWithError()` overrides are NOT implicitly `@MainActor` even if the class is. Using `XCUIApplication().terminate()` before launch is the correct pattern.
+- Concurrency group `cancel-in-progress: true` can cause webhook-triggered runs to cancel each other if webhooks fire in rapid succession. An empty re-trigger commit resolves this.

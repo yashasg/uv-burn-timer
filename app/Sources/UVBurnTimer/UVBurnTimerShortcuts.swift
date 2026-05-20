@@ -17,7 +17,7 @@ struct UVBurnTimerShortcuts: AppShortcutsProvider {
             intent: OpenUVBurnTimerIntent(),
             phrases: [
                 "Open \(.applicationName)",
-                "Check UV burn timer in \(.applicationName)"
+                "Check UV burn timer in \(.applicationName)",
             ],
             shortTitle: "Open UV Burn Timer",
             systemImageName: "sun.max"

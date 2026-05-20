@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import UVBurnTimerCore
 
 @Test func workflowRequiresSkinTypeBeforeFetchingUV() async {
@@ -81,6 +82,24 @@ import Testing
 
     #expect(!longEstimate.isElapsed(fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval(7_199)))
     #expect(longEstimate.isElapsed(fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval(7_200)))
+}
+
+@Test func uncappedLongEstimateStillExpiresAtTwoHourRefreshInterval() throws {
+    let fetchedAt = Date(timeIntervalSince1970: 1_000)
+    let longEstimate = try BurnTimeCalculator.estimate(
+        skinType: .typeVI,
+        spf: .none,
+        uvIndex: 4
+    )
+
+    #expect(longEstimate.tier == .long)
+    #expect(!longEstimate.isCappedForDisplay)
+    #expect(longEstimate.rawMinutes > 120)
+    #expect(!longEstimate.isElapsed(fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval(7_199)))
+    #expect(
+        longEstimate.isElapsed(
+            fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval(ProductTiming.sunscreenReapplicationIntervalSeconds)
+        ))
 }
 
 @Test func zeroUVEstimateDoesNotExpire() throws {

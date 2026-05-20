@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import UVBurnTimerCore
 
 @Test func typeOneWithoutSPFAtUVTenIsShortWindow() throws {
@@ -91,26 +92,30 @@ import Testing
     #expect(session.selectedSkinType == nil)
     #expect(session.selectedSPF == .spf30)
     #expect(session.acknowledgedDisclaimer == false)
-    #expect(!DisclaimerReattestationPolicy.shouldPresentOnForeground(
-        returnedFromBackground: true,
-        acknowledgedDisclaimer: false,
-        estimateWindowElapsed: true
-    ))
-    #expect(DisclaimerReattestationPolicy.shouldPresentOnForeground(
-        returnedFromBackground: true,
-        acknowledgedDisclaimer: true,
-        estimateWindowElapsed: true
-    ))
-    #expect(!DisclaimerReattestationPolicy.shouldPresentOnForeground(
-        returnedFromBackground: false,
-        acknowledgedDisclaimer: true,
-        estimateWindowElapsed: true
-    ))
-    #expect(!DisclaimerReattestationPolicy.shouldPresentOnForeground(
-        returnedFromBackground: true,
-        acknowledgedDisclaimer: true,
-        estimateWindowElapsed: false
-    ))
+    #expect(
+        !DisclaimerReattestationPolicy.shouldPresentOnForeground(
+            returnedFromBackground: true,
+            acknowledgedDisclaimer: false,
+            estimateWindowElapsed: true
+        ))
+    #expect(
+        DisclaimerReattestationPolicy.shouldPresentOnForeground(
+            returnedFromBackground: true,
+            acknowledgedDisclaimer: true,
+            estimateWindowElapsed: true
+        ))
+    #expect(
+        !DisclaimerReattestationPolicy.shouldPresentOnForeground(
+            returnedFromBackground: false,
+            acknowledgedDisclaimer: true,
+            estimateWindowElapsed: true
+        ))
+    #expect(
+        !DisclaimerReattestationPolicy.shouldPresentOnForeground(
+            returnedFromBackground: true,
+            acknowledgedDisclaimer: true,
+            estimateWindowElapsed: false
+        ))
 }
 
 @Test func foregroundReattestationSurvivesInactiveHopAfterBackground() {
@@ -210,7 +215,7 @@ import Testing
         .typeIII: "Burns moderately, tans gradually. Medium skin tone.",
         .typeIV: "Burns minimally, tans easily. Olive or medium-brown skin.",
         .typeV: "Rarely burns, tans deeply. Brown skin.",
-        .typeVI: "Almost never burns, deeply pigmented. Dark brown to black skin."
+        .typeVI: "Almost never burns, deeply pigmented. Dark brown to black skin.",
     ]
     let behaviorFirstPrefixes: [FitzpatrickSkinType: String] = [
         .typeI: "Always burns, never tans.",
@@ -218,7 +223,7 @@ import Testing
         .typeIII: "Burns moderately, tans gradually.",
         .typeIV: "Burns minimally, tans easily.",
         .typeV: "Rarely burns, tans deeply.",
-        .typeVI: "Almost never burns, deeply pigmented."
+        .typeVI: "Almost never burns, deeply pigmented.",
     ]
 
     for skinType in FitzpatrickSkinType.allCases {
@@ -236,7 +241,7 @@ import Testing
         .typeIII: 300,
         .typeIV: 450,
         .typeV: 600,
-        .typeVI: 1_000
+        .typeVI: 1_000,
     ]
 
     for skinType in FitzpatrickSkinType.allCases {
@@ -289,7 +294,9 @@ import Testing
     #expect(ProductCopy.photosensitizationAuthorityLine.localizedCaseInsensitiveContains("NIH MedlinePlus"))
     #expect(ProductCopy.photosensitizationBannerLabel.localizedCaseInsensitiveContains("meds"))
     #expect(ProductCopy.photosensitizationBannerLabel.localizedCaseInsensitiveContains("conditions"))
-    #expect(ProductCopy.locationRationale == "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather.")
+    #expect(
+        ProductCopy.locationRationale
+            == "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather.")
     #expect(ProductCopy.locationPrivacyLine.contains("2 decimals"))
     #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("last rounded coordinate"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("last rounded coordinate"))
@@ -298,8 +305,12 @@ import Testing
     #expect(!ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("never saved"))
     #expect(ProductCopy.childrenDisclaimerLine == "For children, consult a pediatrician.")
     #expect(ProductCopy.locationDeniedEmptyState.contains("tap Use my location again"))
-    #expect(ProductCopy.locationUnavailableMessage.localizedCaseInsensitiveContains("could not determine your location"))
+    #expect(
+        ProductCopy.locationUnavailableMessage.localizedCaseInsensitiveContains("could not determine your location"))
     #expect(ProductCopy.locationRequestInProgressMessage.localizedCaseInsensitiveContains("already checking"))
+    #expect(ProductCopy.weatherUnavailableTitle == "Weather unavailable")
+    #expect(ProductCopy.weatherUnavailableMessage.localizedCaseInsensitiveContains("Apple Weather"))
+    #expect(ProductCopy.weatherUnavailableMessage.localizedCaseInsensitiveContains("try again"))
     #expect(ProductCopy.estimateElapsedWarning.contains("Recalculate"))
     #expect(ProductCopy.reapplicationFooter.contains("Reapply sunscreen every 2 hours"))
     #expect(ProductCopy.reapplicationFooter.localizedCaseInsensitiveContains("cover up"))
@@ -308,12 +319,28 @@ import Testing
     #expect(ProductCopy.mainVerdictCaveatLinkLabel.localizedCaseInsensitiveContains("can shorten"))
     #expect(ProductCopy.longEstimateHedge.localizedCaseInsensitiveContains("does not mean"))
     #expect(ProductCopy.longEstimateHedge.localizedCaseInsensitiveContains("safe"))
-    #expect(ProductCopy.skinTypePickerPrompt == "Pick the row that matches what your skin does, not its color.")
+    #expect(ProductCopy.skinTypePickerPrompt == "Choose by how your skin burns and tans, not by how it looks.")
     #expect(ProductCopy.uvSourceLine == "Source: Apple Weather")
     #expect(ProductCopy.disclaimerLinkLabel == "About & applicability")
     #expect(ProductCopy.fitzpatrickCitations.contains("NCBI Bookshelf NBK481857"))
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("WHO Global Solar UV Index"))
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("Schalka"))
+}
+
+@Test func productCopyAvoidsMonetizationDriftLanguage() {
+    let bannedPhrases = [
+        "premium",
+        "unlock",
+        "paywall",
+        "upgrade",
+        "pro tier",
+    ]
+
+    for copy in ProductCopy.auditCopySurfaces {
+        for phrase in bannedPhrases {
+            #expect(!copy.localizedCaseInsensitiveContains(phrase))
+        }
+    }
 }
 
 @Test func requiredSafetyDisclaimerCopyIsCaptured() {
@@ -336,7 +363,9 @@ import Testing
 @Test func skinTypeCaveatIsConsistentAcrossEntryPoints() {
     for copy in [ProductCopy.skinTypePickerFooter, ProductCopy.skinTypeSettingsFooter] {
         #expect(copy.localizedCaseInsensitiveContains("self-assessment"))
-        #expect(copy.localizedCaseInsensitiveContains("consult a dermatologist before using this estimate to plan sun exposure"))
+        #expect(
+            copy.localizedCaseInsensitiveContains(
+                "consult a dermatologist before using this estimate to plan sun exposure"))
         #expect(copy.localizedCaseInsensitiveContains("Learn more"))
         #expect(copy.localizedCaseInsensitiveContains("result screen"))
         #expect(copy.localizedCaseInsensitiveContains("healthy skin"))
@@ -345,7 +374,12 @@ import Testing
 }
 
 @Test func aboutCopyIncludesApplicabilityAndWeatherMentalModel() {
-    let aboutCopy = ProductCopy.aboutEstimateApplicability + " " + ProductCopy.aboutWeatherVariability + " " + ProductCopy.aboutSunscreenAssumptions
+    let aboutCopy =
+        ProductCopy.aboutEstimateApplicability
+        + " " + ProductCopy.aboutWeatherVariability
+        + " " + ProductCopy.aboutSunscreenAssumptions
+        + " " + ProductCopy.aboutModelLimitations
+        + " " + ProductCopy.pediatricAndEscalationGuidance
 
     #expect(aboutCopy.localizedCaseInsensitiveContains("certain medications"))
     #expect(aboutCopy.localizedCaseInsensitiveContains("photosensitive conditions"))
@@ -370,8 +404,18 @@ import Testing
     #expect(aboutCopy.localizedCaseInsensitiveContains("correctly applied"))
     #expect(aboutCopy.localizedCaseInsensitiveContains("cloud"))
     #expect(aboutCopy.localizedCaseInsensitiveContains("UV"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("wider uncertainty"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("Fitzpatrick IV–VI"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("current UV remains constant"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("altitude"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("reflection"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("children"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("blistering"))
+    #expect(aboutCopy.localizedCaseInsensitiveContains("fever"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("Fitzpatrick"))
     #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("SPF"))
+    #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("70+"))
+    #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("modeled as SPF 50"))
     #expect(ProductCopy.outdoorReadabilityTip.localizedCaseInsensitiveContains("Increase Contrast"))
 }
 
@@ -382,7 +426,7 @@ import Testing
         "Plaquenil",
         "doxycycline",
         "hydroxychloroquine",
-        "isotretinoin"
+        "isotretinoin",
     ]
 
     for medicationName in excludedMedicationNames {
@@ -396,13 +440,50 @@ import Testing
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("skin type and SPF"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("app memory only"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("last rounded coordinate"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("no accounts"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("analytics"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("ads"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("crash SDKs"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("third-party tracking"))
 }
 
 @Test func attributionAndPricingCopyAreCanonical() {
     #expect(ProductCopy.weatherAttributionServiceName == "Apple Weather")
-    #expect(ProductCopy.weatherAttributionLegalURL.absoluteString == "https://weatherkit.apple.com/legal-attribution.html")
+    #expect(
+        ProductCopy.weatherAttributionLegalURL.absoluteString == "https://weatherkit.apple.com/legal-attribution.html")
+    #expect(ProductCopy.weatherAttributionLegalURLString == "https://weatherkit.apple.com/legal-attribution.html")
+    #expect(ProductCopy.weatherDataAttributionBody.localizedCaseInsensitiveContains("uses Apple Weather"))
+    #expect(ProductCopy.weatherDataAttributionBody.localizedCaseInsensitiveContains("range of providers"))
+    #expect(ProductCopy.medlinePlusSunSensitivityURL.host() == "medlineplus.gov")
     #expect(ProductCopy.pricingLine.localizedCaseInsensitiveContains("one-time paid app"))
-    #expect(ProductCopy.pricingLine.localizedCaseInsensitiveContains("no in-app purchase to restore"))
+    #expect(ProductCopy.pricingLine.localizedCaseInsensitiveContains("no subscription"))
+    #expect(ProductCopy.pricingLine.localizedCaseInsensitiveContains("in-app purchases"))
+    #expect(ProductCopy.pricingLine.localizedCaseInsensitiveContains("tip jar"))
+    #expect(ProductCopy.pricingLine.localizedCaseInsensitiveContains("restore flow"))
+}
+
+@Test func citationLinksUseApprovedCanonicalSources() {
+    let linksByTitle = Dictionary(
+        uniqueKeysWithValues: ProductCopy.citationLinks.map { ($0.title, $0.url.absoluteString) })
+
+    #expect(linksByTitle["Fitzpatrick TB 1988"] == "https://doi.org/10.1001/archderm.1988.01670060015008")
+    #expect(linksByTitle["Ward & Farma NCBI Bookshelf NBK481857"] == "https://www.ncbi.nlm.nih.gov/books/NBK481857/")
+    #expect(linksByTitle["WHO Global Solar UV Index practical guide"] == "https://iris.who.int/handle/10665/42459")
+    #expect(
+        linksByTitle["Schalka, dos Reis & Cucé sunscreen/SPF study"]
+            == "https://doi.org/10.1111/j.1600-0781.2009.00408.x")
+    #expect(linksByTitle["Diffey BL 1991"] == "https://doi.org/10.1088/0031-9155/36/3/001")
+    #expect(
+        linksByTitle["CIE erythemal reference action spectrum"]
+            == "https://cie.co.at/publications/erythema-reference-action-spectrum-and-standard-erythema-dose")
+}
+
+@Test func citationCopyUsesAdaptedFramingAndRequiredSourceIdentifiers() {
+    #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("adapted"))
+    #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("paraphrased"))
+    #expect(!ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("CC BY-NC-SA"))
+    #expect(
+        ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("https://iris.who.int/handle/10665/42459"))
 }
 
 @Test func productCopyAvoidsBannedClinicalClaims() {
@@ -423,7 +504,7 @@ import Testing
         "burn protection",
         "you will not burn",
         "protects you from",
-        "skin cancer prevention"
+        "skin cancer prevention",
     ]
 
     for copy in copySurfaces {
@@ -433,21 +514,68 @@ import Testing
     }
 }
 
+@Test func appSourcesAvoidProhibitedIntegrations() throws {
+    let appRoot = try appRootURL()
+    let sourceFiles = try swiftSourceFiles(in: appRoot.appending(path: "Sources"))
+    let filesToScan =
+        [
+            appRoot.appending(path: "Package.swift"),
+            appRoot.appending(path: "UVBurnTimer.entitlements"),
+            appRoot.appending(path: "app.xcodeproj/project.pbxproj"),
+        ] + sourceFiles
+
+    let prohibitedIntegrationTokens = [
+        "HealthKit",
+        "StoreKit",
+        "AdSupport",
+        "AppTrackingTransparency",
+        "Firebase",
+        "Crashlytics",
+        "GoogleMobileAds",
+        "RevenueCat",
+        "Amplitude",
+        "Mixpanel",
+        "Sentry",
+        "FacebookSDK",
+        "AuthenticationServices",
+    ]
+    let prohibitedUITokens = [
+        "apple.logo",
+        "accessibilitySortPriority(-",
+    ]
+
+    for file in filesToScan {
+        let contents = try String(contentsOf: file, encoding: .utf8)
+        for token in prohibitedIntegrationTokens {
+            #expect(
+                !contents.localizedCaseInsensitiveContains(token),
+                "\(file.path(percentEncoded: false)) contains prohibited integration token \(token)")
+        }
+        for token in prohibitedUITokens {
+            #expect(
+                !contents.localizedCaseInsensitiveContains(token),
+                "\(file.path(percentEncoded: false)) contains prohibited UI token \(token)")
+        }
+    }
+}
+
 @Test func sunscreenReapplicationReminderUsesTwoHourInterval() {
     #expect(ProductTiming.sunscreenReapplicationIntervalSeconds == 7_200)
 }
 
 @Test func visibleEstimateContextLineIncludesInputsAndOneDecimalUV() {
-    #expect(EstimateContextLine.text(
-        skinType: .typeIII,
-        spf: .spf30,
-        uvIndex: 6.24
-    ) == "Fitzpatrick III · SPF 30 · UV index 6.2")
-    #expect(EstimateContextLine.text(
-        skinType: .typeI,
-        spf: .none,
-        uvIndex: 10
-    ) == "Fitzpatrick I · SPF none · UV index 10.0")
+    #expect(
+        EstimateContextLine.text(
+            skinType: .typeIII,
+            spf: .spf30,
+            uvIndex: 6.24
+        ) == "Fitzpatrick III · SPF 30 · UV index 6.2")
+    #expect(
+        EstimateContextLine.text(
+            skinType: .typeI,
+            spf: .none,
+            uvIndex: 10
+        ) == "Fitzpatrick I · SPF none · UV index 10.0")
 }
 
 @Test func heroAccessibilitySummaryCombinesSafetyCriticalVerdictContext() throws {
@@ -457,11 +585,14 @@ import Testing
         uvIndex: 6
     )
 
-    #expect(HeroAccessibilitySummary.text(
-        estimate: estimate,
-        uvIndex: 6,
-        verdict: "Moderate"
-    ) == "Estimated burn time: 33 minutes. Current UV index: 6.0. Moderate tier. Estimated only, not medical advice.")
+    #expect(
+        HeroAccessibilitySummary.text(
+            estimate: estimate,
+            uvIndex: 6,
+            verdict: "Moderate"
+        )
+            == "Estimated burn time: 33 minutes. Current UV index: 6.0. Moderate tier. Estimated only, not medical advice."
+    )
 }
 
 @Test func locationPromptGateAcknowledgesRationaleBeforeAllowingSystemPrompt() {
@@ -500,21 +631,24 @@ import Testing
 }
 
 @Test func locationActionPresentationMatchesReadyStates() {
-    #expect(LocationActionPresentation(
-        hasUVIndex: false,
-        hasAcknowledgedRationale: false,
-        isFetching: false
-    ).title == "Continue to location request")
-    #expect(LocationActionPresentation(
-        hasUVIndex: false,
-        hasAcknowledgedRationale: true,
-        isFetching: false
-    ).title == "Use my location")
-    #expect(LocationActionPresentation(
-        hasUVIndex: true,
-        hasAcknowledgedRationale: true,
-        isFetching: false
-    ).title == "Recalculate")
+    #expect(
+        LocationActionPresentation(
+            hasUVIndex: false,
+            hasAcknowledgedRationale: false,
+            isFetching: false
+        ).title == "Continue to location request")
+    #expect(
+        LocationActionPresentation(
+            hasUVIndex: false,
+            hasAcknowledgedRationale: true,
+            isFetching: false
+        ).title == "Use my location")
+    #expect(
+        LocationActionPresentation(
+            hasUVIndex: true,
+            hasAcknowledgedRationale: true,
+            isFetching: false
+        ).title == "Recalculate")
 }
 
 @Test func cachedRoundedCoordinateRoundTripsWithoutUVSkinTypeOrSPF() throws {
@@ -531,14 +665,24 @@ import Testing
     let decoded = try JSONDecoder().decode(CachedRoundedCoordinate.self, from: encoded)
 
     #expect(decoded == cached)
-    #expect(try CachedRoundedCoordinateStorage.roundedCoordinate(from: storageValue) == UVCoordinate(latitude: 37.77, longitude: -122.42))
-    #expect(try CachedRoundedCoordinateStorage.roundedCoordinate(from: CachedRoundedCoordinateStorage.clearedStorageValue) == nil)
+    #expect(
+        try CachedRoundedCoordinateStorage.roundedCoordinate(from: storageValue)
+            == UVCoordinate(latitude: 37.77, longitude: -122.42))
+    #expect(
+        try CachedRoundedCoordinateStorage.roundedCoordinate(from: CachedRoundedCoordinateStorage.clearedStorageValue)
+            == nil)
     #expect(decoded.roundedCoordinate == UVCoordinate(latitude: 37.77, longitude: -122.42))
     #expect(decoded.roundedCoordinate.privacyDisplayText == "Approx. 37.77, -122.42")
     #expect(encodedObject["uvIndex"] == nil)
     #expect(encodedObject["fetchedAt"] == nil)
     #expect(encodedObject["selectedSkinType"] == nil)
     #expect(encodedObject["selectedSPF"] == nil)
+}
+
+@Test func corruptCachedRoundedCoordinateStorageThrowsWithoutProducingCoordinate() {
+    #expect(throws: (any Error).self) {
+        try CachedRoundedCoordinateStorage.roundedCoordinate(from: "not-json")
+    }
 }
 
 @Test func relativeAgeCopyIsHumanReadable() {
@@ -548,4 +692,159 @@ import Testing
     #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_059)) == "Updated 1 min ago")
     #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_090)) == "Updated 1 min ago")
     #expect(RelativeAgeText.text(fetchedAt: fetchedAt, now: Date(timeIntervalSince1970: 1_300)) == "Updated 5 min ago")
+}
+
+// MARK: - Work item #4: approved redesign + source-backed paraphrasing
+
+@Test func fitzpatrickPickerPresentsSixRowsForTypesIThroughVI() {
+    let allCases = FitzpatrickSkinType.allCases
+    #expect(allCases.count == 6)
+
+    let expectedRomanNumerals = ["I", "II", "III", "IV", "V", "VI"]
+    let actualRomanNumerals = allCases.map(\.romanNumeral)
+    #expect(actualRomanNumerals == expectedRomanNumerals)
+
+    for skinType in allCases {
+        #expect(!skinType.pickerDescription.isEmpty)
+    }
+}
+
+@Test func skinTypePickerHeaderIsBehaviorFirstPerWheelerSpec() {
+    // Wheeler §3.1 behavior-first requirement: prompt must lead with burns/tans behavior,
+    // not visual skin color, to avoid anchor-effect bias (D-2026-05-19-012, Suchi).
+    let prompt = ProductCopy.skinTypePickerPrompt
+    #expect(prompt.localizedCaseInsensitiveContains("burns") || prompt.localizedCaseInsensitiveContains("burn"))
+    #expect(prompt.localizedCaseInsensitiveContains("tans") || prompt.localizedCaseInsensitiveContains("tan"))
+    // Must not position color as the primary classification signal.
+    #expect(
+        !prompt.localizedCaseInsensitiveContains("skin color")
+            && !prompt.localizedCaseInsensitiveContains("skin colour"))
+    // Must not be empty.
+    #expect(!prompt.isEmpty)
+}
+
+@Test func skinTypePickerSubtextCapturesBehaviorCuesAndRangeOfTones() {
+    // Wheeler §3.1 subtext: references unprotected sun, no sunscreen, no recent tan,
+    // and range of natural skin tones — all source-backed cues.
+    let subtext = ProductCopy.skinTypePickerSubtext
+    #expect(subtext.localizedCaseInsensitiveContains("what your skin does"))
+    #expect(subtext.localizedCaseInsensitiveContains("no sunscreen"))
+    #expect(subtext.localizedCaseInsensitiveContains("no recent tan"))
+    #expect(subtext.localizedCaseInsensitiveContains("range of natural skin tones"))
+    #expect(subtext.localizedCaseInsensitiveContains("30 minutes"))
+}
+
+@Test func skinTypeSourcePointerNamesRequiredSources() {
+    // Plunder §2.3: inline source pointer must name at least one source by author/year.
+    let pointer = ProductCopy.skinTypeSourcePointer
+    #expect(pointer.localizedCaseInsensitiveContains("Fitzpatrick"))
+    #expect(pointer.localizedCaseInsensitiveContains("NCBI"))
+    #expect(pointer.localizedCaseInsensitiveContains("NBK481857"))
+    // Must include a path to the About surface.
+    #expect(pointer.localizedCaseInsensitiveContains("About"))
+}
+
+@Test func skinTypePickerFooterExplicitlyStatesNoDefault() {
+    // D-2026-05-19-012: no default selection is a hard safety rule.
+    let footer = ProductCopy.skinTypePickerFooter
+    #expect(footer.localizedCaseInsensitiveContains("No default"))
+    #expect(footer.localizedCaseInsensitiveContains("deliberately"))
+}
+
+@Test func notMedicalAdviceLimitsAppearOnReapplicationAndAboutSurfaces() {
+    // L2 persistent footer and About copy both carry "not medical advice" per D-2026-05-19-011.
+    #expect(ProductCopy.reapplicationFooter.localizedCaseInsensitiveContains("not medical advice"))
+    #expect(
+        ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("not medical advice")
+            || ProductCopy.disclaimerBody.localizedCaseInsensitiveContains("not medical advice"))
+}
+
+@Test func weatherKitAttributionCopyMeetsAppleRequirements() {
+    // D-2026-05-19-004: WeatherKit attribution must name "Apple Weather" and link to the legal URL.
+    #expect(ProductCopy.weatherAttributionServiceName == "Apple Weather")
+    #expect(ProductCopy.weatherDataAttributionBody.localizedCaseInsensitiveContains("Apple Weather"))
+    #expect(ProductCopy.weatherAttributionLegalURLString.hasPrefix("https://weatherkit.apple.com/"))
+    #expect(ProductCopy.weatherAttributionLegalURL.host() == "weatherkit.apple.com")
+}
+
+@Test func aboutCitationLinksSatisfyWheelerSection4Requirements() {
+    // Wheeler §4.1–4.4: NCBI, Fitzpatrick, WHO, Schalka, Diffey, CIE all required in About.
+    let titles = Set(ProductCopy.citationLinks.map(\.title))
+    let urls = Set(ProductCopy.citationLinks.map { $0.url.absoluteString })
+
+    // §4.1 skin-type classification
+    #expect(urls.contains("https://doi.org/10.1001/archderm.1988.01670060015008"))  // Fitzpatrick TB 1988
+    #expect(urls.contains("https://www.ncbi.nlm.nih.gov/books/NBK481857/"))  // NCBI Bookshelf
+
+    // §4.2–4.3 MED math and UVI conversion
+    #expect(urls.contains("https://iris.who.int/handle/10665/42459"))  // WHO UV Index
+    #expect(urls.contains("https://doi.org/10.1088/0031-9155/36/3/001"))  // Diffey 1991
+
+    // At least 6 distinct citations listed.
+    #expect(ProductCopy.citationLinks.count >= 6)
+    // No two citations share the same URL (deduplication guard).
+    #expect(ProductCopy.citationLinks.count == urls.count)
+    _ = titles  // ensure set was computed
+}
+
+@Test func mainScreenFitzpatrickExposureIsLimitedToOnboardingAndSettings() {
+    // Architecture invariant: the main app session starts without a skin type, enforcing
+    // that skin-type selection is an explicit onboarding step (D-2026-05-19-012).
+    // The SkinTypeOnboardingDraft commit gate is the only write path into the session.
+    let freshSession = UVBurnTimerSession()
+    #expect(freshSession.selectedSkinType == nil)
+
+    // Draft cannot commit without an explicit selection.
+    var draft = SkinTypeOnboardingDraft()
+    #expect(!draft.canContinue)
+
+    var session = freshSession
+    #expect(!draft.commit(to: &session))
+    #expect(session.selectedSkinType == nil)
+
+    // Only after an explicit select() call can the draft commit.
+    draft.select(.typeIII)
+    #expect(draft.canContinue)
+    #expect(draft.commit(to: &session))
+    #expect(session.selectedSkinType == .typeIII)
+}
+
+private func appRootURL() throws -> URL {
+    var url = URL(filePath: #filePath)
+
+    while url.lastPathComponent != "app" {
+        let parent = url.deletingLastPathComponent()
+        if parent == url {
+            throw AppSourceLookupError.appRootNotFound
+        }
+        url = parent
+    }
+
+    return url
+}
+
+private func swiftSourceFiles(in directory: URL) throws -> [URL] {
+    let resourceKeys: Set<URLResourceKey> = [.isRegularFileKey]
+    guard
+        let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: Array(resourceKeys)
+        )
+    else {
+        throw AppSourceLookupError.sourcesNotFound
+    }
+
+    return try enumerator.compactMap { item in
+        guard let url = item as? URL, url.pathExtension == "swift" else {
+            return nil
+        }
+
+        let values = try url.resourceValues(forKeys: resourceKeys)
+        return values.isRegularFile == true ? url : nil
+    }
+}
+
+private enum AppSourceLookupError: Error {
+    case appRootNotFound
+    case sourcesNotFound
 }
