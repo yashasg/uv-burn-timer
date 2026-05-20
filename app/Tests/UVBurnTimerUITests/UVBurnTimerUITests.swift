@@ -494,18 +494,22 @@ final class UVBurnTimerUITests: XCTestCase {
             "AboutView must expose the applicability section (highlightEstimateApplicability: true)")
 
         // Phase 4 — Asha dismisses About after reading the cohort list.
+        // The About sheet from DisclaimerCover has a Done button (added because
+        // .interactiveDismissDisabled(true) on the outer DisclaimerCover prevents
+        // swipe-down on nested sheets on some iOS runtime versions).
         let doneButton = app.buttons["Done"]
-        if doneButton.waitForExistence(timeout: 2) {
-            doneButton.tap()
-        } else {
-            app.swipeDown(velocity: .fast)
-        }
+        XCTAssertTrue(
+            doneButton.waitForExistence(timeout: 5),
+            "About sheet presented from DisclaimerCover must have a Done button")
+        doneButton.tap()
         // Wait for the sheet to be fully gone before inspecting the L1 cover.
         // Post-sheet-dismiss, the AX hierarchy can be transiently inconsistent;
         // scrollToVisible on elements in the L1 cover returns kAXErrorCannotComplete
         // until the presentation graph settles. waitForNonExistence gives the
         // runtime enough time to tear down the sheet's accessibility tree.
-        _ = app.navigationBars["About"].waitForNonExistence(timeout: 5)
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForNonExistence(timeout: 5),
+            "About sheet must be fully dismissed before proceeding")
 
         // Phase 5 — L1 cover is STILL present: both the title and the acknowledge
         // button must be visible and hittable. This is the core Asha loop contract —
