@@ -42,6 +42,9 @@ struct RootView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     photosensitizationBanner
+                    #if DEBUG
+                    UITestRefreshableProbeButton()
+                    #endif
                     if !locationPromptGate.hasAcknowledgedRationale {
                         LocationRationaleCard()
                     }
@@ -1757,3 +1760,41 @@ struct PersistentFooter: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+
+#if DEBUG
+/// WI-50 — Probes that the `.refreshable { await refreshUV() }` modifier on
+/// `NowView`'s ScrollView is still installed and still wires to the same
+/// closure body. Renders **only** when the `-uiTestRefreshableEcho` launch
+/// argument is present (so it is invisible in normal DEBUG builds and is
+/// stripped from Release builds entirely).
+///
+/// Mechanism: SwiftUI exposes the action installed by `.refreshable` to
+/// descendant views through `@Environment(\.refresh)`. When the modifier
+/// is present, the environment value is a non-nil `RefreshAction`; when
+/// the modifier is removed during a refactor, the value is `nil`. The
+/// probe's accessibility value reflects that state so the XCUI test can
+/// distinguish "modifier removed" (refresh == nil) from "modifier present"
+/// (refresh != nil) without relying on simulator gesture infrastructure.
+///
+/// We use this probe instead of an XCUI pull-to-refresh gesture because
+/// `.refreshable` gesture testing on iOS 26 simulators is fundamentally
+/// flaky across the local dev simulator + GitHub `macos-15` CI runner
+/// matrix (see WI-50 closure note). Invoking the env action from a
+/// button tap drives **the same closure body** that the real pull
+/// gesture would drive, so the assertion still proves "the refreshable
+/// closure is wired to `refreshUV()`" — without depending on simulator
+/// gesture infrastructure.
+struct UITestRefreshableProbeButton: View {
+    @Environment(\.refresh) private var refresh
+
+    var body: some View {
+        if ProcessInfo.processInfo.arguments.contains("-uiTestRefreshableEcho") {
+            Button("uiTestInvokeRefreshable") {
+                Task { await refresh?() }
+            }
+            .accessibilityIdentifier("UITestRefreshableProbeButton")
+            .accessibilityValue(refresh == nil ? "RefreshActionNil" : "RefreshActionAvailable")
+        }
+    }
+}
+#endif

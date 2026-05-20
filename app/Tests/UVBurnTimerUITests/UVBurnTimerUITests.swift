@@ -265,55 +265,96 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(staticText(in: app, containing: "does not mean prolonged sun exposure is safe").exists)
     }
 
-    /// WI-47 — Suchi persona-annotations.md:118 (Maya, P2 open-water swim):
-    /// **Pull-to-refresh is "Maya's primary affordance on repeating use."**
-    /// She cold-launches the app twice (pre-swim and post-warmup) and expects
-    /// pulling down on the NowView ScrollView to re-fetch the UV verdict
-    /// without traversing the disclaimer-cover cold-launch path. Without an
-    /// XCUI guard the `.refreshable` modifier could be silently dropped during
-    /// a NowView refactor — it is a passive gesture-only affordance with no
-    /// other identifier-based surface in the existing test set.
+    /// WI-47 / WI-50 — Suchi persona-annotations.md:118 (Maya, P2 open-water
+    /// swim): **Pull-to-refresh is "Maya's primary affordance on repeating
+    /// use."** She cold-launches the app twice (pre-swim and post-warmup)
+    /// and expects pulling down on the NowView ScrollView to re-fetch the
+    /// UV verdict without traversing the disclaimer-cover cold-launch path.
+    /// Without an XCUI guard, the `.refreshable` modifier could be silently
+    /// dropped during a NowView refactor — it is a passive gesture-only
+    /// affordance with no other identifier-based surface in the existing
+    /// test set.
+    ///
+    /// **WI-50 redesign — environment-action probe instead of pull gesture.**
+    /// The original WI-47 test drove `.refreshable` via an XCUI
+    /// `press(forDuration:thenDragTo:)` pull gesture. That gesture was
+    /// reliable on the dev's local Xcode 26 simulator but **flaky across
+    /// the local + GitHub `macos-15` CI runner matrix**: the CI run on
+    /// `ffe9e40` reported the post-pull `UV Index 4.0` never appeared, and
+    /// every replacement gesture pattern we tried (longer hold, slower
+    /// velocity, longer drag, retry loops) either failed the same way or
+    /// timed out the test runner with SIGTERM.
+    ///
+    /// Rather than fight `.refreshable` gesture infrastructure, this test
+    /// now exercises the **same closure** through SwiftUI's
+    /// `@Environment(\.refresh)` action — the value SwiftUI sets on the
+    /// scroll view's child environment whenever `.refreshable` is
+    /// installed. The DEBUG-only `UITestRefreshableProbeButton` reads that
+    /// environment value and exposes its presence-or-absence through an
+    /// accessibility value:
+    ///   - `RefreshActionAvailable` — `.refreshable` is installed and the
+    ///     env action is bound; tapping the probe invokes the same closure
+    ///     body the real pull gesture would.
+    ///   - `RefreshActionNil` — `.refreshable` has been dropped from the
+    ///     ScrollView (the exact regression WI-47 was designed to catch)
+    ///     and this test fails before invocation.
     ///
     /// Determinism: `-uiTestStaleEstimate` seeds an initial `UV Index 200.0`
-    /// (fetchedAt 15 min ago), and `-uiTestRefreshableEcho` makes
-    /// `refreshUV()` short-circuit the live WeatherKit + location stack to
-    /// a sentinel `uvIndex = 4.0` so the post-pull re-render is observable
-    /// from a single static-text assertion.
+    /// (fetchedAt 15 min ago), and `-uiTestRefreshableEcho` (a) gates the
+    /// probe button into the view tree and (b) makes `refreshUV()`
+    /// short-circuit the live WeatherKit + location stack to a sentinel
+    /// `uvIndex = 4.0`. Tapping the probe calls the env action, which
+    /// runs the exact `.refreshable { await refreshUV() }` closure body,
+    /// so the post-tap re-render is observable from a single static-text
+    /// assertion.
     func testMayaPullToRefreshGestureRefetchesUVOnRepeatUse() {
         let app = launchApp(arguments: ["-uiTestStaleEstimate", "-uiTestRefreshableEcho"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
 
         // Baseline: the stale-estimate seed must render UV Index 200.0 on the
-        // UVIndexCard before any user gesture fires.
+        // UVIndexCard before any refresh fires.
         XCTAssertTrue(
             app.staticTexts["UV Index 200.0"].waitForExistence(timeout: 5),
-            "Pre-pull baseline: -uiTestStaleEstimate must seed UV Index 200.0 on the UVIndexCard."
+            "Pre-refresh baseline: -uiTestStaleEstimate must seed UV Index 200.0 on the UVIndexCard."
         )
 
-        // Maya's gesture: pull down on the NowView ScrollView to trigger the
-        // `.refreshable { await refreshUV() }` closure. Coordinate-based drag
-        // (instead of `swipeDown()`) reliably crosses the refresh threshold
-        // because the start coordinate is near the top of the scroll content.
-        let scrollView = app.scrollViews["NowViewScrollView"]
+        // The NowView ScrollView must still expose its accessibility identifier
+        // so any future gesture-based test (or a VoiceOver user) can target it.
         XCTAssertTrue(
-            scrollView.waitForExistence(timeout: 5),
+            app.scrollViews["NowViewScrollView"].waitForExistence(timeout: 5),
             "NowView ScrollView must expose the NowViewScrollView accessibility identifier "
-                + "so XCUI can target the pull-to-refresh gesture for Maya's repeating-use flow."
+                + "so Maya's pull-to-refresh affordance has a stable target."
         )
 
-        let start = scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
-        let finish = scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
-        start.press(forDuration: 0.05, thenDragTo: finish)
+        // The probe button renders whenever -uiTestRefreshableEcho is set.
+        // Its accessibility value reveals whether @Environment(\.refresh) is
+        // bound (proving .refreshable is still installed) or nil (proving
+        // it was dropped).
+        let probe = app.buttons["UITestRefreshableProbeButton"]
+        XCTAssertTrue(
+            probe.waitForExistence(timeout: 5),
+            "UITestRefreshableProbeButton must be present in DEBUG builds when "
+                + "-uiTestRefreshableEcho is set — it is the WI-50 test seam for "
+                + "verifying the .refreshable modifier wiring."
+        )
+        XCTAssertEqual(
+            probe.value as? String,
+            "RefreshActionAvailable",
+            ".refreshable must still be installed on NowViewScrollView. "
+                + "A RefreshActionNil value means the modifier was dropped — "
+                + "the exact regression WI-47/WI-50 guard against."
+        )
 
-        // Post-pull: the echo seam replaces UV Index 200.0 with the sentinel
-        // 4.0, proving `refreshable { await refreshUV() }` actually ran in
-        // response to Maya's pull gesture.
+        // Tap the probe to invoke the env action — the same closure body the
+        // real pull gesture would invoke — and assert the echo seam fires.
+        probe.tap()
+
         XCTAssertTrue(
             app.staticTexts["UV Index 4.0"].waitForExistence(timeout: 10),
-            "After Maya's pull-to-refresh, refreshUV() must run and the "
+            "After invoking the refresh env-action, refreshUV() must run and the "
                 + "UVIndexCard must re-render with the echo-seam UV value (4.0). "
-                + "Failure here means the .refreshable modifier was dropped or rewired."
+                + "Failure here means the .refreshable closure was rewired away from refreshUV()."
         )
     }
 
