@@ -36,9 +36,11 @@ final class UVBurnTimerUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Location permission"].waitForExistence(timeout: 5))
         XCTAssertTrue(
-            app.staticTexts[
-                "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
-            ].exists)
+            staticText(
+                in: app,
+                containing:
+                    "Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
+            ).exists)
         XCTAssertTrue(app.buttons["Continue to location request"].exists)
 
         app.buttons["Continue to location request"].tap()
