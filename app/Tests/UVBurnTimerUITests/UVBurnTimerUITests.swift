@@ -188,7 +188,12 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // Use tapWithRetry instead of direct .tap(): the "Use my location" button sits in
+        // a safeAreaInset(edge: .bottom) and the iOS 26 activation-point resolver can
+        // compute hit point {-1, -1} for safe-area buttons while the skin-type cover is
+        // still settling, silently dropping the tap.  tapWithRetry uses coordinate-based
+        // synthesis on iOS 26+ which bypasses the activation-point resolver.
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
         assertAppleWeatherAttributionVisible(in: app)
     }
@@ -205,7 +210,8 @@ final class UVBurnTimerUITests: XCTestCase {
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
 
-        app.buttons["Use my location"].tap()
+        // See comment above: use tapWithRetry to avoid {-1, -1} hit point on iOS 26.
+        tapWithRetry(app.buttons["Use my location"])
         XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
         assertAppleWeatherAttributionVisible(in: app)
     }
@@ -483,9 +489,19 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
+        // Use the "About & Citations" button as the tap-until-appears target rather than
+        // the "Settings" navigation bar title. The nav bar title is inside the sheet's
+        // NavigationStack; at the `.medium` presentation detent it can take longer than
+        // the 4-second per-attempt budget in tapUntilAppears to propagate into the
+        // accessibility tree.  Meanwhile the loop continues to re-tap the gear, which
+        // can toggle the sheet closed before the nav bar is registered — creating an
+        // open/close cycle that exhausts the 30-second deadline.  The "About &
+        // Citations" NavigationLink cell appears earlier in the tree on sheet open and
+        // is unique to the Settings sheet surface.
+        let aboutCitationsButton = app.buttons["About & Citations"]
+        tapUntilAppears(app.buttons["Settings"], aboutCitationsButton)
 
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
         XCTAssertTrue(scrollToStaticText(in: app, containing: "One-time paid app").exists)
 
         app.buttons["About & Citations"].tap()
