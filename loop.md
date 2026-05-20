@@ -41,7 +41,7 @@ description: "My squad work loop"
 	- [ ] UI/UX approved
 	- [ ] User scenarios captured
 	- [ ] Expert approved
-	- [ ] Code tested and validated — includes a green sign-off on `.squad/files/iris-contrast-qa-checklist.md` (WCAG contrast) **and** `.squad/files/iris-launch-readiness-checklist.md` (polarized-OLED outdoor readability) within the current build cycle.
+	- [ ] Code tested and validated — includes a green sign-off on `.squad/files/iris-contrast-qa-checklist.md` (WCAG contrast) **and** `.squad/files/iris-launch-readiness-checklist.md` (polarized-OLED outdoor readability) within the current build cycle. *Both checklists carry an `Automation status (WI-21)` section explaining that the sign-off blocks cannot be completed by an automated agent or CI. A blank sign-off block is treated as a fail; the next build cycle whose owner has access to a physical OLED iPhone + measurement tool MUST execute the procedure and commit the filled-in block.*
 
 7. **Review**
 	- After all work items are complete, each squad member reviews the project in parallel to ensure all goals are met and nothing is missed.
