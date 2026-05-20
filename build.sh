@@ -44,7 +44,7 @@ select_destination() {
   local booted_devices
   booted_devices="$(xcrun simctl list devices booted)"
 
-  if grep -Eq '^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)' <<< "$booted_devices"; then
+  if [[ "$booted_devices" =~ "^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)" ]]; then
     device_id="$(
       awk '
         /^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)/ {
@@ -76,7 +76,7 @@ select_destination() {
 
   local preferred_device
   for preferred_device in "${preferred_devices[@]}"; do
-    if grep -Fq "$preferred_device (" <<< "$available_devices"; then
+    if [[ "$available_devices" == *"$preferred_device ("* ]]; then
       device_id="$(
         awk -v device="$preferred_device" '
           index($0, device " (") {
