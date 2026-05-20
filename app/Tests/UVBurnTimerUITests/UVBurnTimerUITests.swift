@@ -749,7 +749,8 @@ final class UVBurnTimerUITests: XCTestCase {
         if exact.exists {
             return exact
         }
-        return app.buttons.matching(NSPredicate(format: "label MATCHES %@", "(?i)(?:selected,?\\s*)?\(NSRegularExpression.escapedPattern(for: label))(?:,?\\s*selected)?")).firstMatch
+        let pattern = "(?i)(?:selected,?\\s*)?\(NSRegularExpression.escapedPattern(for: label))(?:,?\\s*selected)?"
+        return app.buttons.matching(NSPredicate(format: "label MATCHES %@", pattern)).firstMatch
     }
 
     /// Scrolls the main-screen ScrollView so the compact Location + SPF row enters the
@@ -870,16 +871,20 @@ final class UVBurnTimerUITests: XCTestCase {
     /// `element.tap()` resolves the tap target via the accessibility
     /// activation point, which iOS 26 sometimes reports as `{-1, -1}` while
     /// a `.fullScreenCover` is still animating in — the resulting tap is
-    /// dropped without an error. Computing the hit point from the element's
-    /// frame via `coordinate(withNormalizedOffset:)` bypasses that resolver
-    /// and reliably lands the synthesized event inside the rendered bounds.
+    /// dropped without an error. On iOS 26+ the helper computes the hit
+    /// point from the element's frame via `coordinate(withNormalizedOffset:)`
+    /// to bypass that resolver. On older runtimes the standard `tap()` path
+    /// is preserved because the coordinate-based fallback interacts badly
+    /// with bordered-button hit-test geometry on iOS 17 / 18 — the tap can
+    /// land on a child Label / Image element instead of activating the
+    /// button's action.
     private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
         _ = waitForHittable(element, timeout: 5)
         for _ in 0..<retries {
             if element.exists && element.isHittable {
                 let frame = element.frame
                 if frame.width > 0 && frame.height > 0 {
-                    element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                    tapViaSafestPath(element, frame: frame)
                     return
                 }
             }
@@ -889,10 +894,23 @@ final class UVBurnTimerUITests: XCTestCase {
         if element.exists {
             let frame = element.frame
             if frame.width > 0 && frame.height > 0 {
-                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                tapViaSafestPath(element, frame: frame)
             } else {
                 element.tap()
             }
+        }
+    }
+
+    /// Picks the most reliable tap path for the current iOS runtime:
+    /// the coordinate-based path on iOS 26+ (where the activation-point
+    /// resolver bug fires) and the standard activation-point path on
+    /// every older runtime (where coordinate-based taps regress bordered
+    /// button hit-testing on iOS 17 / 18).
+    private func tapViaSafestPath(_ element: XCUIElement, frame: CGRect) {
+        if #available(iOS 26.0, *) {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        } else {
+            element.tap()
         }
     }
 
