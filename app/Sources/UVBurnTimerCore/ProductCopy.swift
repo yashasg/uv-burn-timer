@@ -72,6 +72,9 @@ public enum ProductCopy {
         "Children need pediatric guidance. Seek urgent care for severe sunburn symptoms such as blistering, fever, chills, dizziness, confusion, dehydration, or feeling very unwell."
     public static let aboutPrivacy =
         "Skin type and SPF stay in app memory only. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. No accounts, analytics, ads, crash SDKs, or third-party tracking."
+    public static let whatTheAppDoesNotDo =
+        "UV Burn Timer does not diagnose, prevent, or treat sunburn; does not replace professional medical advice; does not track your exposure over time; does not send alerts or timers; and does not account for shade, clothing, altitude, reflected glare, water, sweat, toweling, or changing weather after the UV value is fetched."
+    public static let lastUpdatedLine = "Last updated: 2026-05-20."
     public static let outdoorReadabilityTip =
         "Bright sunlight? Try Settings → Accessibility → Display & Text Size → Increase Contrast."
     public static let weatherAttributionServiceName = "Apple Weather"
@@ -146,6 +149,8 @@ public enum ProductCopy {
         aboutModelLimitations,
         pediatricAndEscalationGuidance,
         aboutPrivacy,
+        whatTheAppDoesNotDo,
+        lastUpdatedLine,
         outdoorReadabilityTip,
         weatherAttributionServiceName,
         weatherDataAttributionBody,
