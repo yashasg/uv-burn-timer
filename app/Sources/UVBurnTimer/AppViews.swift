@@ -35,6 +35,7 @@ struct RootView: View {
     @State private var locationPromptGate = LocationPromptGate()
     @State private var reattestationTracker = ForegroundReattestationTracker()
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
         NavigationStack {
@@ -160,13 +161,38 @@ struct RootView: View {
         NavigationLink {
             AboutView(highlightEstimateApplicability: true)
         } label: {
-            Label(ProductCopy.photosensitizationBannerLabel, systemImage: "exclamationmark.triangle")
-                .font(.callout.weight(.semibold))
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text(ProductCopy.photosensitizationBannerLabel)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color.yellow.opacity(colorSchemeContrast == .increased ? 0.35 : 0.18),
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(
+                        Color.orange.opacity(colorSchemeContrast == .increased ? 0.85 : 0.55),
+                        lineWidth: 1
+                    )
+            )
         }
-        .buttonStyle(.bordered)
-        .tint(.orange)
+        .buttonStyle(.plain)
+        .accessibilityLabel(ProductCopy.photosensitizationBannerLabel)
         .accessibilityHint("Opens About with medication, condition, pregnancy, and recent skin-treatment caveats.")
+        .accessibilityIdentifier("PhotosensitizationBanner")
     }
 
     @ViewBuilder

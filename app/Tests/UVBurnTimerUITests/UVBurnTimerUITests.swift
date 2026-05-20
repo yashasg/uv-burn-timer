@@ -349,6 +349,43 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(scrollToActionElement(in: app, named: "NIH MedlinePlus sun-sensitivity overview").exists)
     }
 
+    /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
+    /// photosensitization reach-back is a *banner*, not a chip — it spans
+    /// the full row, sits above the hero card, and serves as the L1
+    /// reach-back surface for users on photosensitizing meds. The previous
+    /// `Button.buttonStyle(.bordered).tint(.orange)` rendered as an
+    /// orange-tinted chip that was easy to mistake for a regular content
+    /// button. Lock the layout contract:
+    ///   1. The banner is reachable on the main screen with the dedicated
+    ///      `PhotosensitizationBanner` accessibility identifier.
+    ///   2. It spans ≥85% of the screen width.
+    ///   3. It sits above the hero `Burn-time estimate` card.
+    func testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let banner = app.buttons["PhotosensitizationBanner"]
+        XCTAssertTrue(
+            banner.waitForExistence(timeout: 5),
+            "Photosensitization affordance must expose the PhotosensitizationBanner accessibility identifier"
+        )
+
+        let screenWidth = app.windows.firstMatch.frame.width
+        XCTAssertGreaterThanOrEqual(
+            banner.frame.width,
+            screenWidth * 0.85,
+            "Photosensitization affordance must render as a banner spanning ≥85% of screen width, not a chip"
+        )
+
+        let heroTitle = app.staticTexts["Burn-time estimate"]
+        XCTAssertTrue(heroTitle.waitForExistence(timeout: 5))
+        XCTAssertLessThan(
+            banner.frame.midY,
+            heroTitle.frame.midY,
+            "Photosensitization banner must sit above the Burn-time estimate card"
+        )
+    }
+
     func testScenario9SettingsIncludesAboutCitationsAttributionAndPricing() {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
