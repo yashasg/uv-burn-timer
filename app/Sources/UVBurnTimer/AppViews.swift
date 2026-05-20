@@ -462,9 +462,7 @@ struct HeroTimerCard: View {
                         .foregroundStyle(.secondary)
                         .accessibilityLabel("Estimate inputs: \(contextLine)")
                 }
-                if let fetchedAt, estimate.tier != .none, estimate.rawMinutes.isFinite {
-                    BurnRiskGaugeCard(estimate: estimate, fetchedAt: fetchedAt, now: now)
-                }
+                burnRiskGauge
                 if isEstimateStale {
                     SafetyStatusCard(
                         title: "Estimate window elapsed",
@@ -482,6 +480,7 @@ struct HeroTimerCard: View {
             } else {
                 Text(verdictText)
                     .font(.title3.weight(.semibold))
+                burnRiskGauge
             }
 
             if let estimate, estimate.rawMinutes.isFinite {
@@ -499,6 +498,31 @@ struct HeroTimerCard: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var burnRiskGauge: some View {
+        if let estimate, let fetchedAt, estimate.tier != .none, estimate.rawMinutes.isFinite {
+            BurnRiskGaugeCard(estimate: estimate, fetchedAt: fetchedAt, now: now)
+        } else {
+            BurnRiskGaugeUnavailableCard(message: burnRiskGaugeUnavailableMessage)
+        }
+    }
+
+    private var burnRiskGaugeUnavailableMessage: String {
+        if let estimate, estimate.tier == .none {
+            return "No active burn window because the UV index is 0."
+        }
+
+        if weatherFailureMessage != nil {
+            return "Unavailable until Apple Weather returns a UV estimate."
+        }
+
+        if locationFailureMessage != nil {
+            return "Unavailable until location is available for a UV estimate."
+        }
+
+        return "Waiting for location and Apple Weather UV."
     }
 
     @ViewBuilder
@@ -1440,6 +1464,53 @@ struct BurnRiskGaugeCard: View {
         case .short:
             AnyShapeStyle(Gradient(colors: [Color("SeverityShort").opacity(0.5), Color("SeverityShort")]))
         }
+    }
+}
+
+struct BurnRiskGaugeUnavailableCard: View {
+    let message: String
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Burn window")
+                        .font(.headline)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                gauge
+            }
+            if differentiateWithoutColor {
+                Text("Unavailable")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var gauge: some View {
+        Gauge(value: 0, in: 0...1) {
+            Text("Burn risk")
+        } currentValueLabel: {
+            Text("—")
+                .font(.caption2.weight(.semibold))
+        }
+        .gaugeStyle(.accessoryCircularCapacity)
+        .tint(.secondary)
+        .scaleEffect(1.8)
+        .frame(width: 72, height: 72)
+        .accessibilityLabel("Burn risk gauge unavailable. \(message)")
+        .accessibilityValue("Unavailable")
+        .accessibilityHint("Fetch location and Apple Weather UV before relying on burn timing.")
+        .accessibilityIdentifier("BurnRiskGauge")
     }
 }
 
