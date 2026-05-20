@@ -488,9 +488,31 @@ final class UVBurnTimerUITests: XCTestCase {
             app.navigationBars["About"].waitForExistence(timeout: 5),
             "Tapping the hero L3 caveat link must push AboutView."
         )
+
+        // WI-53 — strengthen the deep-link contract: assert the
+        // applicability anchor was actually scrolled into view by
+        // `highlightEstimateApplicability: true`. The notForMe section
+        // ("When this estimate may not apply") lives roughly 1500pt
+        // down the AboutView scroll content — after the "About &
+        // Citations" intro, "How this works", "Skin type
+        // classification" (with three paragraphs of Fitzpatrick
+        // citation text), and "Sunscreen assumptions". Without the
+        // highlight flag, AboutView lands at the top and the section
+        // header is below the fold (`exists` would still be true via
+        // the AX tree, but `isHittable` is false). With the flag, the
+        // `proxy.scrollTo(notForMeAnchor, anchor: .top)` lands it in
+        // the visible viewport and `isHittable` flips true. This
+        // assertion catches a refactor that drops the flag or
+        // short-circuits the .onAppear scroll, which the prior
+        // existence-only check would have missed.
+        let applicabilityHeader = staticText(in: app, containing: "When this estimate may not apply")
         XCTAssertTrue(
-            staticText(in: app, containing: "When this estimate may not apply").exists,
-            "Hero L3 link must route to AboutView with highlightEstimateApplicability:true — the applicability section ('When this estimate may not apply', the notForMe anchor) must be reachable so Asha re-anchors on photosensitizer caveats per verdict."
+            applicabilityHeader.exists,
+            "Hero L3 link must route to AboutView with the applicability section materialized — the 'When this estimate may not apply' heading must exist so Asha can re-anchor on photosensitizer caveats per verdict."
+        )
+        XCTAssertTrue(
+            applicabilityHeader.isHittable,
+            "Hero L3 link must route with highlightEstimateApplicability:true — the applicability anchor must scroll into the visible viewport (isHittable). Without the highlight flag, the section is far below the fold and the deep-link contract degrades to a generic 'About' open."
         )
     }
 
