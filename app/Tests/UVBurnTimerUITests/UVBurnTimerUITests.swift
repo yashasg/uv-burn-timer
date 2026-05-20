@@ -749,7 +749,8 @@ final class UVBurnTimerUITests: XCTestCase {
         if exact.exists {
             return exact
         }
-        return app.buttons.matching(NSPredicate(format: "label MATCHES %@", "(?i)(?:selected,?\\s*)?\(NSRegularExpression.escapedPattern(for: label))(?:,?\\s*selected)?")).firstMatch
+        let pattern = "(?i)(?:selected,?\\s*)?\(NSRegularExpression.escapedPattern(for: label))(?:,?\\s*selected)?"
+        return app.buttons.matching(NSPredicate(format: "label MATCHES %@", pattern)).firstMatch
     }
 
     /// Scrolls the main-screen ScrollView so the compact Location + SPF row enters the

@@ -3345,6 +3345,75 @@ explicitly v1.1 scope.
 3. Consider adding a parallel-agent-safe local test wrapper (boot a
    dedicated sim per agent) if the loop continues running with many
    concurrent agents.
+### 2026-05-20T05:35:00-07:00: Plunder — `Clear saved location` does NOT clear rationale ack
+
+**Author:** Plunder (Legal & Compliance)
+**Status:** **RATIFIED** — closes WI-12 and Guardrail #2 of
+`gaia-location-rationale-persistence.md`
+**Reviewer:** Gaia
+**Source:** `.squad/decisions/inbox/plunder-rationale-ack-clear-coord-decision.md`
+
+#### Decision
+
+`Settings → Clear saved location` clears the cached rounded coordinate
+(and the legacy UV snapshot key) but **does not** clear
+`UserPreferenceStorage.locationRationaleAcknowledgedKey`. The
+rationale-ack lifecycle is intentionally decoupled from the
+saved-coordinate lifecycle.
+
+#### Mental model
+
+- **Rationale ack** = informed-consent state ("has the user read what we
+  send to Apple Weather?").
+- **Saved coordinate** = last-known data point ("where did we last
+  fetch?").
+
+| Trigger | Clears rationale ack? | Clears saved coordinate? |
+|---|---|---|
+| Settings → Clear saved location | ❌ no | ✅ yes |
+| App uninstall | ✅ yes | ✅ yes |
+| Material privacy-copy change (future v1.1 — `privacyCopyVersion` key) | ✅ yes | ❌ no |
+
+#### Why this is the right Plunder posture
+
+1. Re-prompting after coord clear would train users to dismiss privacy
+   text reflexively, undermining the informed-consent posture.
+2. The information disclosed has not changed; clearing the *last*
+   coordinate does not change *what gets sent next time*.
+3. Uninstall is the universal escape hatch (app sandbox guarantees
+   complete removal). This matches Apple's own permission posture.
+4. Symmetry with the L1 safety disclaimer: L1 re-fires every cold
+   launch because skin response is the load-bearing *safety* claim;
+   the rationale describes a static product-architecture fact and so
+   persists.
+
+#### Test coverage
+
+- `clearingCachedCoordinateDoesNotClearRationaleAcknowledgment`
+  (`app/Tests/UVBurnTimerCoreTests/UVWorkflowTests.swift`) — pins the
+  storage-layer contract: simulating
+  `RootView.clearSavedRoundedCoordinate`'s clear-only-coord writes
+  leaves the rationale-ack key intact, while
+  `UserPreferenceStorage.clearStoredPreferences` (the uninstall
+  analogue) clears all three preference keys together.
+
+#### Out-of-scope (deferred)
+
+- Settings toggle to forget the rationale ack (uninstall remains v1
+  escape hatch).
+- `privacyCopyVersion` versioning key (v1.1, per Guardrail #1 of the
+  parent ADR).
+
+#### Files touched by this ADR
+
+- `.squad/decisions/inbox/plunder-rationale-ack-clear-coord-decision.md`
+  (source — gitignored, archived locally only).
+- `app/Tests/UVBurnTimerCoreTests/UVWorkflowTests.swift`
+  (`clearingCachedCoordinateDoesNotClearRationaleAcknowledgment`).
+- `.squad/decisions.md` (this entry).
+
+No iOS source change — this ADR ratifies shipped behavior in
+`RootView.clearSavedRoundedCoordinate` (AppViews.swift line 483-488).
 
 
 ---
