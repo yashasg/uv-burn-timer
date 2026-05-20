@@ -84,7 +84,7 @@ rotation angle.
 | Surface | Glyphs that must remain legible | Pass? | Notes |
 |---|---|---|---|
 | UV Index secondary card `UV Index 6.2` + `Source: Apple Weather` | Full digit + attribution lockup | ☐ | Attribution is contractually required to stay visible |
-| Compact Location chip (`📍 San Francisco ›` or `Location`) | Full chip label + glyph | ☐ | |
+| Compact Location chip (`📍 Approx. 37.77, -122.42 ›` or `Location`) | Full chip label + glyph | ☐ | Chip renders `UVCoordinate.privacyDisplayText` (rounded coordinate), not a city name |
 | Compact SPF chip (`SPF 30`, etc.) | Full chip label + glyph | ☐ | |
 | Persistent footer `Informational only. Not medical advice.` | Full link copy | ☐ | Required to stay legible — disclaimer link |
 | Apple Weather attribution lockup OR `Apple Weather` text fallback | Lockup or fallback text | ☐ | Either form is acceptable per attribution audit |
