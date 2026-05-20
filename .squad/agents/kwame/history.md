@@ -135,3 +135,7 @@ GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
   - Files: `app/Sources/UVBurnTimer/AppViews.swift`, `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`.
   - Validation: `DERIVED_DATA_PATH="$PWD/.build/DerivedData" CONFIGURATION=Debug RUN_TESTS=true ./build.sh`; `DERIVED_DATA_PATH="$PWD/.build/DerivedData" ./run.sh`; screenshot confirmed full gauge visible on iPhone 17 Pro.
 - 2026-05-19T21:34:24.682-07:00 — Fixed simulator/development gauge visibility by rendering an explicit unavailable `BurnRiskGauge` shell inside the hero card whenever CoreLocation/WeatherKit have not produced a usable UV estimate. The fallback uses no fake UV data: accessibility value is "Unavailable," copy names the missing location/Apple Weather state, and valid estimates continue to drive the real percentage gauge. Added UI regression coverage for no-estimate, location-unavailable, weather-unavailable, and valid-estimate states.
+- 2026-05-19T22:27:48.170-07:00 — Fixed main-screen Location chip routing and gauge prominence:
+  - `Location` now invokes the location/UV refresh flow instead of presenting Settings; Settings remains on the gear button.
+  - Reworked `BurnRiskGaugeCard` and unavailable gauge shell into large centered SwiftUI circular rings inside the hero card, preserving honest unavailable copy/value when WeatherKit/CoreLocation has no estimate.
+  - Added UI regression coverage for Location-not-Settings routing and gauge minimum visual size on valid estimates.

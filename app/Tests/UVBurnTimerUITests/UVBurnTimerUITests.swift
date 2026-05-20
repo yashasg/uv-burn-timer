@@ -90,6 +90,21 @@ final class UVBurnTimerUITests: XCTestCase {
         assertUnavailableBurnRiskGaugeExists(in: app)
     }
 
+    func testLocationButtonStartsLocationFlowInsteadOfSettings() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        app.buttons["Location"].tap()
+
+        XCTAssertFalse(
+            app.navigationBars["Settings"].waitForExistence(timeout: 1),
+            "The Location chip must not route to the Settings sheet")
+        XCTAssertTrue(
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
+                timeout: 5))
+        XCTAssertTrue(app.buttons["Use my location"].exists)
+    }
+
     func testScenario4WeatherAttributionFallbackRemainsVisible() {
         let app = launchApp(arguments: ["-uiTestWeatherAttributionUnavailable"])
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
@@ -194,6 +209,10 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(
             gauge.isHittable,
             "BurnRiskGauge must be visible without scrolling or being covered by the persistent footer"
+        )
+        XCTAssertTrue(
+            gauge.frame.width >= 150 && gauge.frame.height >= 150,
+            "BurnRiskGauge must render as a prominent circular gauge, not a tiny accessory control"
         )
     }
 
