@@ -114,6 +114,33 @@ Result:        ☐ All rows pass    ☐ Failing rows filed as WI(s) ____________
 Signature:     ____________
 ```
 
+### Automation status (WI-21)
+
+This sign-off block **cannot be completed by an automated agent or by
+CI**. The acceptance criteria explicitly require a physical iPhone
+under controlled lighting plus a WCAG contrast-measurement tool (Xcode
+Accessibility Inspector, Apple Vision audit, or `colour-contrast-analyser`
+desktop). No simulator path, no CI runner, and no agentic loop has
+access to a physical display + measurement instrument. Faking this
+sign-off would violate the truthfulness contract that the rest of the
+copy + ADR ledger upholds (see `D-2026-05-19-honest-privacy-copy`).
+
+**Owner for the first signed pass:** Iris (UI/UX Designer) executes
+the procedure; Ma-Ti countersigns the per-row ratios.
+
+**Triggering event:** the first TestFlight build, then every TestFlight
+build that touches any surface listed in this checklist (see the
+`build.sh` SWIFT_TREAT_WARNINGS_AS_ERRORS gate output for the build
+identity to pin in the sign-off block).
+
+**Until the first signed pass exists,** `loop.md` §6 Goal 5 ("Code
+tested and validated") is intentionally not green for the launch-readiness
+gate — the automated portion (Swift Testing + XCUITest + warnings-as-
+errors) is green per `./build.sh`, but the rendered-contrast portion
+owned by this file remains open. The next build cycle whose owner can
+execute the physical-device pass MUST fill in the sign-off block above
+and commit the result; a blank block is treated as **fail** by Goal 5.
+
 ## Out of scope
 
 - Programmatic WCAG ratio assertion (rendered measurement remains

@@ -123,6 +123,36 @@ Result:           ☐ All rows pass    ☐ Failing rows filed as WI(s) _________
 Signature:        ____________
 ```
 
+### Automation status (WI-21)
+
+This sign-off block **cannot be completed by an automated agent or by
+CI**. The acceptance criteria require a physical OLED iPhone outdoors
+under direct sun (or a ≥ 50,000 lux bench light) plus a linear-polarized
+filter rotated through a full 360°. The simulator cannot reproduce
+polarization extinction, OLED panel emission, True Tone, or
+Auto-Brightness behaviour. No CI runner has access to a physical
+display or polarizing optics. Faking this sign-off would defeat the
+purpose of the gate — UV Burn Timer is a sunny-day app and the
+polarized-OLED extinction failure mode is the exact failure this
+checklist exists to catch.
+
+**Owner for the first signed pass:** Iris (UI/UX Designer) or any
+squad member with a physical iPhone executes the procedure; Argos
+countersigns the per-row polarization-tilt results (per WI-16
+acceptance).
+
+**Triggering event:** the first TestFlight build, then every
+TestFlight build that touches any surface listed in this checklist.
+
+**Until the first signed pass exists,** `loop.md` §6 Goal 5 ("Code
+tested and validated") is intentionally not green for the
+launch-readiness gate — the automated portion (Swift Testing +
+XCUITest + warnings-as-errors) is green per `./build.sh`, but the
+polarized-OLED outdoor-readability portion owned by this file
+remains open. The next build cycle whose owner can execute the
+physical-device pass MUST fill in the sign-off block above and
+commit the result; a blank block is treated as **fail** by Goal 5.
+
 ## Out of scope
 
 - Indoor / normal-ambient contrast — owned by
