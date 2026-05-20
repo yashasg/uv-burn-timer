@@ -3064,3 +3064,287 @@ mechanism its mandate.
 
 
 ---
+
+---
+
+
+# Decision: Default Model Selection for Squad Agents
+
+**Date:** 2026-05-20  
+**Status:** Proposed  
+**Audience:** All squad agents and team coordinators
+
+## Problem
+
+Squad agents were using inconsistent models, leading to:
+- Variable performance across tasks
+- Unpredictable costs
+- Difficulty in predicting behavior and quality
+
+## Decision
+
+Establish `claude-opus-4.7-xhigh` as the default model for all squad agents and sub-agents, with explicit exceptions for Ralph and Scribe.
+
+### Trade-offs
+
+**Pros:**
+- **Consistency:** Unified behavior across the team
+- **Quality:** Opus 4.7 XHigh provides superior reasoning for architectural decisions
+- **Predictability:** Team can reason about capabilities uniformly
+
+**Cons:**
+- **Cost:** Opus 4.7 XHigh is more expensive than other models
+- **Latency:** Slower inference compared to Haiku/Sonnet
+- **Not optimal for all tasks:** Task-specific models (e.g., Haiku for fast searches) may be more efficient
+
+### Exceptions
+
+- **Ralph:** Retains existing model assignment (specialized for specific workflows)
+- **Scribe:** Retains existing model assignment (specialized for specific workflows)
+
+Task-specific model overrides are permitted when documented rationale exists (performance, cost, or capability requirements).
+
+## Implementation
+
+- Updated `loop.md` Section 1: Model Selection
+- Effective for all new agent launches
+- Does not retroactively change running agents
+
+## Related Files
+
+- `loop.md` (Section 1: Model Selection)
+
+**Status update (2026-05-20):** RATIFIED in this loop. `loop.md` Section 1 codifies the rule and every squad agent run since the decision has used `claude-opus-4.7-xhigh` (or the documented exceptions). Closing as adopted-in-practice.
+
+---
+
+
+# Loop Closure — 2026-05-20 main branch parity
+
+- **Date:** 2026-05-20T04:30:00-07:00
+- **Author:** Squad work-loop session (acting as Kwame/Ralph integration role)
+- **Branch:** `main` at `7daac21` after squashing 6 in-flight branches
+
+## What landed this loop
+
+`main` advanced 12 squashed commits in this loop (newest first):
+
+| MR | Title | Owner | Spec/Backlog tie |
+|---|---|---|---|
+| !18 | Photosens reach-back is a yellow banner above the hero card | (squad) | Gaia WI-5 — spec §3 LANE 2 |
+| !15 | Audit Apple Weather attribution visibility on every weather-derived surface | (squad) | Gaia WI-8 — Plunder pre-submit #2, LANE 3 callout #4 |
+| !16 | Guard against IAP/monetization frameworks (StoreKit symbols + requestReview) | (squad) | Gaia WI-7 — Argos 90-day rule |
+| !17 | Ratify LocationPromptGate rationale-ack persistence ADR + regression test | (squad) | Gaia WI-10 — close open question from gaia-preference-persistence |
+| !14 | Align user-flow spec hero label with shipped "Burn-time estimate" | (squad) | Gaia WI-6 — spec §4 LANE 2 |
+| !13 | Footer disclaimer link uses spec copy | (this session) | Gaia WI follow-up — spec §7 LANE 2 |
+| !12 | fix(copy): align in-app privacy text with actual persistence behavior | (squad) | Gaia WI-1 — Plunder pre-submit #6 |
+| !11 | Compact Location + SPF chip row on main screen | (this session) | Gaia WI-3 — spec §6 LANE 2 |
+| !10 | docs: align display-cap copy in user-flow spec and persona notes | (squad) | Gaia WI-4 — spec LANE 3 callout #3 |
+| !9 | Harden onboarding cover chain; Fitzpatrick off main; default model + docs | (prior loop) | Iris redesign + cover-chain hardening |
+
+All MRs squash-merged after green GitHub-runner CI per loop §4.
+
+## Goals Checklist (loop.md §5)
+
+- [x] **Working app** — `BUILD SUCCEEDED` Debug + Release; CI green on every merged MR
+- [x] **UI/UX approved** — Spec §1-9 LANE 2 all implemented; photosens banner yellow with chevron; compact chip row replaces stacked controls
+- [x] **User scenarios captured** — README "User scenarios captured" + "Privacy guardrails" now match shipped persistence (MR !12)
+- [x] **Expert approved** — Wheeler (sunscreen 2-hr cap, photosens copy), Plunder (privacy truthfulness via !12; attribution coverage via !15; IAP guard via !16), Iris (gauge prominence, location chip routing, banner styling), Suchi (persona overlays) all reflected
+- [x] **Code tested and validated** — 64 Swift Testing tests pass cleanly; UI test suite augmented with `testMainScreenShowsLocationAndSPFInCompactRow`, `testMainScreenSPFChipOpensMenuWithAllFourLevels`, `testPersistentFooterDisclaimerLinkUsesSpecCopyAndOpensAbout`, `testAppleWeatherAttributionVisibleOnEveryWeatherDerivedSurface` family, `testLocationRationaleAcknowledgementSurvivesRelaunch`, and `pricingGuardrailsRejectInAppPurchaseFrameworks`
+
+## Backlog disposition (Gaia 2026-05-20T03:10Z)
+
+| WI | Title | Status |
+|---|---|---|
+| WI-1 | Privacy disclosure copy alignment | ✅ Merged (!12) |
+| WI-2 | README scenarios | ✅ Merged (folded into !12) |
+| WI-3 | Verify + merge compact inputs row | ✅ Merged (!11) |
+| WI-4 | 240+ min vs 4+ hr display cap | ✅ Resolved via docs alignment (!10) |
+| WI-5 | Photosens banner styling | ✅ Merged (!18) |
+| WI-6 | Hero card "Burn time" vs "Burn-time estimate" | ✅ Merged (!14) |
+| WI-7 | StoreKit / IAP source-guard test | ✅ Merged (!16) |
+| WI-8 | WeatherKit attribution audit | ✅ Merged (!15) |
+| WI-9 | Plan-for-elsewhere affordance | ⏸ Deferred to v1.1 (intentional) |
+| WI-10 | Location rationale ADR | ✅ Merged (!17) |
+
+9 of 10 work items resolved. WI-9 is the only outstanding item and is explicitly v1.1 scope.
+
+## Risk / known issues
+
+- **Local UI test runs are flaky on this shared workstation:** ~34 concurrent Copilot agents + multiple competing iOS apps on the same iPhone 17 Pro simulator cause `Restarting after unexpected exit, crash, or test timeout` events (NSMachErrorDomain -308). Tests pass individually but the full suite can't run in one shot locally. **External GitHub-runner CI is green** for every merged MR — that is the source of truth per loop §4.
+
+## Next loop seeds (no blockers)
+
+1. v1.1 scoping for WI-9 (plan-for-elsewhere) — Suchi/Iris to define interaction without GPS.
+2. Continued external CI monitoring as new contributions land.
+3. Consider adding a parallel-agent-safe local test wrapper (boot a dedicated sim per-agent) if the loop continues running with many concurrent agents.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+
+<!-- Source: .squad/decisions/inbox/gaia-model-default-loop.md -->
+
+# Decision: Default Model Selection for Squad Agents
+
+- **Date:** 2026-05-20
+- **Status:** **RATIFIED** — already enforced by `loop.md` §1 since this
+  loop cycle. Adoption verified: every agent charter under
+  `.squad/agents/*/charter.md` either inherits the default or names a
+  documented exception (Ralph + Scribe).
+- **Audience:** All squad agents and team coordinators
+- **Reviewer:** Gaia (Lead/Architect)
+- **Closes:** WI-17 inbox-fold item from `gaia-backlog-20260520T0430Z.md`
+  for the model-default decision.
+
+## Problem
+
+Squad agents were using inconsistent models, leading to variable
+performance across tasks, unpredictable costs, and difficulty in
+predicting behaviour and quality.
+
+## Decision
+
+`claude-opus-4.7-xhigh` is the default model for all squad agents and
+sub-agents, with explicit exceptions for Ralph and Scribe.
+
+### Trade-offs
+
+**Pros:**
+
+- **Consistency:** Unified behaviour across the team.
+- **Quality:** Opus 4.7 XHigh provides superior reasoning for
+  architectural decisions and code review.
+- **Predictability:** The team can reason about agent capabilities
+  uniformly.
+
+**Cons:**
+
+- **Cost:** Opus 4.7 XHigh is more expensive than Sonnet/Haiku tiers.
+- **Latency:** Slower inference than Haiku/Sonnet, especially for
+  large search threads.
+- **Not optimal for all tasks:** Task-specific overrides (e.g. Haiku
+  for fast searches, Sonnet for medium-complexity orchestration) are
+  more efficient and remain permitted when documented rationale exists.
+
+### Exceptions
+
+- **Ralph:** Retains existing model assignment (specialised for the
+  monitor/sentinel workflow).
+- **Scribe:** Retains existing model assignment (specialised for the
+  ledger/summary workflow).
+
+Task-specific model overrides are permitted when a documented
+rationale (performance, cost, or capability requirement) appears in
+either the agent's charter or the orchestration entry that spawned
+the override.
+
+## Implementation
+
+- `loop.md` §1 (Model Selection) enforces the default.
+- Effective for all new agent launches.
+- Does not retroactively change running agents — future loop cycles
+  will inherit it.
+
+## Related files
+
+- `loop.md` §1 (Model Selection — enforcement text).
+- `.squad/agents/*/charter.md` (per-agent inheritance + exception
+  documentation).
+
+
+---
+
+
+<!-- Source: .squad/decisions/inbox/loop-closure-20260520T043000Z.md -->
+
+# Loop Closure — 2026-05-20 main-branch parity
+
+- **Date:** 2026-05-20T04:30:00-07:00
+- **Author:** Squad work-loop session (acting as Kwame / Ralph
+  integration role)
+- **Branch:** `main` at `7daac21` after squashing six in-flight
+  branches; subsequently advanced by WI-11 merge to `e795c35`.
+- **Closes:** WI-17 inbox-fold item from `gaia-backlog-20260520T0430Z.md`
+  for the loop-closure summary.
+
+## What landed this loop
+
+`main` advanced 12 squashed commits in this loop (newest first):
+
+| MR  | Title                                                                            | Owner          | Spec / Backlog tie                                                |
+| --- | -------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------ |
+| !18 | Photosens reach-back is a yellow banner above the hero card                      | (squad)        | Gaia WI-5 — spec §3 LANE 2                                        |
+| !15 | Audit Apple Weather attribution visibility on every weather-derived surface      | (squad)        | Gaia WI-8 — Plunder pre-submit #2, LANE 3 callout #4              |
+| !16 | Guard against IAP/monetization frameworks (StoreKit + requestReview)             | (squad)        | Gaia WI-7 — Argos 90-day rule                                     |
+| !17 | Ratify LocationPromptGate rationale-ack persistence ADR + regression test        | (squad)        | Gaia WI-10 — close open question from gaia-preference-persistence |
+| !14 | Align user-flow spec hero label with shipped "Burn-time estimate"                | (squad)        | Gaia WI-6 — spec §4 LANE 2                                        |
+| !13 | Footer disclaimer link uses spec copy                                            | (this session) | Gaia WI follow-up — spec §7 LANE 2                                |
+| !12 | fix(copy): align in-app privacy text with actual persistence behavior            | (squad)        | Gaia WI-1 — Plunder pre-submit #6                                  |
+| !11 | Compact Location + SPF chip row on main screen                                   | (this session) | Gaia WI-3 — spec §6 LANE 2                                        |
+| !10 | docs: align display-cap copy in user-flow spec and persona notes                 | (squad)        | Gaia WI-4 — spec LANE 3 callout #3                                |
+| !9  | Harden onboarding cover chain; Fitzpatrick off main; default model + docs        | (prior loop)   | Iris redesign + cover-chain hardening                              |
+
+All MRs squash-merged after green GitHub-runner CI per loop §4.
+
+## Goals checklist (loop.md §6 at the time of closure)
+
+- [x] **Working app** — `BUILD SUCCEEDED` Debug + Release; CI green on
+      every merged MR.
+- [x] **UI/UX approved** — Spec §1–9 LANE 2 all implemented; photosens
+      banner yellow with chevron; compact chip row replaces stacked
+      controls.
+- [x] **User scenarios captured** — `README.md` "User scenarios
+      captured" + "Privacy guardrails" match shipped persistence
+      (MR !12).
+- [x] **Expert approved** — Wheeler (2-hour sunscreen cap, photosens
+      copy), Plunder (privacy truthfulness via !12; attribution
+      coverage via !15; IAP guard via !16), Iris (gauge prominence,
+      location chip routing, banner styling), Suchi (persona overlays).
+- [x] **Code tested and validated** — 64 Swift Testing tests pass
+      cleanly; UI test suite augmented with
+      `testMainScreenShowsLocationAndSPFInCompactRow`,
+      `testMainScreenSPFChipOpensMenuWithAllFourLevels`,
+      `testPersistentFooterDisclaimerLinkUsesSpecCopyAndOpensAbout`,
+      `testAppleWeatherAttributionVisibleOnEveryWeatherDerivedSurface`
+      family, `testLocationRationaleAcknowledgementSurvivesRelaunch`,
+      and `pricingGuardrailsRejectInAppPurchaseFrameworks`.
+
+## Backlog disposition (Gaia 2026-05-20T03:10Z, closed in this loop)
+
+| WI    | Title                                            | Status                            |
+| ----- | ------------------------------------------------ | --------------------------------- |
+| WI-1  | Privacy disclosure copy alignment                | ✅ Merged (!12)                   |
+| WI-2  | README scenarios                                 | ✅ Merged (folded into !12)       |
+| WI-3  | Verify + merge compact inputs row                | ✅ Merged (!11)                   |
+| WI-4  | 240+ min vs 4+ hr display cap                    | ✅ Resolved via docs alignment (!10) |
+| WI-5  | Photosens banner styling                         | ✅ Merged (!18)                   |
+| WI-6  | Hero card "Burn time" vs "Burn-time estimate"    | ✅ Merged (!14)                   |
+| WI-7  | StoreKit / IAP source-guard test                 | ✅ Merged (!16)                   |
+| WI-8  | WeatherKit attribution audit                     | ✅ Merged (!15)                   |
+| WI-9  | Plan-for-elsewhere affordance                    | ⏸ Deferred to v1.1 (intentional) |
+| WI-10 | Location rationale ADR                           | ✅ Merged (!17)                   |
+
+9 of 10 work items resolved. WI-9 is the only outstanding item and is
+explicitly v1.1 scope.
+
+## Risk / known issues
+
+- **Local UI test runs are flaky on this shared workstation:** ~34
+  concurrent Copilot agents + multiple competing iOS apps on the same
+  iPhone 17 Pro simulator cause `Restarting after unexpected exit,
+  crash, or test timeout` events (`NSMachErrorDomain -308`). Tests
+  pass individually but the full suite can't always run in one shot
+  locally. **External GitHub-runner CI is green** for every merged MR
+  — that is the source of truth per loop §4.
+
+## Next loop seeds (no blockers)
+
+1. v1.1 scoping for WI-9 (plan-for-elsewhere) — Suchi/Iris to define
+   interaction without GPS.
+2. Continued external CI monitoring as new contributions land.
+3. Consider adding a parallel-agent-safe local test wrapper (boot a
+   dedicated sim per agent) if the loop continues running with many
+   concurrent agents.
+
+
+---
