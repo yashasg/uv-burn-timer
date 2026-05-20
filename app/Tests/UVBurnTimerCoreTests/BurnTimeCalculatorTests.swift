@@ -491,6 +491,13 @@ import Testing
     #expect(ProductCopy.disclaimerSeeAboutLinkURL.host == "about-applicability")
 
     #expect(ProductCopy.auditCopySurfaces.contains(prompt))
+
+    let composed =
+        ProductCopy.disclaimerSeeAboutInlineLead
+        + ProductCopy.disclaimerSeeAboutInlineLinkLabel
+        + ProductCopy.disclaimerSeeAboutInlineTail
+    #expect(composed == prompt)
+    #expect(ProductCopy.disclaimerSeeAboutInlineLinkLabel == "see About")
 }
 
 @Test func skinTypeCaveatIsConsistentAcrossEntryPoints() {

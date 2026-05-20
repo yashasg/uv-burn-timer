@@ -47,12 +47,30 @@ public enum ProductCopy {
     public static let disclaimerSeeAboutInlinePrompt =
         "If you take a photosensitizing medication or have a sun-sensitive condition — see About."
 
-    /// Markdown variant rendered inline by `Text(LocalizedStringKey:)` in
-    /// `DisclaimerCover`. SwiftUI treats the `[see About](...)` span as a
-    /// tappable inline link; `DisclaimerCover` installs an `OpenURLAction`
-    /// that recognizes `disclaimerSeeAboutLinkURL` and opens the About
-    /// sheet at the applicability anchor instead of handing the URL to
-    /// the system.
+    /// Lead prose preceding the inline link span. Together with
+    /// `disclaimerSeeAboutInlineLinkLabel` and
+    /// `disclaimerSeeAboutInlineTail` these compose
+    /// `disclaimerSeeAboutInlinePrompt` for accessibility-stable
+    /// rendering via a `Button` with `.accessibilityIdentifier(
+    /// "DisclaimerSeeAboutLink")`. Splitting the prompt into three
+    /// pieces lets `DisclaimerCover` style the `see About` span with
+    /// the accent color and underline (link affordance) while keeping
+    /// the entire sentence inside a single tappable `Button` that
+    /// XCUITest can find by identifier across all supported iOS
+    /// versions (the previous `Text(LocalizedStringKey:)` Markdown
+    /// rendering's link a11y exposure varied between iOS 17 and
+    /// iOS 18+, which made the test unreliable on the CI runner).
+    public static let disclaimerSeeAboutInlineLead =
+        "If you take a photosensitizing medication or have a sun-sensitive condition — "
+    public static let disclaimerSeeAboutInlineLinkLabel = "see About"
+    public static let disclaimerSeeAboutInlineTail = "."
+
+    /// Markdown variant retained for spec/audit fidelity even though
+    /// `DisclaimerCover` now renders the prompt through a styled
+    /// `Button` rather than `Text(LocalizedStringKey:)`. The link
+    /// target (`disclaimerSeeAboutLinkURL`) still documents the
+    /// deep-link contract so future surfaces can re-use the same URL
+    /// scheme if they need a true Markdown rendering path.
     public static let disclaimerSeeAboutInlineMarkdown =
         "If you take a photosensitizing medication or have a sun-sensitive condition — [see About](\(disclaimerSeeAboutLinkURL.absoluteString))."
     public static let locationRationale =

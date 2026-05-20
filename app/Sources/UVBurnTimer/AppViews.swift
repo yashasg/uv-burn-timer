@@ -959,21 +959,26 @@ struct DisclaimerCover: View {
                     Text(ProductCopy.disclaimerBody)
                         .font(.body)
 
-                    Text(LocalizedStringKey(ProductCopy.disclaimerSeeAboutInlineMarkdown))
-                        .font(.body)
-                        .tint(.accentColor)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .environment(
-                            \.openURL,
-                            OpenURLAction { url in
-                                if url == ProductCopy.disclaimerSeeAboutLinkURL {
-                                    showAbout = true
-                                    return .handled
-                                }
-                                return .systemAction
-                            }
+                    Button {
+                        showAbout = true
+                    } label: {
+                        (
+                            Text(ProductCopy.disclaimerSeeAboutInlineLead)
+                                + Text(ProductCopy.disclaimerSeeAboutInlineLinkLabel)
+                                    .foregroundColor(.accentColor)
+                                    .underline()
+                                + Text(ProductCopy.disclaimerSeeAboutInlineTail)
                         )
+                        .font(.body)
+                        .multilineTextAlignment(.leading)
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("DisclaimerSeeAboutLink")
+                    .accessibilityLabel(ProductCopy.disclaimerSeeAboutInlinePrompt)
+                    .accessibilityHint("Opens the About sheet at the applicability anchor.")
+                    .accessibilityAddTraits(.isLink)
 
                     Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
                         .font(.callout.weight(.semibold))
