@@ -376,13 +376,20 @@ final class UVBurnTimerUITests: XCTestCase {
     /// the body. Tapping the link opens AboutView at the applicability
     /// anchor without dismissing the underlying cover.
     ///
-    /// The test pins three contracts:
-    ///   1. The inline prompt sentence is rendered as a hittable element
-    ///      on the cover (XCUITest exposes SwiftUI inline links as
-    ///      `links` / `buttons` with the link's label as their `label`).
-    ///   2. The pre-WI-13 bordered button copy
+    /// The test pins four contracts:
+    ///   1. The pre-WI-13 bordered button copy
     ///      ("See About: when estimates may not apply") is NOT present.
-    ///   3. Tapping the inline link opens AboutView and the cover stays
+    ///   2. The inline prompt is exposed through the
+    ///      `DisclaimerSeeAboutLink` accessibility identifier so
+    ///      XCUITest can find it reliably across iOS 17 / 18 / 26 — the
+    ///      SwiftUI `Text(LocalizedStringKey:)` Markdown link a11y
+    ///      exposure varies by runtime, so `DisclaimerCover` now wraps
+    ///      the prompt in a single styled `Button` that XCUITest
+    ///      addresses by identifier.
+    ///   3. The button's `label` surfaces the full prompt (including
+    ///      "photosensitizing medication" and "see About") for
+    ///      VoiceOver discoverability.
+    ///   4. Tapping the inline link opens AboutView and the cover stays
     ///      behind it (re-asserted by `acknowledgeButton` still existing
     ///      after dismissing About).
     func testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton() {
@@ -394,49 +401,21 @@ final class UVBurnTimerUITests: XCTestCase {
             "L1 disclaimer must not render a separate bordered 'See About: when estimates may not apply' button; the deep-link belongs inline in the body sentence."
         )
 
-        let inlinePromptStaticText = staticText(
-            in: app,
-            containing: "If you take a photosensitizing medication"
+        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
+        XCTAssertTrue(
+            inlineSeeAboutLink.waitForExistence(timeout: 5),
+            "L1 disclaimer must expose the inline 'see About' deep-link via the DisclaimerSeeAboutLink accessibility identifier."
         )
         XCTAssertTrue(
-            inlinePromptStaticText.waitForExistence(timeout: 5),
-            "L1 disclaimer must show the inline 'If you take a photosensitizing medication or have a sun-sensitive condition — see About.' prompt."
+            inlineSeeAboutLink.label.localizedCaseInsensitiveContains("photosensitizing medication"),
+            "Inline 'see About' control must surface the photosensitizing-medication prompt for VoiceOver."
         )
-
-        let inlineSeeAboutPredicate = NSPredicate(format: "label CONTAINS[c] %@", "see About")
-        let inlineLink = app.links.matching(inlineSeeAboutPredicate).firstMatch
-        let inlineLinkButton = app.buttons.matching(inlineSeeAboutPredicate).firstMatch
-        let inlineLinkStaticText = app.staticTexts.matching(inlineSeeAboutPredicate).firstMatch
-
-        let tappableInlineSeeAbout: XCUIElement
-        if inlineLink.waitForExistence(timeout: 2) {
-            tappableInlineSeeAbout = inlineLink
-        } else if inlineLinkButton.exists {
-            tappableInlineSeeAbout = inlineLinkButton
-        } else if inlineLinkStaticText.exists {
-            tappableInlineSeeAbout = inlineLinkStaticText
-        } else {
-            tappableInlineSeeAbout = inlinePromptStaticText
-        }
         XCTAssertTrue(
-            tappableInlineSeeAbout.exists,
-            "Inline 'see About' span must be reachable as a link, button, or static-text element so VoiceOver and tap targets can find it."
+            inlineSeeAboutLink.label.localizedCaseInsensitiveContains("see About"),
+            "Inline 'see About' control must include the 'see About' affordance text in its accessibility label."
         )
 
-        // SwiftUI Markdown-link a11y exposure varies by iOS version. On iOS
-        // 15-17 the Text(LocalizedStringKey:) often collapses into a single
-        // static-text element with the link span embedded at the trailing
-        // edge of the sentence (left-to-right locales). Tapping the trailing
-        // 85% horizontal offset lands on the [see About] span whether the
-        // accessibility tree split it out or not.
-        let tapTarget: XCUICoordinate
-        let frame = tappableInlineSeeAbout.frame
-        if frame.width > 0, frame.height > 0 {
-            tapTarget = tappableInlineSeeAbout.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
-        } else {
-            tapTarget = tappableInlineSeeAbout.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        }
-        tapTarget.tap()
+        inlineSeeAboutLink.tap()
 
         XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 10))
         XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
