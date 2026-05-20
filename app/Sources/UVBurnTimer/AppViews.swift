@@ -40,6 +40,8 @@ struct RootView: View {
                     HeroTimerCard(
                         estimate: estimate,
                         uvIndex: uvIndex,
+                        fetchedAt: fetchedAt,
+                        now: now,
                         contextLine: estimateContextLine,
                         statusMessage: statusMessage,
                         locationFailureMessage: locationFailureMessage,
@@ -51,11 +53,6 @@ struct RootView: View {
                             }
                         }
                     )
-                    if let est = estimate, let fa = fetchedAt,
-                        est.tier != .none, est.rawMinutes.isFinite
-                    {
-                        BurnRiskGaugeCard(estimate: est, fetchedAt: fa, now: now)
-                    }
                     if let uvIndex {
                         UVIndexCard(
                             uvIndex: uvIndex,
@@ -434,6 +431,8 @@ struct RootView: View {
 struct HeroTimerCard: View {
     let estimate: BurnTimeEstimate?
     let uvIndex: Double?
+    let fetchedAt: Date?
+    let now: Date
     let contextLine: String?
     let statusMessage: String
     let locationFailureMessage: String?
@@ -462,6 +461,9 @@ struct HeroTimerCard: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
                         .accessibilityLabel("Estimate inputs: \(contextLine)")
+                }
+                if let fetchedAt, estimate.tier != .none, estimate.rawMinutes.isFinite {
+                    BurnRiskGaugeCard(estimate: estimate, fetchedAt: fetchedAt, now: now)
                 }
                 if isEstimateStale {
                     SafetyStatusCard(
