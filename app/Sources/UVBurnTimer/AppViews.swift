@@ -28,7 +28,7 @@ struct RootView: View {
     @State private var fetchedAt: Date?
     @State private var roundedCoordinate: UVCoordinate?
     @State private var now = Date()
-    @State private var statusMessage = "Pick a skin type to see your estimate."
+    @State private var statusMessage = ""
     @State private var isFetching = false
     @State private var locationFailureMessage: String?
     @State private var weatherFailureMessage: String?
@@ -51,7 +51,7 @@ struct RootView: View {
                         fetchedAt: fetchedAt,
                         now: now,
                         contextLine: estimateContextLine,
-                        statusMessage: statusMessage,
+                        statusMessage: displayedStatusMessage,
                         locationFailureMessage: locationFailureMessage,
                         weatherFailureMessage: weatherFailureMessage,
                         isEstimateStale: isEstimateStale,
@@ -273,6 +273,19 @@ struct RootView: View {
             spf: session.selectedSPF,
             uvIndex: uvIndex
         )
+    }
+
+    /// Hero `statusMessage` is `@State` and mutates on transient events
+    /// (location request in progress, weather fetch succeeded, errors, etc.).
+    /// When no transient message is in flight, derive the empty-state copy
+    /// from the session so that once a Fitzpatrick skin type is committed the
+    /// hero stops asking the user to do something they've already done (WI-11).
+    private var displayedStatusMessage: String {
+        if !statusMessage.isEmpty {
+            return statusMessage
+        }
+
+        return ProductCopy.heroEmptyStatePrompt(hasSkinType: session.selectedSkinType != nil)
     }
 
     private var primaryActionPresentation: LocationActionPresentation {

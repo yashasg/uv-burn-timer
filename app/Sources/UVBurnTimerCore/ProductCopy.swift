@@ -12,6 +12,18 @@ public struct ProductCitationLink: Equatable, Sendable {
 
 public enum ProductCopy {
     public static let burnTimeEstimateTitle = "Burn-time estimate"
+    public static let emptyStateAwaitingSkinType = "Pick a skin type to see your estimate."
+    public static let emptyStateAwaitingLocation = "Tap Use my location to compute your estimate."
+
+    /// Hero empty-state prompt derived from session state so the copy can
+    /// never drift out of sync with what the user has already done. Once a
+    /// Fitzpatrick skin type has been committed (via onboarding or Settings),
+    /// the prompt directs the user to the next action (location); otherwise
+    /// it asks them to pick a skin type.
+    public static func heroEmptyStatePrompt(hasSkinType: Bool) -> String {
+        hasSkinType ? emptyStateAwaitingLocation : emptyStateAwaitingSkinType
+    }
+
     public static let disclaimerTitle = "How accurate is this for you?"
     public static let disclaimerBody =
         "UV Burn Timer is informational only and is not medical advice. It is a model calculation, not a measurement, and cannot replace professional medical advice, diagnosis, or treatment; it is not prevention guidance. Estimates assume healthy adult skin, consistent conditions, and that the labeled SPF is achieved through correct sunscreen amount and reapplication; skin response varies. For personal guidance, especially if you use photosensitizing medications or have photosensitive conditions, consult a dermatologist or qualified clinician. When in doubt: cover up, reapply sunscreen, or move into shade."
@@ -114,6 +126,8 @@ public enum ProductCopy {
 
     public static let auditCopySurfaces = [
         burnTimeEstimateTitle,
+        emptyStateAwaitingSkinType,
+        emptyStateAwaitingLocation,
         disclaimerTitle,
         disclaimerBody,
         photosensitizerDisclaimerLine,
