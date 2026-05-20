@@ -637,6 +637,41 @@ import Testing
     }
 }
 
+@Test func pricingGuardrailsRejectInAppPurchaseFrameworks() throws {
+    // Argos's 90-day post-launch rule (see .squad ledger): the app ships as a
+    // one-time paid download with no in-app purchase, subscription, tip jar,
+    // or restore flow. The existing `appSourcesAvoidProhibitedIntegrations`
+    // test scans for `StoreKit` as a substring, which catches
+    // `import StoreKit`/`import StoreKit2` but not specific StoreKit symbols
+    // whose names do not contain the literal substring "StoreKit". This
+    // guards against those symbols being introduced via copy-paste.
+    let appRoot = try appRootURL()
+    let sourceFiles = try swiftSourceFiles(in: appRoot.appending(path: "Sources"))
+    let filesToScan =
+        [
+            appRoot.appending(path: "Package.swift"),
+            appRoot.appending(path: "UVBurnTimer.entitlements"),
+            appRoot.appending(path: "app.xcodeproj/project.pbxproj"),
+        ] + sourceFiles
+
+    let prohibitedIAPTokens = [
+        "SubscriptionStoreView",
+        "AppTransaction",
+        "SKPaymentTransactionObserver",
+        "Product.products",
+        "requestReview",
+    ]
+
+    for file in filesToScan {
+        let contents = try String(contentsOf: file, encoding: .utf8)
+        for token in prohibitedIAPTokens {
+            #expect(
+                !contents.localizedCaseInsensitiveContains(token),
+                "\(file.path(percentEncoded: false)) contains prohibited IAP/monetization token \(token)")
+        }
+    }
+}
+
 @Test func sunscreenReapplicationReminderUsesTwoHourInterval() {
     #expect(ProductTiming.sunscreenReapplicationIntervalSeconds == 7_200)
 }
