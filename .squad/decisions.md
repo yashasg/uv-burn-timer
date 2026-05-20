@@ -3690,3 +3690,38 @@ All 10 in-scope WIs resolved (8 merged + WI-28 hardware-blocked carry-forward + 
 3. WI-9 (plan-for-elsewhere affordance) deferred to v1.1; Suchi/Iris to define interaction without GPS.
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
+
+---
+
+# Loop Closure — 2026-05-20T09:19Z (third loop addendum — PRs #3, #4, #7)
+
+Added by coordinator parallel squad review at `8a3406a` (after PRs #1/#2 merged).
+
+## Additional work items found and opened in this session
+
+| PR | WI | Title | Owner | Status |
+|---|---|---|---|---|
+| #3 | WI-36 | Extend `acknowledgeDisclaimerAndChooseTypeIII` settle wait: nav-bar timeout 5s→15s + `waitForHittable` banner guard for iOS 26 cover-chain | Kwame | pending CI |
+| #4 (docfix) | — | Restore full docstring for `testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero` (accidentally truncated in original WI-35 commit) | Kwame | pushed |
+| #7 | WI-37 | Reconcile hero-caveat spec `→` design-indicator with shipped SwiftUI `Label` + `info.circle` SF Symbol — docs only | Iris | pending CI |
+
+## Updated WI table (this loop, complete)
+
+| WI | Title | Status | Evidence |
+|---|---|---|---|
+| WI-26 | Update spec.md §LANE 1 #2 to match WI-13 (Button+sheet) | ✅ Merged | PR #1 / `2740cd1` |
+| WI-27 | Label disclaimerSeeAboutLinkURL/Markdown as AUDIT-ONLY | ✅ Merged | PR #2 / `8a3406a` |
+| WI-28 | Physical-device Iris checklist sign-off | ⛔ Carry-forward | Hardware-only; no agent path |
+| WI-29 | Fix Suchi persona navigation verbs (pushes → presents as .sheet) | ✅ Merged | PR #1 / `2740cd1` |
+| WI-30 | Full test suite verification on HEAD | ✅ Verified | 69 unit + 35 XCUI green on CI |
+| WI-31 | Add last-reconciled footer to spec + persona docs | ✅ Merged | PR #1 / `2740cd1` |
+| WI-32 | Extend tapWithRetry to remaining iOS 26 tap sites | ✅ Merged | PR #2 / `8a3406a` |
+| WI-33 | Convert 3 remaining Use-my-location `.tap()` to `tapWithRetry()` | ✅ Merged (pending) | PR #4 |
+| WI-34 | Loop-closure note | ✅ This file | — |
+| WI-35 | XCUI: Asha P4 L1 see-About round-trip leaves L1 cover present | ✅ Merged (pending) | PR #4 |
+| WI-36 | Extend acknowledgeHelper settle wait for iOS 26 cover-chain race | ✅ Merged (pending) | PR #3 |
+| WI-37 | Reconcile hero-caveat spec arrow notation with shipped Label+icon | ✅ Merged (pending) | PR #7 |
+
+tapWithRetry hardening now covers **all** cover-chain and safe-area button tap sites (WI-22/25/32/33/36). Zero remaining unguarded `.tap()` calls on the onboarding cover path.
+
+*Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
