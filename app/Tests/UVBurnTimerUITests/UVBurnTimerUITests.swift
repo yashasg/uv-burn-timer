@@ -448,6 +448,62 @@ final class UVBurnTimerUITests: XCTestCase {
         )
     }
 
+    /// WI-34 — Suchi Asha (P4) end-to-end safety-via-visibility contract.
+    ///
+    /// Asha's load-bearing flow: she reads the L1 disclaimer, taps the
+    /// inline "see About" link to inspect the applicability section, then
+    /// dismisses the About sheet and acknowledges the disclaimer. The
+    /// test pins that:
+    ///   1. Tapping `DisclaimerSeeAboutLink` opens AboutView as a `.sheet`
+    ///      with the applicability anchor section visible.
+    ///   2. After dismissing About, the L1 `DisclaimerCover` is still
+    ///      presented (interactiveDismissDisabled = true).
+    ///   3. Tapping "I understand" completes the flow and advances to
+    ///      skin-type selection — the full Asha round-trip.
+    func testScenarioAshaP4InlineSeeAboutRoundTripThenAcknowledge() {
+        let app = launchApp()
+        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10))
+
+        // Step 1: tap the inline see-About link.
+        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
+        XCTAssertTrue(
+            inlineSeeAboutLink.waitForExistence(timeout: 5),
+            "DisclaimerSeeAboutLink button must be present in the L1 disclaimer."
+        )
+        inlineSeeAboutLink.tap()
+
+        // Step 2: AboutView opens as a sheet with the applicability anchor.
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForExistence(timeout: 10),
+            "Tapping DisclaimerSeeAboutLink must open the About sheet."
+        )
+        XCTAssertTrue(
+            staticText(in: app, containing: "When this estimate may not apply").exists,
+            "About sheet must surface the applicability anchor section (highlightEstimateApplicability: true)."
+        )
+
+        // Step 3: dismiss the About sheet.
+        let doneButton = app.buttons["Done"]
+        if doneButton.waitForExistence(timeout: 2) {
+            doneButton.tap()
+        } else {
+            app.swipeDown(velocity: .fast)
+        }
+
+        // Step 4: DisclaimerCover must still be presented (interactiveDismissDisabled).
+        XCTAssertTrue(
+            app.buttons["I understand"].waitForExistence(timeout: 5),
+            "After dismissing About, the L1 disclaimer cover must still be presented."
+        )
+
+        // Step 5: acknowledge the disclaimer and advance to skin-type selection.
+        tapUntilAppears(app.buttons["I understand"], app.navigationBars["Choose skin type"])
+        XCTAssertTrue(
+            app.navigationBars["Choose skin type"].waitForExistence(timeout: 10),
+            "Acknowledging the disclaimer must advance to skin-type selection."
+        )
+    }
+
     /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
     /// photosensitization reach-back is a *banner*, not a chip — it spans
     /// the full row, sits above the hero card, and serves as the L1
