@@ -118,3 +118,8 @@ GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
 - `build.sh` must support CI env vars (`CONFIGURATION`, `DERIVED_DATA_PATH`, etc.) — the CI bridge passes these for selective build/test control.
 - Swift 6 strict concurrency on Xcode 26: `tearDownWithError()` overrides are NOT implicitly `@MainActor` even if the class is. Using `XCUIApplication().terminate()` before launch is the correct pattern.
 - Concurrency group `cancel-in-progress: true` can cause webhook-triggered runs to cancel each other if webhooks fire in rapid succession. An empty re-trigger commit resolves this.
+- 2026-05-19T18:53:47.266-07:00 — Rebased MR !2 app icon catalog onto `origin/main`:
+  - Existing `squad/fix-app-icon-catalog` history carried stale `squad-work-loop-ci-tests` commits, so I created a safety backup branch (`backup/app-icon-before-main-rebase-2026-05-19`) and rebased only the app-icon commit onto latest `main`.
+  - Retargeted GitLab MR !2 from `squad-work-loop-ci-tests` to `main` and kept the existing MR to avoid duplicate review surfaces.
+  - Validated icon catalog with a Contents.json/PNG pixel-dimension check (18 entries) and ran `./build.sh` locally on the project-selected iPhone simulator; both passed.
+  - External CI bridge can emit duplicate GitHub repository_dispatch events; when the first MR run was cancelled, an empty `ci: retrigger app icon validation` commit restored a clean external pipeline.
