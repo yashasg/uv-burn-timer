@@ -49,7 +49,7 @@ public struct BurnTimeEstimate: Equatable, Sendable {
         }
 
         if isCappedForDisplay {
-            return "240+ min"
+            return "4+ hr"
         }
 
         return "~\(Self.compactDurationText(minutes: roundedDisplayMinutes ?? 0))"
