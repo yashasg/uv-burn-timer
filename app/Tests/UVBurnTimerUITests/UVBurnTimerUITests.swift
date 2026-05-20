@@ -265,8 +265,60 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(staticText(in: app, containing: "does not mean prolonged sun exposure is safe").exists)
     }
 
+    /// WI-47 — Suchi persona-annotations.md:118 (Maya, P2 open-water swim):
+    /// **Pull-to-refresh is "Maya's primary affordance on repeating use."**
+    /// She cold-launches the app twice (pre-swim and post-warmup) and expects
+    /// pulling down on the NowView ScrollView to re-fetch the UV verdict
+    /// without traversing the disclaimer-cover cold-launch path. Without an
+    /// XCUI guard the `.refreshable` modifier could be silently dropped during
+    /// a NowView refactor — it is a passive gesture-only affordance with no
+    /// other identifier-based surface in the existing test set.
+    ///
+    /// Determinism: `-uiTestStaleEstimate` seeds an initial `UV Index 200.0`
+    /// (fetchedAt 15 min ago), and `-uiTestRefreshableEcho` makes
+    /// `refreshUV()` short-circuit the live WeatherKit + location stack to
+    /// a sentinel `uvIndex = 4.0` so the post-pull re-render is observable
+    /// from a single static-text assertion.
+    func testMayaPullToRefreshGestureRefetchesUVOnRepeatUse() {
+        let app = launchApp(arguments: ["-uiTestStaleEstimate", "-uiTestRefreshableEcho"])
+
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+
+        // Baseline: the stale-estimate seed must render UV Index 200.0 on the
+        // UVIndexCard before any user gesture fires.
+        XCTAssertTrue(
+            app.staticTexts["UV Index 200.0"].waitForExistence(timeout: 5),
+            "Pre-pull baseline: -uiTestStaleEstimate must seed UV Index 200.0 on the UVIndexCard."
+        )
+
+        // Maya's gesture: pull down on the NowView ScrollView to trigger the
+        // `.refreshable { await refreshUV() }` closure. Coordinate-based drag
+        // (instead of `swipeDown()`) reliably crosses the refresh threshold
+        // because the start coordinate is near the top of the scroll content.
+        let scrollView = app.scrollViews["NowViewScrollView"]
+        XCTAssertTrue(
+            scrollView.waitForExistence(timeout: 5),
+            "NowView ScrollView must expose the NowViewScrollView accessibility identifier "
+                + "so XCUI can target the pull-to-refresh gesture for Maya's repeating-use flow."
+        )
+
+        let start = scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+        let finish = scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+        start.press(forDuration: 0.05, thenDragTo: finish)
+
+        // Post-pull: the echo seam replaces UV Index 200.0 with the sentinel
+        // 4.0, proving `refreshable { await refreshUV() }` actually ran in
+        // response to Maya's pull gesture.
+        XCTAssertTrue(
+            app.staticTexts["UV Index 4.0"].waitForExistence(timeout: 10),
+            "After Maya's pull-to-refresh, refreshUV() must run and the "
+                + "UVIndexCard must re-render with the echo-seam UV value (4.0). "
+                + "Failure here means the .refreshable modifier was dropped or rewired."
+        )
+    }
+
     func testBurnRiskGaugeExistsAndIsMeaningfulOnStaleEstimate() {
-        // The -uiTestStaleEstimate seed sets uvIndex=10, fetchedAt 15 min ago, typeI.
+        // The -uiTestStaleEstimate seed sets uvIndex=200, fetchedAt 15 min ago, typeI.
         // With elapsed > 0 and a valid estimate the gauge must be present and not at 0%.
         let app = launchApp(arguments: ["-uiTestStaleEstimate"])
 
