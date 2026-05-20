@@ -14,14 +14,29 @@ public enum BurnTimeTier: Equatable, Sendable {
 public struct BurnTimeEstimate: Equatable, Sendable {
     public let rawMinutes: Double
     public let tier: BurnTimeTier
+    public let isSunscreenProtected: Bool
+
+    public var effectiveWindowMinutes: Double {
+        guard rawMinutes.isFinite else { return rawMinutes }
+
+        if isCappedForSunscreenReapplication {
+            return ProductTiming.sunscreenReapplicationIntervalMinutes
+        }
+
+        return rawMinutes
+    }
+
+    public var isCappedForSunscreenReapplication: Bool {
+        rawMinutes.isFinite && isSunscreenProtected && rawMinutes > ProductTiming.sunscreenReapplicationIntervalMinutes
+    }
 
     public var isCappedForDisplay: Bool {
-        rawMinutes.isFinite && rawMinutes >= 240
+        isCappedForSunscreenReapplication || (rawMinutes.isFinite && rawMinutes >= 240)
     }
 
     public var roundedDisplayMinutes: Int? {
-        guard rawMinutes.isFinite else { return nil }
-        return Int(rawMinutes.rounded())
+        guard effectiveWindowMinutes.isFinite else { return nil }
+        return Int(effectiveWindowMinutes.rounded())
     }
 
     public var displayText: String {
@@ -29,11 +44,15 @@ public struct BurnTimeEstimate: Equatable, Sendable {
             return "No UV"
         }
 
+        if isCappedForSunscreenReapplication {
+            return "Up to 120 min"
+        }
+
         if isCappedForDisplay {
             return "240+ min"
         }
 
-        return "~\(Int(rawMinutes.rounded())) min"
+        return "~\(Int(effectiveWindowMinutes.rounded())) min"
     }
 
     public var accessibilitySummary: String {
@@ -41,21 +60,23 @@ public struct BurnTimeEstimate: Equatable, Sendable {
             return "UV index is 0. No erythemal irradiance detected."
         }
 
+        if isCappedForSunscreenReapplication {
+            return "Sunscreen reapplication window: up to 120 minutes. The mathematical burn estimate may be longer, but reapply sunscreen at least every 2 hours."
+        }
+
         if isCappedForDisplay {
             return "Estimated burn time: 4 or more hours."
         }
 
-        return "Estimated burn time: \(Int(rawMinutes.rounded())) minutes."
+        return "Estimated burn time: \(Int(effectiveWindowMinutes.rounded())) minutes."
     }
 
     public func isElapsed(fetchedAt: Date, now: Date) -> Bool {
-        guard rawMinutes.isFinite else {
+        guard effectiveWindowMinutes.isFinite else {
             return false
         }
 
-        let burnWindowSeconds = rawMinutes * 60
-        let refreshWindowSeconds = ProductTiming.sunscreenReapplicationIntervalSeconds
-        return now.timeIntervalSince(fetchedAt) >= min(burnWindowSeconds, refreshWindowSeconds)
+        return now.timeIntervalSince(fetchedAt) >= effectiveWindowMinutes * 60
     }
 }
 
@@ -70,7 +91,7 @@ public enum BurnTimeCalculator {
         }
 
         guard uvIndex > 0 else {
-            return BurnTimeEstimate(rawMinutes: .infinity, tier: .none)
+            return BurnTimeEstimate(rawMinutes: .infinity, tier: .none, isSunscreenProtected: spf.isSunscreen)
         }
 
         let erythemalIrradianceWattsPerSquareMeter = uvIndex * 0.025
@@ -80,7 +101,12 @@ public enum BurnTimeCalculator {
 
         return BurnTimeEstimate(
             rawMinutes: protectedMinutes,
-            tier: tier(for: protectedMinutes)
+            tier: tier(
+                for: min(
+                    protectedMinutes,
+                    spf.isSunscreen ? ProductTiming.sunscreenReapplicationIntervalMinutes : protectedMinutes
+                )),
+            isSunscreenProtected: spf.isSunscreen
         )
     }
 

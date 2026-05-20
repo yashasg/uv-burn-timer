@@ -3,16 +3,32 @@ import UVBurnTimerCore
 
 @main
 struct UVBurnTimerApp: App {
-    @State private var session = UVBurnTimerSession()
-    @State private var showDisclaimer = true
+    @State private var session: UVBurnTimerSession
+    @State private var showDisclaimer: Bool
     @State private var showSkinTypeOnboarding = false
 
     init() {
+        let defaults = UserDefaults.standard
+        var initialSession = UserPreferenceStorage.restoredSession(from: defaults)
+        var initialShowDisclaimer = true
+
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-uiTestResetDefaults") {
+            UserPreferenceStorage.clearStoredPreferences(from: defaults)
             UserDefaults.standard.removeObject(forKey: "lastRoundedCoordinate")
             UserDefaults.standard.removeObject(forKey: "lastUVSnapshot")
+            initialSession = UserPreferenceStorage.restoredSession(from: defaults)
+        }
+        if arguments.contains("-uiTestSavedPreferences") {
+            defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+            defaults.set(SPFLevel.spf50.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+            defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+            defaults.set(
+                #"{"roundedCoordinate":{"latitude":37.77,"longitude":-122.42}}"#,
+                forKey: "lastRoundedCoordinate"
+            )
+            initialSession = UserPreferenceStorage.restoredSession(from: defaults)
         }
         if arguments.contains("-uiTestCorruptRoundedCoordinate") {
             UserDefaults.standard.set("not-json", forKey: "lastRoundedCoordinate")
@@ -24,33 +40,33 @@ struct UVBurnTimerApp: App {
             )
         }
         if arguments.contains("-uiTestStaleEstimate") {
-            _session = State(
-                initialValue: UVBurnTimerSession(
-                    selectedSkinType: .typeI,
-                    selectedSPF: .none,
-                    acknowledgedDisclaimer: true
-                ))
-            _showDisclaimer = State(initialValue: false)
+            initialSession = UVBurnTimerSession(
+                selectedSkinType: .typeI,
+                selectedSPF: .spf15,
+                acknowledgedDisclaimer: true
+            )
+            initialShowDisclaimer = false
         }
         if arguments.contains("-uiTestCappedEstimate") {
-            _session = State(
-                initialValue: UVBurnTimerSession(
-                    selectedSkinType: .typeIII,
-                    selectedSPF: .spf30,
-                    acknowledgedDisclaimer: true
-                ))
-            _showDisclaimer = State(initialValue: false)
+            initialSession = UVBurnTimerSession(
+                selectedSkinType: .typeIII,
+                selectedSPF: .spf30,
+                acknowledgedDisclaimer: true
+            )
+            initialShowDisclaimer = false
         }
         if arguments.contains("-uiTestLongUncappedEstimate") {
-            _session = State(
-                initialValue: UVBurnTimerSession(
-                    selectedSkinType: .typeIII,
-                    selectedSPF: .none,
-                    acknowledgedDisclaimer: true
-                ))
-            _showDisclaimer = State(initialValue: false)
+            initialSession = UVBurnTimerSession(
+                selectedSkinType: .typeIII,
+                selectedSPF: .spf15,
+                acknowledgedDisclaimer: true
+            )
+            initialShowDisclaimer = false
         }
         #endif
+
+        _session = State(initialValue: initialSession)
+        _showDisclaimer = State(initialValue: initialShowDisclaimer)
     }
 
     var body: some Scene {

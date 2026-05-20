@@ -135,3 +135,7 @@ GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
   - Files: `app/Sources/UVBurnTimer/AppViews.swift`, `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`.
   - Validation: `DERIVED_DATA_PATH="$PWD/.build/DerivedData" CONFIGURATION=Debug RUN_TESTS=true ./build.sh`; `DERIVED_DATA_PATH="$PWD/.build/DerivedData" ./run.sh`; screenshot confirmed full gauge visible on iPhone 17 Pro.
 - 2026-05-19T21:34:24.682-07:00 — Fixed simulator/development gauge visibility by rendering an explicit unavailable `BurnRiskGauge` shell inside the hero card whenever CoreLocation/WeatherKit have not produced a usable UV estimate. The fallback uses no fake UV data: accessibility value is "Unavailable," copy names the missing location/Apple Weather state, and valid estimates continue to drive the real percentage gauge. Added UI regression coverage for no-estimate, location-unavailable, weather-unavailable, and valid-estimate states.
+- 2026-05-19T22:34:50.179-07:00 — Removed SPF None as a user-facing sunscreen choice:
+  - `SPFLevel.allCases` now lists only sunscreen products (15, 30, 50, 70+); the old no-SPF path is retained only as `unprotectedReference` for internal/reference math tests.
+  - UI/debug seeds now default to real SPF values, and UI coverage asserts the segmented control does not expose "None".
+  - Validated with `DERIVED_DATA_PATH="$PWD/.build/DerivedData" CONFIGURATION=Debug RUN_TESTS=true ./build.sh` after integrating with the active 2-hour sunscreen-cap work.

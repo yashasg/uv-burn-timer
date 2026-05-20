@@ -17,7 +17,11 @@ final class DeviceLocationProvider: NSObject, ObservableObject, CLLocationManage
     override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyKilometer
+        if #available(iOS 14.0, *) {
+            manager.desiredAccuracy = kCLLocationAccuracyReduced
+        } else {
+            manager.desiredAccuracy = kCLLocationAccuracyKilometer
+        }
     }
 
     func currentCoordinate() async throws -> UVCoordinate {
@@ -70,7 +74,7 @@ final class DeviceLocationProvider: NSObject, ObservableObject, CLLocationManage
                     UVCoordinate(
                         latitude: coordinate.latitude,
                         longitude: coordinate.longitude
-                    )
+                    ).roundedForWeatherRequest
                 )
             )
         }

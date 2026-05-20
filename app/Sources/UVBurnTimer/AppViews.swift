@@ -16,6 +16,11 @@ struct RootView: View {
     @Binding var showDisclaimer: Bool
     @AppStorage("lastRoundedCoordinate") private var cachedRoundedCoordinateStorage = ""
     @AppStorage("lastUVSnapshot") private var legacyCachedUVSnapshotStorage = ""
+    @AppStorage(UserPreferenceStorage.selectedSkinTypeKey) private var persistedSkinTypeRawValue =
+        UserPreferenceStorage.unsetSkinTypeRawValue
+    @AppStorage(UserPreferenceStorage.selectedSPFKey) private var persistedSPFRawValue = SPFLevel.spf30.rawValue
+    @AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey) private var persistedLocationRationaleAcknowledged =
+        false
     @StateObject private var locationProvider = DeviceLocationProvider()
     @State private var showSettings = false
     @State private var uvIndex: Double?
@@ -118,6 +123,12 @@ struct RootView: View {
             .onChange(of: statusMessage) { _, newValue in
                 announceStatusForAccessibility(newValue)
             }
+            .onChange(of: session.selectedSkinType) { _, selectedSkinType in
+                persist(skinType: selectedSkinType)
+            }
+            .onChange(of: session.selectedSPF) { _, selectedSPF in
+                persist(spf: selectedSPF)
+            }
             .sheet(isPresented: $showSettings) {
                 SettingsSheet(
                     session: $session,
@@ -159,15 +170,18 @@ struct RootView: View {
 
     private var contextChipRow: some View {
         Button {
-            showSettings = true
+            Task {
+                await refreshUV()
+            }
         } label: {
             Label(locationChipTitle, systemImage: "location")
                 .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.bordered)
+        .disabled(isFetching)
         .accessibilityLabel("Location")
         .accessibilityValue(locationChipAccessibilityValue)
-        .accessibilityHint("Opens Settings.")
+        .accessibilityHint(primaryActionPresentation.accessibilityHint)
     }
 
     private var spfCard: some View {
@@ -258,7 +272,7 @@ struct RootView: View {
                 throw UVBurnTimerWorkflowError.missingSkinType
             }
 
-            guard locationPromptGate.allowSystemPromptOrAcknowledgeRationale() else {
+            guard allowLocationRequestOrPersistRationale() else {
                 statusMessage = "Location rationale reviewed. Tap Use my location to continue."
                 return
             }
@@ -336,10 +350,39 @@ struct RootView: View {
     }
 
     private func handleAppear() {
+        syncPreferenceStorageFromSession()
+        restoreLocationPromptChoice()
         restoreSavedRoundedCoordinate()
         applyUITestStaleEstimateSeedIfNeeded()
         applyUITestCappedEstimateSeedIfNeeded()
         applyUITestLongUncappedEstimateSeedIfNeeded()
+    }
+
+    private func syncPreferenceStorageFromSession() {
+        persist(skinType: session.selectedSkinType)
+        persist(spf: session.selectedSPF)
+    }
+
+    private func persist(skinType: FitzpatrickSkinType?) {
+        persistedSkinTypeRawValue = skinType?.rawValue ?? UserPreferenceStorage.unsetSkinTypeRawValue
+    }
+
+    private func persist(spf: SPFLevel) {
+        persistedSPFRawValue = (spf.isSunscreen ? spf : .spf30).rawValue
+    }
+
+    private func restoreLocationPromptChoice() {
+        guard persistedLocationRationaleAcknowledged else {
+            return
+        }
+
+        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+    }
+
+    private func allowLocationRequestOrPersistRationale() -> Bool {
+        let isAllowed = locationPromptGate.allowSystemPromptOrAcknowledgeRationale()
+        persistedLocationRationaleAcknowledged = locationPromptGate.hasAcknowledgedRationale
+        return isAllowed
     }
 
     private func restoreSavedRoundedCoordinate() {
@@ -355,6 +398,7 @@ struct RootView: View {
             {
                 roundedCoordinate = restoredCoordinate
                 locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
+                persistedLocationRationaleAcknowledged = true
             }
         } catch {
             cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
@@ -365,6 +409,7 @@ struct RootView: View {
         do {
             cachedRoundedCoordinateStorage = try CachedRoundedCoordinateStorage.storageValue(for: snapshot)
             legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
+            persistedLocationRationaleAcknowledged = true
         } catch {
             cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         }
@@ -383,7 +428,7 @@ struct RootView: View {
             return
         }
 
-        uvIndex = 10
+        uvIndex = 200
         fetchedAt = Date().addingTimeInterval(-15 * 60)
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
         locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
@@ -411,7 +456,7 @@ struct RootView: View {
             return
         }
 
-        uvIndex = 2.5
+        uvIndex = 37.5
         fetchedAt = Date()
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
         locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
@@ -475,6 +520,13 @@ struct HeroTimerCard: View {
                         title: "Long estimate caveat",
                         message: ProductCopy.longEstimateHedge,
                         systemImage: "shield.lefthalf.filled"
+                    )
+                }
+                if estimate.isCappedForSunscreenReapplication {
+                    SafetyStatusCard(
+                        title: "Sunscreen reapplication limit",
+                        message: ProductCopy.sunscreenCapHedge,
+                        systemImage: "clock.badge.exclamationmark"
                     )
                 }
             } else {
@@ -1391,46 +1443,61 @@ struct BurnRiskGaugeCard: View {
     let estimate: BurnTimeEstimate
     let fetchedAt: Date
     let now: Date
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+    @ScaledMetric(relativeTo: .largeTitle) private var gaugeDiameter = 188
+    @ScaledMetric(relativeTo: .title) private var gaugeLineWidth = 18
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Burn window")
-                        .font(.headline)
-                    Text(supportingText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                gauge
+        VStack(spacing: 16) {
+            VStack(spacing: 4) {
+                Text("Burn window")
+                    .font(.headline)
+                Text(supportingText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+
+            gauge
+
             if differentiateWithoutColor {
                 Text(percentText)
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .accessibilityHidden(true)
             }
         }
-        .padding()
+        .padding(20)
         .frame(maxWidth: .infinity)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var gauge: some View {
-        Gauge(value: burnFraction, in: 0...1) {
-            Text("Burn risk")
-        } currentValueLabel: {
-            Text(percentText)
-                .font(.caption2.weight(.semibold))
+        ZStack {
+            Circle()
+                .stroke(Color.secondary.opacity(0.22), lineWidth: gaugeLineWidth)
+            Circle()
+                .trim(from: 0, to: burnFraction)
+                .stroke(
+                    tierColor,
+                    style: StrokeStyle(lineWidth: gaugeLineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 4) {
+                Text(percentText)
+                    .font(.system(size: 42, weight: .heavy, design: .rounded))
+                    .minimumScaleFactor(0.7)
+                Text("elapsed")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityHidden(true)
         }
-        .gaugeStyle(.accessoryCircularCapacity)
-        .tint(tierGradient)
-        .scaleEffect(1.8)
-        .frame(width: 72, height: 72)
-        .accessibilityLabel("Burn risk gauge. \(percentText) of estimated burn window elapsed.")
+        .frame(width: gaugeDiameter, height: gaugeDiameter)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Burn risk gauge. \(percentText) \(gaugeAccessibilityWindowDescription) elapsed.")
         .accessibilityValue(percentText)
         .accessibilityHint("Secondary risk indicator. The hero timer card shows the full estimate.")
         .accessibilityIdentifier("BurnRiskGauge")
@@ -1438,10 +1505,7 @@ struct BurnRiskGaugeCard: View {
 
     private var burnFraction: Double {
         let elapsedSeconds = now.timeIntervalSince(fetchedAt)
-        let burnWindowSeconds = min(
-            estimate.rawMinutes * 60,
-            ProductTiming.sunscreenReapplicationIntervalSeconds
-        )
+        let burnWindowSeconds = estimate.effectiveWindowMinutes * 60
         return min(1.0, max(0.0, elapsedSeconds / burnWindowSeconds))
     }
 
@@ -1450,19 +1514,31 @@ struct BurnRiskGaugeCard: View {
     }
 
     private var supportingText: String {
-        "\(percentText) of burn window elapsed"
+        if estimate.isCappedForSunscreenReapplication {
+            return "\(percentText) of 2-hour sunscreen reapplication window elapsed"
+        }
+
+        return "\(percentText) of burn window elapsed"
     }
 
-    private var tierGradient: AnyShapeStyle {
+    private var gaugeAccessibilityWindowDescription: String {
+        if estimate.isCappedForSunscreenReapplication {
+            return "of 2-hour sunscreen reapplication window"
+        }
+
+        return "of estimated burn window"
+    }
+
+    private var tierColor: Color {
         switch estimate.tier {
         case .none:
-            AnyShapeStyle(.secondary)
+            .secondary
         case .long:
-            AnyShapeStyle(Gradient(colors: [Color("SeverityLong").opacity(0.5), Color("SeverityLong")]))
+            Color("SeverityLong")
         case .moderate:
-            AnyShapeStyle(Gradient(colors: [Color("SeverityModerate").opacity(0.5), Color("SeverityModerate")]))
+            Color("SeverityModerate")
         case .short:
-            AnyShapeStyle(Gradient(colors: [Color("SeverityShort").opacity(0.5), Color("SeverityShort")]))
+            Color("SeverityShort")
         }
     }
 }
@@ -1470,43 +1546,51 @@ struct BurnRiskGaugeCard: View {
 struct BurnRiskGaugeUnavailableCard: View {
     let message: String
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+    @ScaledMetric(relativeTo: .largeTitle) private var gaugeDiameter = 188
+    @ScaledMetric(relativeTo: .title) private var gaugeLineWidth = 18
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Burn window")
-                        .font(.headline)
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                gauge
+        VStack(spacing: 16) {
+            VStack(spacing: 4) {
+                Text("Burn window")
+                    .font(.headline)
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+
+            gauge
+
             if differentiateWithoutColor {
                 Text("Unavailable")
                     .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .accessibilityHidden(true)
             }
         }
-        .padding()
+        .padding(20)
         .frame(maxWidth: .infinity)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var gauge: some View {
-        Gauge(value: 0, in: 0...1) {
-            Text("Burn risk")
-        } currentValueLabel: {
-            Text("—")
-                .font(.caption2.weight(.semibold))
+        ZStack {
+            Circle()
+                .stroke(Color.secondary.opacity(0.28), lineWidth: gaugeLineWidth)
+            VStack(spacing: 4) {
+                Text("—")
+                    .font(.system(size: 48, weight: .heavy, design: .rounded))
+                Text("unavailable")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityHidden(true)
         }
-        .gaugeStyle(.accessoryCircularCapacity)
-        .tint(.secondary)
-        .scaleEffect(1.8)
-        .frame(width: 72, height: 72)
+        .frame(width: gaugeDiameter, height: gaugeDiameter)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Burn risk gauge unavailable. \(message)")
         .accessibilityValue("Unavailable")
         .accessibilityHint("Fetch location and Apple Weather UV before relying on burn timing.")
