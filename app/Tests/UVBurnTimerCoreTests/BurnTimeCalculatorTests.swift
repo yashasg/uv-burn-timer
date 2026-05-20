@@ -387,7 +387,7 @@ import Testing
     #expect(ProductCopy.longEstimateHedge.localizedCaseInsensitiveContains("safe"))
     #expect(ProductCopy.skinTypePickerPrompt == "Choose by how your skin burns and tans, not by how it looks.")
     #expect(ProductCopy.uvSourceLine == "Source: Apple Weather")
-    #expect(ProductCopy.disclaimerLinkLabel == "About & applicability")
+    #expect(ProductCopy.disclaimerLinkLabel == "Informational only. Not medical advice.")
     #expect(ProductCopy.fitzpatrickCitations.contains("NCBI Bookshelf NBK481857"))
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("WHO Global Solar UV Index"))
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("Schalka"))

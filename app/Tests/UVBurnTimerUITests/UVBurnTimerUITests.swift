@@ -456,6 +456,29 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertEqual(spfChipButton(in: app).label, "SPF 70+")
     }
 
+    func testPersistentFooterDisclaimerLinkUsesSpecCopyAndOpensAbout() {
+        // Spec §7 (user-flow-onboarding-main-spec.md): "inline bottom-of-content link:
+        // `Informational only. Not medical advice. →`." The persistent footer must
+        // surface this exact label and route to the About applicability anchor.
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let footerLink = actionElement(in: app, named: "Informational only. Not medical advice.")
+        XCTAssertTrue(
+            footerLink.waitForExistence(timeout: 5),
+            "Footer must surface the spec-mandated disclaimer link copy"
+        )
+        XCTAssertFalse(
+            app.buttons["About & applicability"].exists,
+            "Legacy disclaimer-link copy must no longer appear"
+        )
+
+        footerLink.tap()
+
+        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
+        XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
+    }
+
     func testSkinTypePickerInSettingsReusesOnboardingPattern() {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)

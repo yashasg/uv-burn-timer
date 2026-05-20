@@ -51,7 +51,7 @@ public enum ProductCopy {
     public static let skinTypeSourcePointer =
         "Sources: Fitzpatrick 1988; NCBI Bookshelf 2017 (NBK481857). See About & Citations."
     public static let uvSourceLine = "Source: Apple Weather"
-    public static let disclaimerLinkLabel = "About & applicability"
+    public static let disclaimerLinkLabel = "Informational only. Not medical advice."
     public static let fitzpatrickCitations =
         "Picker descriptions are adapted and paraphrased from Fitzpatrick TB (1988) and Ward & Farma, Cutaneous Melanoma: Etiology and Therapy, NCBI Bookshelf NBK481857 (2017). UV guidance references WHO Global Solar UV Index practical guide (2002), https://iris.who.int/handle/10665/42459; Schalka & Reis on real-world sunscreen/SPF use; Diffey BL (1991) / CIE Standard S 007/E-1998."
     public static let skinTypePickerFooter =
