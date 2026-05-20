@@ -43,7 +43,14 @@ final class UVBurnTimerUITests: XCTestCase {
             ).exists)
         XCTAssertTrue(app.buttons["Continue to location request"].exists)
 
-        app.buttons["Continue to location request"].tap()
+        // Cover-chain race: the skin-type fullScreenCover may still be tearing
+        // down when this tap fires, producing a {-1, -1} hit point silently
+        // dropped by XCUITest. Re-tap until the rationale-reviewed banner
+        // appears (or the budget expires).
+        tapUntilAppears(
+            app.buttons["Continue to location request"],
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
+        )
         XCTAssertTrue(
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
@@ -71,7 +78,10 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestLocationUnavailable"])
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Continue to location request"].tap()
+        tapUntilAppears(
+            app.buttons["Continue to location request"],
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
+        )
         XCTAssertTrue(
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
@@ -87,7 +97,10 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestWeatherUnavailable"])
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Continue to location request"].tap()
+        tapUntilAppears(
+            app.buttons["Continue to location request"],
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
+        )
         XCTAssertTrue(
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
@@ -167,7 +180,10 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestWeatherUnavailable"])
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Continue to location request"].tap()
+        tapUntilAppears(
+            app.buttons["Continue to location request"],
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
+        )
         XCTAssertTrue(
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
@@ -181,7 +197,10 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestLocationDenied"])
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Continue to location request"].tap()
+        tapUntilAppears(
+            app.buttons["Continue to location request"],
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
+        )
         XCTAssertTrue(
             app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
                 timeout: 5))
@@ -498,6 +517,30 @@ final class UVBurnTimerUITests: XCTestCase {
         )
     }
 
+    /// WI-11 (P1): after the user finishes onboarding (Type III committed),
+    /// the hero empty state must prompt them to fetch a UV index — NOT to do
+    /// the skin-type step they just completed. The previous implementation
+    /// initialised `RootView.statusMessage` to "Pick a skin type to see your
+    /// estimate." and never refreshed it when the session got a skin type,
+    /// so every persona landed on a main screen telling them to do something
+    /// they had already done.
+    func testHeroEmptyStateAfterOnboardingPromptsForLocation() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        // Hero copy after onboarding must direct the user to the next action
+        // (location) — not loop them back to the just-completed step.
+        XCTAssertTrue(
+            staticText(in: app, containing: "Tap Use my location to compute your estimate").waitForExistence(
+                timeout: 5),
+            "Hero empty-state copy must prompt for location once a skin type is selected"
+        )
+        XCTAssertFalse(
+            app.staticTexts["Pick a skin type to see your estimate."].exists,
+            "Hero must stop asking for skin type after one has been committed via onboarding"
+        )
+    }
+
     func testMainScreenDoesNotExposeFitzpatrickPickerAfterOnboarding() {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
@@ -677,11 +720,17 @@ final class UVBurnTimerUITests: XCTestCase {
     private func acknowledgeDisclaimer(in app: XCUIApplication) {
         let acknowledgeButton = app.buttons["I understand"]
         XCTAssertTrue(acknowledgeButton.waitForExistence(timeout: 10))
-        tapWithRetry(acknowledgeButton)
 
-        if !app.navigationBars["Choose skin type"].waitForExistence(timeout: 8), acknowledgeButton.exists {
-            tapWithRetry(acknowledgeButton)
-        }
+        // Cover-chain race: on iOS 26 / Xcode 26, XCUITest can synthesize a
+        // tap at hit point {-1, -1} while the `.fullScreenCover` disclaimer is
+        // mid-presentation animation, silently dropping the tap even though
+        // the element reports `exists` + `isHittable` from a stale snapshot.
+        // Re-tap the acknowledge button until either the skin-type cover
+        // claims the presentation slot (signalled by the "Choose skin type"
+        // navigation bar) or the budget expires. This keeps tests honest about
+        // any real regression — if the cover-chain is actually broken, the
+        // assertion below will still fire after the budget.
+        tapUntilAppears(acknowledgeButton, app.navigationBars["Choose skin type"])
     }
 
     private func staticText(in app: XCUIApplication, containing text: String) -> XCUIElement {
@@ -817,13 +866,20 @@ final class UVBurnTimerUITests: XCTestCase {
     /// mid-presentation animation, swallowing the tap. Retry with a short
     /// settle delay before giving up so transient layout races do not produce
     /// flaky failures in the chained disclaimer → onboarding flow.
+    ///
+    /// `element.tap()` resolves the tap target via the accessibility
+    /// activation point, which iOS 26 sometimes reports as `{-1, -1}` while
+    /// a `.fullScreenCover` is still animating in — the resulting tap is
+    /// dropped without an error. Computing the hit point from the element's
+    /// frame via `coordinate(withNormalizedOffset:)` bypasses that resolver
+    /// and reliably lands the synthesized event inside the rendered bounds.
     private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
         _ = waitForHittable(element, timeout: 5)
         for _ in 0..<retries {
             if element.exists && element.isHittable {
                 let frame = element.frame
                 if frame.width > 0 && frame.height > 0 {
-                    element.tap()
+                    element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                     return
                 }
             }
@@ -831,7 +887,29 @@ final class UVBurnTimerUITests: XCTestCase {
         }
 
         if element.exists {
-            element.tap()
+            let frame = element.frame
+            if frame.width > 0 && frame.height > 0 {
+                element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            } else {
+                element.tap()
+            }
+        }
+    }
+
+    /// Re-taps `trigger` until `target` appears, the trigger disappears, or
+    /// the total budget expires. Defends against the iOS 26 / Xcode 26
+    /// cover-presentation race where XCUITest synthesizes a tap at hit point
+    /// {-1, -1} for an element whose host view is still animating in; that
+    /// tap is silently dropped even though `exists` + `isHittable` return
+    /// true from a stale snapshot. A single re-tap is normally enough; the
+    /// loop keeps the contract honest by polling for the expected state
+    /// change and bailing once observed (or once the trigger goes away,
+    /// indicating an earlier tap landed and the host view has dismissed).
+    private func tapUntilAppears(_ trigger: XCUIElement, _ target: XCUIElement, totalTimeout: TimeInterval = 30) {
+        let deadline = Date().addingTimeInterval(totalTimeout)
+        while Date() < deadline && trigger.exists && !target.exists {
+            tapWithRetry(trigger)
+            _ = target.waitForExistence(timeout: 4)
         }
     }
 }

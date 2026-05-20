@@ -393,6 +393,32 @@ import Testing
     #expect(ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("Schalka"))
 }
 
+@Test func heroEmptyStatePromptForSelectedSkinTypeAsksForLocation() {
+    // WI-11 (P1): after the user has committed a skin type in onboarding,
+    // the hero empty state must stop asking them to do something they have
+    // already done and prompt them for the *next* action (location).
+    let prompt = ProductCopy.heroEmptyStatePrompt(hasSkinType: true)
+
+    #expect(prompt.localizedCaseInsensitiveContains("use my location"))
+    #expect(!prompt.localizedCaseInsensitiveContains("pick a skin type"))
+}
+
+@Test func heroEmptyStatePromptWithoutSkinTypePromptsForSkinType() {
+    // WI-11: until a skin type is set (e.g. Settings → Edit skin type →
+    // cancel without selecting), the empty state should still ask for one.
+    let prompt = ProductCopy.heroEmptyStatePrompt(hasSkinType: false)
+
+    #expect(prompt.localizedCaseInsensitiveContains("pick a skin type"))
+    #expect(!prompt.localizedCaseInsensitiveContains("use my location"))
+}
+
+@Test func heroEmptyStateConstantsArePartOfAuditCopySurfaces() {
+    // Both empty-state strings must be auditable so the monetization-drift
+    // and banned-clinical-claim guards apply to them too.
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.emptyStateAwaitingSkinType))
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.emptyStateAwaitingLocation))
+}
+
 @Test func productCopyAvoidsMonetizationDriftLanguage() {
     let bannedPhrases = [
         "premium",
