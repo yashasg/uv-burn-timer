@@ -123,3 +123,9 @@ GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
   - Retargeted GitLab MR !2 from `squad-work-loop-ci-tests` to `main` and kept the existing MR to avoid duplicate review surfaces.
   - Validated icon catalog with a Contents.json/PNG pixel-dimension check (18 entries) and ran `./build.sh` locally on the project-selected iPhone simulator; both passed.
   - External CI bridge can emit duplicate GitHub repository_dispatch events; when the first MR run was cancelled, an empty `ci: retrigger app icon validation` commit restored a clean external pipeline.
+
+- 2026-05-19T20:04:12.851-07:00 — Added root `run.sh` for local simulator launch:
+  - Reuses `./build.sh` with `CONFIGURATION=Debug`, `RUN_TESTS=false`, a repo-local ignored `.build/DerivedData`, and the selected iPhone 17 Pro destination.
+  - Resolves the built `.app` path from `xcodebuild -showBuildSettings`, then boots, installs, and launches via `xcrun simctl`.
+  - Includes `--print-app-path` for quick path validation without launching.
+  - Validation passed: `bash -n run.sh`, `./run.sh --print-app-path`, and full `./run.sh` (Debug build succeeded, simulator booted, app installed/launched on iPhone 17 Pro).
