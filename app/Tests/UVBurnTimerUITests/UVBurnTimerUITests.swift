@@ -361,7 +361,16 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Meds or photosensitive conditions? Learn more"].tap()
+        // Cover-chain race: on iOS 26 / Xcode 26, the rendered frame for the
+        // photosens banner can still be resolving when the onboarding cover
+        // finishes dismissing. A plain `.tap()` against the banner then
+        // synthesizes a {-1, -1} hit point and is silently dropped (the
+        // "About" navigation bar never appears even though the element
+        // reports `exists`). Re-tap until the AboutView lands.
+        tapUntilAppears(
+            app.buttons["Meds or photosensitive conditions? Learn more"],
+            app.navigationBars["About"]
+        )
 
         XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
         XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
@@ -409,7 +418,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Settings"].tap()
+        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
 
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(scrollToStaticText(in: app, containing: "One-time paid app").exists)
@@ -433,7 +442,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestCorruptRoundedCoordinate"])
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Settings"].tap()
+        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
 
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(scrollToStaticText(in: app, containing: "does not save UV values").exists)
@@ -457,7 +466,12 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertEqual(spfChipButton(in: app).label, "SPF 30")
         XCTAssertFalse(app.staticTexts["4+ hr"].exists)
         XCTAssertFalse(app.staticTexts["UV Index 8.0"].exists)
-        app.buttons["Settings"].tap()
+        // Cover-chain race: opening the Settings sheet from the main screen
+        // can land a {-1, -1} hit point on iOS 26 / Xcode 26 if the just-
+        // dismissed onboarding cover hasn't fully released the presentation
+        // slot yet. Re-tap the toolbar gear until the Settings navigation
+        // bar appears.
+        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
 
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
         XCTAssertTrue(scrollToStaticText(in: app, containing: "does not save UV values").exists)
@@ -657,7 +671,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Settings"].tap()
+        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
 
         // Settings should provide a Skin type edit affordance (Iris spec §2).
