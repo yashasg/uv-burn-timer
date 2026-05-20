@@ -76,7 +76,7 @@ A green arrow from screen 6 (LANE 1) now lands diagonally into the portrait fram
 **Row 1 (y=1540):**
 1. 🚨 **No-default Fitzpatrick** (D-2026-05-19-012) — arrow up to skin-type picker.
 2. 🚨 **L1 sticky + photo-sens reach-back** — arrow up to the yellow NowView banner.
-3. 📌 **240-min display cap** — arrow up to the portrait hero number.
+3. 📌 **Compact duration display cap** — arrow up to the portrait hero number. Sub-hour estimates render as `~45 min`; hour-plus estimates render as `~1 hr`, `~1 hr 20 min`, `~2 hr 47 min`; sunscreen-protected windows cap at `Up to 2 hr`; unprotected windows ≥ 240 min cap at `4+ hr`. (Format ratified by Kwame 2026-05-19T22:50:27 and Ma-Ti's duration-format test contract; supersedes the earlier `240+ min` shorthand.)
 4. 📌 **WeatherKit attribution always visible** (D-2026-05-19-002/003/004 launch-blocker) — arrow up to the UV secondary card's source line.
 
 **Row 2 (y=1770):**
