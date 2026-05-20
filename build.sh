@@ -47,10 +47,10 @@ select_destination() {
   if [[ "$booted_devices" =~ "^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)" ]]; then
     device_id="$(
       awk '
-        /^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)/ {
+        /^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)/ && !found {
           if (match($0, /\([0-9A-F-]{36}\)/)) {
             print substr($0, RSTART + 1, 36)
-            exit
+            found = 1
           }
         }
       ' <<< "$booted_devices"
@@ -79,10 +79,10 @@ select_destination() {
     if [[ "$available_devices" == *"$preferred_device ("* ]]; then
       device_id="$(
         awk -v device="$preferred_device" '
-          index($0, device " (") {
+          index($0, device " (") && !found {
             if (match($0, /\([0-9A-F-]{36}\)/)) {
               print substr($0, RSTART + 1, 36)
-              exit
+              found = 1
             }
           }
         ' <<< "$available_devices"
