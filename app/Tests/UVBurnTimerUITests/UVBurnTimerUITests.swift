@@ -809,7 +809,15 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(waitForEnabled(continueButton, timeout: 10))
         continueButton.tap()
 
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 15))
+
+        // iOS 26 cover-chain settle: the nav-bar title can appear in the
+        // accessibility tree while the skin-type cover dismiss animation is
+        // still running. NavigationLink elements in the main view are
+        // unresponsive until that animation drains. Wait for the always-present
+        // photosensitization banner to become hittable — that signals the main
+        // screen is fully interactive — before returning control to the caller.
+        _ = waitForHittable(app.buttons["Meds or photosensitive conditions? Learn more"], timeout: 5)
     }
 
     private func acknowledgeDisclaimer(in app: XCUIApplication) {
