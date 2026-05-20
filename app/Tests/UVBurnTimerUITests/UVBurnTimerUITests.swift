@@ -147,7 +147,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestCappedEstimate"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Up to 120 min"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Up to 2 hr"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Sunscreen reapplication limit"].exists)
         XCTAssertTrue(staticText(in: app, containing: "capped at 2 hours").exists)
         XCTAssertTrue(app.staticTexts["Long estimate caveat"].exists)
@@ -159,7 +159,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["~80 min"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Long estimate caveat"].exists)
         XCTAssertTrue(
             app.descendants(matching: .any)["Long burn-time tier — longer estimate, not safe exposure"].exists)
@@ -201,7 +201,7 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["~80 min"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5))
 
         let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
         XCTAssertTrue(
@@ -227,7 +227,7 @@ final class UVBurnTimerUITests: XCTestCase {
 
         // Hero estimate visible as the dominant element.
         XCTAssertTrue(
-            app.staticTexts["~80 min"].waitForExistence(timeout: 5),
+            app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5),
             "Hero time estimate must be visible — it is the primary cue, not the gauge"
         )
 
@@ -327,7 +327,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
         XCTAssertTrue(app.segmentedControls.buttons["30"].isSelected)
-        XCTAssertFalse(app.staticTexts["240+ min"].exists)
+        XCTAssertFalse(app.staticTexts["4+ hr"].exists)
         XCTAssertFalse(app.staticTexts["UV Index 8.0"].exists)
         app.buttons["Settings"].tap()
 

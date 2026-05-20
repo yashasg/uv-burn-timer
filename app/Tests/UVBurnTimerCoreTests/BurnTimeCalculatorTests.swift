@@ -29,7 +29,8 @@ import Testing
     #expect(estimate.isCappedForDisplay)
     #expect(estimate.effectiveWindowMinutes == 120)
     #expect(estimate.roundedDisplayMinutes == 120)
-    #expect(estimate.displayText == "Up to 120 min")
+    #expect(estimate.displayText == "Up to 2 hr")
+    #expect(estimate.accessibilitySummary.localizedCaseInsensitiveContains("up to 2 hours"))
     #expect(estimate.accessibilitySummary.localizedCaseInsensitiveContains("reapply sunscreen at least every 2 hours"))
 }
 
@@ -44,7 +45,16 @@ import Testing
     #expect(estimate.isSunscreenProtected)
     #expect(!estimate.isCappedForSunscreenReapplication)
     #expect(estimate.effectiveWindowMinutes == 100)
-    #expect(estimate.displayText == "~100 min")
+    #expect(estimate.displayText == "~1 hr 40 min")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 1 hour 40 minutes.")
+}
+
+@Test func exactOneHourEstimateDoesNotShowRawSixtyMinutes() {
+    let estimate = BurnTimeEstimate(rawMinutes: 60, tier: .long, isSunscreenProtected: false)
+
+    #expect(estimate.roundedDisplayMinutes == 60)
+    #expect(estimate.displayText == "~1 hr")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 1 hour.")
 }
 
 @Test func unprotectedReferenceEstimateOverTwoHoursKeepsUnprotectedWindow() throws {
@@ -58,7 +68,8 @@ import Testing
     #expect(!estimate.isSunscreenProtected)
     #expect(!estimate.isCappedForSunscreenReapplication)
     #expect(estimate.effectiveWindowMinutes == estimate.rawMinutes)
-    #expect(estimate.displayText == "~167 min")
+    #expect(estimate.displayText == "~2 hr 47 min")
+    #expect(estimate.accessibilitySummary == "Estimated burn time: 2 hours 47 minutes.")
 }
 
 @Test func zeroUVProducesNoUVState() throws {
@@ -324,7 +335,7 @@ import Testing
     let unprotectedMinutes = 250.0 / (10.0 * 0.025) / 60.0
 
     #expect(estimate.rawMinutes == unprotectedMinutes * 50)
-    #expect(estimate.displayText == "Up to 120 min")
+    #expect(estimate.displayText == "Up to 2 hr")
 }
 
 @Test func approvedMainScreenSafetyCopyIsCaptured() {

@@ -110,7 +110,9 @@ import Testing
     #expect(!longEstimate.isCappedForDisplay)
     #expect(longEstimate.rawMinutes > 120)
     #expect(!longEstimate.isElapsed(fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval(7_200)))
-    #expect(longEstimate.isElapsed(fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval((longEstimate.rawMinutes * 60) + 1)))
+    #expect(
+        longEstimate.isElapsed(
+            fetchedAt: fetchedAt, now: fetchedAt.addingTimeInterval((longEstimate.rawMinutes * 60) + 1)))
 }
 
 @Test func zeroUVEstimateDoesNotExpire() throws {

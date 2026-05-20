@@ -45,14 +45,14 @@ public struct BurnTimeEstimate: Equatable, Sendable {
         }
 
         if isCappedForSunscreenReapplication {
-            return "Up to 120 min"
+            return "Up to 2 hr"
         }
 
         if isCappedForDisplay {
             return "240+ min"
         }
 
-        return "~\(Int(effectiveWindowMinutes.rounded())) min"
+        return "~\(Self.compactDurationText(minutes: roundedDisplayMinutes ?? 0))"
     }
 
     public var accessibilitySummary: String {
@@ -61,14 +61,17 @@ public struct BurnTimeEstimate: Equatable, Sendable {
         }
 
         if isCappedForSunscreenReapplication {
-            return "Sunscreen reapplication window: up to 120 minutes. The mathematical burn estimate may be longer, but reapply sunscreen at least every 2 hours."
+            return
+                "Sunscreen reapplication window: up to 2 hours. "
+                + "The mathematical burn estimate may be longer, "
+                + "but reapply sunscreen at least every 2 hours."
         }
 
         if isCappedForDisplay {
             return "Estimated burn time: 4 or more hours."
         }
 
-        return "Estimated burn time: \(Int(effectiveWindowMinutes.rounded())) minutes."
+        return "Estimated burn time: \(Self.accessibilityDurationText(minutes: roundedDisplayMinutes ?? 0))."
     }
 
     public func isElapsed(fetchedAt: Date, now: Date) -> Bool {
@@ -77,6 +80,37 @@ public struct BurnTimeEstimate: Equatable, Sendable {
         }
 
         return now.timeIntervalSince(fetchedAt) >= effectiveWindowMinutes * 60
+    }
+
+    private static func compactDurationText(minutes: Int) -> String {
+        guard minutes >= 60 else {
+            return "\(minutes) min"
+        }
+
+        let hours = minutes / 60
+        let remainder = minutes % 60
+
+        if remainder == 0 {
+            return "\(hours) hr"
+        }
+
+        return "\(hours) hr \(remainder) min"
+    }
+
+    private static func accessibilityDurationText(minutes: Int) -> String {
+        guard minutes >= 60 else {
+            return "\(minutes) minutes"
+        }
+
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        let hourText = hours == 1 ? "1 hour" : "\(hours) hours"
+
+        if remainder == 0 {
+            return hourText
+        }
+
+        return "\(hourText) \(remainder) minutes"
     }
 }
 

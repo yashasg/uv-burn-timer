@@ -139,3 +139,7 @@ GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
   - `SPFLevel.allCases` now lists only sunscreen products (15, 30, 50, 70+); the old no-SPF path is retained only as `unprotectedReference` for internal/reference math tests.
   - UI/debug seeds now default to real SPF values, and UI coverage asserts the segmented control does not expose "None".
   - Validated with `DERIVED_DATA_PATH="$PWD/.build/DerivedData" CONFIGURATION=Debug RUN_TESTS=true ./build.sh` after integrating with the active 2-hour sunscreen-cap work.
+- 2026-05-19T22:27:48.170-07:00 — Fixed main-screen Location chip routing and gauge prominence:
+  - `Location` now invokes the location/UV refresh flow instead of presenting Settings; Settings remains on the gear button.
+  - Reworked `BurnRiskGaugeCard` and unavailable gauge shell into large centered SwiftUI circular rings inside the hero card, preserving honest unavailable copy/value when WeatherKit/CoreLocation has no estimate.
+  - Added UI regression coverage for Location-not-Settings routing and gauge minimum visual size on valid estimates.

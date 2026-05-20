@@ -19,7 +19,8 @@ struct RootView: View {
     @AppStorage(UserPreferenceStorage.selectedSkinTypeKey) private var persistedSkinTypeRawValue =
         UserPreferenceStorage.unsetSkinTypeRawValue
     @AppStorage(UserPreferenceStorage.selectedSPFKey) private var persistedSPFRawValue = SPFLevel.spf30.rawValue
-    @AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey) private var persistedLocationRationaleAcknowledged =
+    @AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey) private
+        var persistedLocationRationaleAcknowledged =
         false
     @StateObject private var locationProvider = DeviceLocationProvider()
     @State private var showSettings = false
