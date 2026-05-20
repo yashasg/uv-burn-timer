@@ -186,6 +186,10 @@ final class UVBurnTimerUITests: XCTestCase {
             gauge.waitForExistence(timeout: 5),
             "BurnRiskGauge must be present on a fresh estimate, not only on stale ones"
         )
+        XCTAssertTrue(
+            gauge.isHittable,
+            "BurnRiskGauge must be visible without scrolling or being covered by the persistent footer"
+        )
     }
 
     func testHeroTimeEstimateRemainsDominantAlongsideGauge() {

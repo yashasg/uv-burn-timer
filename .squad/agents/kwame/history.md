@@ -129,3 +129,8 @@ GitLab MR !3 pipeline: **`success`** (sha `2bb02ab`)
   - Resolves the built `.app` path from `xcodebuild -showBuildSettings`, then boots, installs, and launches via `xcrun simctl`.
   - Includes `--print-app-path` for quick path validation without launching.
   - Validation passed: `bash -n run.sh`, `./run.sh --print-app-path`, and full `./run.sh` (Debug build succeeded, simulator booted, app installed/launched on iPhone 17 Pro).
+- 2026-05-19T20:34:41.561-07:00 — Fixed circular gauge visibility on the running iPhone 17 Pro app:
+  - Root cause: `BurnRiskGaugeCard` was wired as a separate `ScrollView` sibling after `HeroTimerCard`; on iPhone 17 Pro the persistent footer/safe-area inset covered most of that sibling at first paint, so users could only see a clipped arc at the bottom instead of the circular gauge.
+  - Fix: moved `BurnRiskGaugeCard` into `HeroTimerCard` below the estimate context line, preserving the existing data guard (`fetchedAt`, non-`.none` tier, finite raw minutes), health caveat copy, and gauge accessibility copy.
+  - Files: `app/Sources/UVBurnTimer/AppViews.swift`, `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`.
+  - Validation: `DERIVED_DATA_PATH="$PWD/.build/DerivedData" CONFIGURATION=Debug RUN_TESTS=true ./build.sh`; `DERIVED_DATA_PATH="$PWD/.build/DerivedData" ./run.sh`; screenshot confirmed full gauge visible on iPhone 17 Pro.
