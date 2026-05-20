@@ -442,10 +442,10 @@ final class UVBurnTimerUITests: XCTestCase {
     private func acknowledgeDisclaimer(in app: XCUIApplication) {
         let acknowledgeButton = app.buttons["I understand"]
         XCTAssertTrue(acknowledgeButton.waitForExistence(timeout: 10))
-        acknowledgeButton.tap()
+        tapWithRetry(acknowledgeButton)
 
-        if !app.navigationBars["Choose skin type"].waitForExistence(timeout: 5), acknowledgeButton.exists {
-            acknowledgeButton.tap()
+        if !app.navigationBars["Choose skin type"].waitForExistence(timeout: 8), acknowledgeButton.exists {
+            tapWithRetry(acknowledgeButton)
         }
     }
 
@@ -505,5 +505,41 @@ final class UVBurnTimerUITests: XCTestCase {
         }
 
         return element.exists && element.isEnabled
+    }
+
+    private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if element.exists && element.isHittable {
+                return true
+            }
+
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+
+        return element.exists && element.isHittable
+    }
+
+    /// XCUITest on iOS 26 occasionally computes hit point {-1, -1} for views
+    /// mid-presentation animation, swallowing the tap. Retry with a short
+    /// settle delay before giving up so transient layout races do not produce
+    /// flaky failures in the chained disclaimer → onboarding flow.
+    private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
+        _ = waitForHittable(element, timeout: 5)
+        for _ in 0..<retries {
+            if element.exists && element.isHittable {
+                let frame = element.frame
+                if frame.width > 0 && frame.height > 0 {
+                    element.tap()
+                    return
+                }
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        }
+
+        if element.exists {
+            element.tap()
+        }
     }
 }

@@ -100,7 +100,12 @@ struct UVBurnTimerApp: App {
             return
         }
 
+        // Defer past the disclaimer fullScreenCover's dismissal animation so
+        // the skin-type cover can reliably claim the presentation slot. iOS
+        // can swallow a second .fullScreenCover that is set while the first
+        // one is still tearing down its transition.
         Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
             guard !showDisclaimer, session.selectedSkinType == nil else {
                 return
             }
