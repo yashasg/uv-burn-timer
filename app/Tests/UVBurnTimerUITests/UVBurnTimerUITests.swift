@@ -367,6 +367,40 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertFalse(app.buttons["None"].exists)
     }
 
+    /// Explicit regression for the location-rationale persistence ADR
+    /// (`.squad/decisions/inbox/gaia-location-rationale-persistence.md`):
+    /// once a user has acknowledged the inline `LocationRationaleCard`,
+    /// subsequent cold launches must restore the ack from UserDefaults so
+    /// the rationale card is *not* re-rendered. This isolates the
+    /// rationale-ack contract from
+    /// `testSavedPreferencesRestoreAfterDisclaimerWithoutRepeatingPrompts`,
+    /// which bundles skin type + SPF + rounded coordinate restoration into
+    /// a single assertion. The L1 safety disclaimer continues to re-fire on
+    /// every cold launch and that is correct — only the rationale card
+    /// persists.
+    func testLocationRationaleAcknowledgementSurvivesRelaunch() {
+        let app = launchApp(arguments: ["-uiTestSavedPreferences"])
+
+        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5))
+        app.buttons["I understand"].tap()
+
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+        XCTAssertFalse(
+            app.staticTexts["Location permission"].exists,
+            "LocationRationaleCard must not re-appear on a launch where the user already acknowledged it"
+        )
+
+        // Headline + body of the LocationRationaleCard must both be absent.
+        XCTAssertFalse(
+            staticText(
+                in: app,
+                containing:
+                    "Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
+            ).exists,
+            "Rationale body copy must not re-appear once the ack is restored from UserDefaults"
+        )
+    }
+
     func testMainScreenDoesNotExposeFitzpatrickPickerAfterOnboarding() {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)

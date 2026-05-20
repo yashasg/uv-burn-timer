@@ -2996,3 +2996,71 @@ Avoid copy that implies sunscreen protects for longer than the reapplication int
 
 ---
 
+
+<!-- Source: .squad/decisions/inbox/gaia-location-rationale-persistence.md -->
+
+# Gaia — Location-rationale acknowledgement persistence ADR
+
+- **Date:** 2026-05-20T03:50:00-07:00
+- **Owner:** Gaia (Lead/Architect)
+- **Status:** **RATIFIED** — closes the open question from
+  `gaia-preference-persistence.md` (WI-10 from
+  `gaia-backlog-20260520T031000Z.md`)
+- **Reviewer:** Plunder
+
+## Decision
+
+`LocationPromptGate.hasAcknowledgedRationale` is persisted in
+`UserDefaults` under
+`UserPreferenceStorage.locationRationaleAcknowledgedKey` and restored
+on every launch. A returning user who already acknowledged the
+inline location rationale does **not** see the `LocationRationaleCard`
+again on subsequent cold launches.
+
+This ratifies the implementation that has been shipping since
+`squad/fix-location-gauge-ui` (commit `df0e01b`). The ledger entry
+`kwame-persist-user-preferences.md` already documented the storage
+mechanism; this ADR is the missing product/IA decision that gave the
+mechanism its mandate.
+
+## Why this is the right default
+
+1. **Persona fit.** Greta (P1, repeating use) and Devon (P3, PCT
+   thru-hike, may relaunch many times per day) both lose flow if the
+   same rationale panel re-renders on every cold launch. Asha (P4,
+   photosensitive re-attestation persona) is already protected because
+   the L1 disclaimer continues to re-fire on cold launch.
+2. **Architectural symmetry with Fitzpatrick/SPF persistence.** Once
+   we accepted that skin type and SPF persist in `UserDefaults`,
+   making the rationale ack volatile would surface a confusing
+   asymmetry: "Why does the app remember my skin type and SPF but ask
+   me to read this rationale again every launch?"
+3. **Privacy posture unchanged.** The persisted value is a single
+   `Bool` in the app sandbox plist; it never leaves the device.
+4. **System permission state is the actual gate.** Even with the
+   rationale ack persisted, the OS still re-prompts the user for
+   location permission if they have never granted it or if they
+   revoked it from Settings.
+
+## Guardrails
+
+1. **Re-show the rationale after a future material privacy change.**
+   Reset the ack via a bundled "privacy copy version" key when the
+   data scope expands (deferred to v1.1).
+2. **"Clear saved location" semantics** — currently clears only the
+   rounded coordinate, not the ack. Flagged to Plunder for sign-off;
+   recommendation is to keep the ack persisted across coordinate
+   clears (user can fully reset by uninstalling).
+3. **Test coverage stays explicit** —
+   `testLocationRationaleAcknowledgementSurvivesRelaunch` names the
+   contract independently of the bundled
+   `testSavedPreferencesRestoreAfterDisclaimerWithoutRepeatingPrompts`.
+
+## Out-of-scope (deferred)
+
+- Versioned reset key (v1.1).
+- Settings toggle to forget the rationale ack (uninstall is the v1
+  escape hatch).
+
+
+---
