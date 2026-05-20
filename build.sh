@@ -40,6 +40,25 @@ run_tests="${RUN_TESTS:-true}"
 # ---------------------------------------------------------------------------
 
 select_destination() {
+  local device_id
+  local booted_devices
+  booted_devices="$(xcrun simctl list devices booted)"
+
+  if grep -Eq '^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)' <<< "$booted_devices"; then
+    device_id="$(
+      awk '
+        /^[[:space:]]+.+ \([0-9A-F-]{36}\) \(Booted\)/ {
+          if (match($0, /\([0-9A-F-]{36}\)/)) {
+            print substr($0, RSTART + 1, 36)
+            exit
+          }
+        }
+      ' <<< "$booted_devices"
+    )"
+    echo "platform=iOS Simulator,id=$device_id,arch=arm64"
+    return
+  fi
+
   local available_devices
   available_devices="$(xcrun simctl list devices available)"
 
@@ -56,10 +75,18 @@ select_destination() {
   fi
 
   local preferred_device
-  local device_id
   for preferred_device in "${preferred_devices[@]}"; do
     if grep -Fq "$preferred_device (" <<< "$available_devices"; then
-      device_id="$(grep -F "$preferred_device (" <<< "$available_devices" | head -n 1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+      device_id="$(
+        awk -v device="$preferred_device" '
+          index($0, device " (") {
+            if (match($0, /\([0-9A-F-]{36}\)/)) {
+              print substr($0, RSTART + 1, 36)
+              exit
+            }
+          }
+        ' <<< "$available_devices"
+      )"
       echo "platform=iOS Simulator,id=$device_id,arch=arm64"
       return
     fi
