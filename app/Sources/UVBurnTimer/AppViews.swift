@@ -974,9 +974,6 @@ struct DisclaimerCover: View {
                                 return .systemAction
                             }
                         )
-                        .accessibilityLabel(ProductCopy.disclaimerSeeAboutInlinePrompt)
-                        .accessibilityHint("Opens About with photosensitizing medication and condition caveats.")
-                        .accessibilityAddTraits(.isLink)
 
                     Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
                         .font(.callout.weight(.semibold))
