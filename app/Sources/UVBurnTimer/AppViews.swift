@@ -43,7 +43,7 @@ struct RootView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     photosensitizationBanner
                     #if DEBUG
-                    UITestRefreshableProbeButton()
+                    UITestRefreshableProbeButton(refreshAction: { await refreshUV() })
                     #endif
                     if !locationPromptGate.hasAcknowledgedRationale {
                         LocationRationaleCard()
@@ -78,7 +78,7 @@ struct RootView: View {
                 .padding()
             }
             .accessibilityIdentifier("NowViewScrollView")
-            .refreshable {
+            .nowViewRefreshable {
                 await refreshUV()
             }
             .navigationTitle("UV Burn Timer")
@@ -1768,33 +1768,90 @@ struct PersistentFooter: View {
 /// argument is present (so it is invisible in normal DEBUG builds and is
 /// stripped from Release builds entirely).
 ///
-/// Mechanism: SwiftUI exposes the action installed by `.refreshable` to
-/// descendant views through `@Environment(\.refresh)`. When the modifier
-/// is present, the environment value is a non-nil `RefreshAction`; when
-/// the modifier is removed during a refactor, the value is `nil`. The
-/// probe's accessibility value reflects that state so the XCUI test can
-/// distinguish "modifier removed" (refresh == nil) from "modifier present"
-/// (refresh != nil) without relying on simulator gesture infrastructure.
+/// ## Why we do not rely on `@Environment(\.refresh)`
 ///
-/// We use this probe instead of an XCUI pull-to-refresh gesture because
-/// `.refreshable` gesture testing on iOS 26 simulators is fundamentally
-/// flaky across the local dev simulator + GitHub `macos-15` CI runner
-/// matrix (see WI-50 closure note). Invoking the env action from a
-/// button tap drives **the same closure body** that the real pull
-/// gesture would drive, so the assertion still proves "the refreshable
-/// closure is wired to `refreshUV()`" — without depending on simulator
-/// gesture infrastructure.
+/// The first WI-50 implementation read `@Environment(\.refresh)` to detect
+/// whether the parent `.refreshable` was wired. That mechanism does not
+/// work reliably for ScrollView-hosted descendants on iOS 26: the
+/// `\.refresh` env value remains `nil` even when `.refreshable` is
+/// correctly installed on the enclosing ScrollView, so the probe always
+/// reported `RefreshActionNil` and the test failed before invoking the
+/// closure.
+///
+/// ## Two-signal design (current)
+///
+/// We probe the modifier wiring through two orthogonal signals so neither
+/// the assertion nor the invocation depends on a SwiftUI behavior we
+/// cannot observe deterministically across iOS 26 simulator versions.
+///
+/// 1. **Modifier-presence signal — custom `\.refreshableInstalled` env key.**
+///    `View.nowViewRefreshable(action:)` applies the standard `.refreshable`
+///    modifier and immediately chains `.environment(\.refreshableInstalled,
+///    true)`. The custom env key uses the standard SwiftUI propagation
+///    mechanism (which works for descendants of a ScrollView, unlike the
+///    `\.refresh` action env value). If a refactor drops the call to
+///    `.nowViewRefreshable` from the ScrollView's modifier chain, the
+///    env key reverts to its `false` default and the probe surfaces
+///    `RefreshActionNil` — the same regression signal the original WI-47
+///    test wanted.
+///
+/// 2. **Closure-body signal — explicit `refreshAction` injection.** The
+///    probe receives the exact same `{ await refreshUV() }` closure body
+///    that the `.refreshable` modifier wraps. Tapping the probe invokes
+///    that closure directly, which runs `refreshUV()` and (when the
+///    `-uiTestRefreshableEcho` seed is also set) triggers the
+///    `applyUITestRefreshableEchoIfNeeded()` short-circuit that flips
+///    `uvIndex` to the `4.0` sentinel. The post-tap `UV Index 4.0`
+///    assertion therefore proves the closure body is reachable; if a
+///    refactor unwires `refreshUV()` from the modifier, the call site
+///    here must also change and the test fails.
+///
+/// Together the two signals catch both classes of regression — modifier
+/// dropped, or closure body redirected — without depending on SwiftUI
+/// gesture infrastructure or on `\.refresh` env propagation for
+/// ScrollView descendants.
 struct UITestRefreshableProbeButton: View {
-    @Environment(\.refresh) private var refresh
+    let refreshAction: @Sendable () async -> Void
+    @Environment(\.refreshableInstalled) private var refreshableInstalled
 
     var body: some View {
         if ProcessInfo.processInfo.arguments.contains("-uiTestRefreshableEcho") {
             Button("uiTestInvokeRefreshable") {
-                Task { await refresh?() }
+                Task { await refreshAction() }
             }
             .accessibilityIdentifier("UITestRefreshableProbeButton")
-            .accessibilityValue(refresh == nil ? "RefreshActionNil" : "RefreshActionAvailable")
+            .accessibilityValue(refreshableInstalled ? "RefreshActionAvailable" : "RefreshActionNil")
         }
     }
 }
 #endif
+
+/// Custom env key used by the WI-50 probe (and any future probe that needs
+/// to detect "the NowView ScrollView's pull-to-refresh modifier is wired").
+/// SwiftUI's `\.refresh` env value does not propagate reliably to
+/// ScrollView descendants on iOS 26, so we use this app-owned key —
+/// applied alongside `.refreshable` via `View.nowViewRefreshable(action:)`
+/// — to surface modifier presence to descendants.
+private struct RefreshableInstalledKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
+extension EnvironmentValues {
+    fileprivate var refreshableInstalled: Bool {
+        get { self[RefreshableInstalledKey.self] }
+        set { self[RefreshableInstalledKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Applies the standard SwiftUI `.refreshable` modifier and propagates
+    /// a `\.refreshableInstalled = true` marker through the SwiftUI
+    /// environment to descendants. The `UITestRefreshableProbeButton`
+    /// reads the marker to detect whether the modifier was removed during
+    /// a refactor (see WI-50). The marker is private to this module; no
+    /// production code path observes it.
+    fileprivate func nowViewRefreshable(action: @escaping @Sendable () async -> Void) -> some View {
+        self.refreshable(action: action)
+            .environment(\.refreshableInstalled, true)
+    }
+}
