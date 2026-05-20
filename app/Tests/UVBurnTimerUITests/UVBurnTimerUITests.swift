@@ -131,6 +131,66 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(actionElement(in: app, named: "Data sources").exists)
     }
 
+    // MARK: - WeatherKit attribution audit (Plunder pre-submit flag #2)
+    //
+    // WeatherKit's terms of use require the official Apple Weather lockup
+    // (or the "Apple Weather" service-name fallback) to be visible in the
+    // same viewport as any Apple-Weather-sourced data. Audit every weather-
+    // derived main-screen state to confirm the attribution survives the
+    // success path, the stale-estimate path, the sunscreen-capped path,
+    // the WeatherKit-unreachable path, and the location-denied empty state.
+
+    func testAppleWeatherAttributionVisibleOnFreshUVEstimate() {
+        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
+
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+        assertAppleWeatherAttributionVisible(in: app)
+    }
+
+    func testAppleWeatherAttributionVisibleOnStaleEstimate() {
+        let app = launchApp(arguments: ["-uiTestStaleEstimate"])
+
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Estimate window elapsed"].waitForExistence(timeout: 5))
+        assertAppleWeatherAttributionVisible(in: app)
+    }
+
+    func testAppleWeatherAttributionVisibleOnCappedEstimate() {
+        let app = launchApp(arguments: ["-uiTestCappedEstimate"])
+
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Up to 2 hr"].waitForExistence(timeout: 5))
+        assertAppleWeatherAttributionVisible(in: app)
+    }
+
+    func testAppleWeatherAttributionVisibleWhenWeatherUnavailable() {
+        let app = launchApp(arguments: ["-uiTestWeatherUnavailable"])
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        app.buttons["Continue to location request"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
+                timeout: 5))
+
+        app.buttons["Use my location"].tap()
+        XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
+        assertAppleWeatherAttributionVisible(in: app)
+    }
+
+    func testAppleWeatherAttributionVisibleWhenLocationDenied() {
+        let app = launchApp(arguments: ["-uiTestLocationDenied"])
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        app.buttons["Continue to location request"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
+                timeout: 5))
+
+        app.buttons["Use my location"].tap()
+        XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
+        assertAppleWeatherAttributionVisible(in: app)
+    }
+
     func testScenario8StaleEstimateShowsWarningRecalculateAndAccessibleTierSeverity() {
         let app = launchApp(arguments: ["-uiTestStaleEstimate"])
 
@@ -657,6 +717,35 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(gauge.isHittable, "BurnRiskGauge shell must be visible in unavailable states")
         XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
         XCTAssertEqual(gauge.value as? String, "Unavailable")
+    }
+
+    /// Asserts WeatherKit's required "Apple Weather" attribution lockup or
+    /// service-name fallback is on the main screen for any state that
+    /// displays Apple-Weather-derived data (live UV, stale UV, capped UV,
+    /// weather-unreachable error, location-denied empty state).
+    ///
+    /// WeatherAttributionView renders `Text(ProductCopy.weatherAttributionServiceName)`
+    /// when `WeatherService.shared.attribution` throws (the common case on
+    /// the test simulator without a real WeatherKit network round-trip), so
+    /// the literal "Apple Weather" string must remain accessible in every
+    /// weather-derived viewport. UVIndexCard/UVIndexPlaceholderCard also
+    /// renders `ProductCopy.uvSourceLine` ("Source: Apple Weather") above
+    /// the lockup; either surface satisfies the visibility requirement.
+    private func assertAppleWeatherAttributionVisible(
+        in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line
+    ) {
+        let sourceLine = scrollToStaticText(in: app, containing: "Source: Apple Weather")
+        let attributionName = app.staticTexts.matching(NSPredicate(format: "label == %@", "Apple Weather")).firstMatch
+
+        let sourceLineVisible = sourceLine.exists
+        let attributionNameVisible = attributionName.waitForExistence(timeout: 3)
+
+        XCTAssertTrue(
+            sourceLineVisible || attributionNameVisible,
+            "WeatherKit attribution must remain visible on every weather-derived surface — "
+                + "expected 'Source: Apple Weather' or the WeatherAttributionView 'Apple Weather' label.",
+            file: file, line: line
+        )
     }
 
     private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
