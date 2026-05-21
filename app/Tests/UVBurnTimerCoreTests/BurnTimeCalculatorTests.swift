@@ -2061,7 +2061,6 @@ private func makeIsolatedDefaults() -> (defaults: UserDefaults, suiteName: Strin
 
 private func tearDownIsolatedDefaults(_ defaults: UserDefaults, suiteName: String) {
     defaults.removePersistentDomain(forName: suiteName)
-    )
 }
 
 // MARK: - Group Z: Suchi persona priming — countdown-vs-estimate misread guard (WI-o)
@@ -2156,7 +2155,4 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         withForecast.contains("Estimated only, not medical advice"),
         "Forecast read-out must still close with the estimate disclaimer so a future-hour read-out does not drop the medical-advice guard. Actual: \(withForecast)"
     )
-    )
-}
-
 }
