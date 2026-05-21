@@ -759,10 +759,14 @@ struct HeroTimerCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if let forecastDateContext {
-                Text(forecastDateContext)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityIdentifier("HeroForecastDateContext")
+                Label {
+                    Text(forecastDateContext)
+                } icon: {
+                    Image(systemName: "clock.arrow.circlepath")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("HeroForecastDateContext")
             }
 
             heroContent
