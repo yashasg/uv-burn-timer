@@ -18,6 +18,11 @@
 		010101010101010101010110 /* ProductCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101010B /* ProductCopy.swift */; };
 		010101010101010101010108 /* BurnTimeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010108 /* BurnTimeCalculatorTests.swift */; };
 		010101010101010101010109 /* UVWorkflowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010109 /* UVWorkflowTests.swift */; };
+		010101010101010101010134 /* ForecastPickerLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010134 /* ForecastPickerLogicTests.swift */; };
+		010101010101010101010135 /* ForecastProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010135 /* ForecastProviderTests.swift */; };
+		010101010101010101010136 /* ForecastStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010136 /* ForecastStoreTests.swift */; };
+		010101010101010101010137 /* ForecastUVResultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010137 /* ForecastUVResultTests.swift */; };
+		010101010101010101010138 /* MainScreenCleanupContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010138 /* MainScreenCleanupContractTests.swift */; };
 		01010101010101010101010A /* UVBurnTimerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010102 /* UVBurnTimerCore.framework */; };
 		01010101010101010101010B /* UVBurnTimerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010102 /* UVBurnTimerCore.framework */; };
 		01010101010101010101010C /* UVBurnTimerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010102 /* UVBurnTimerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -35,6 +40,7 @@
 		010101010101010101010131 /* ForecastStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010131 /* ForecastStore.swift */; };
 		010101010101010101010132 /* ForecastPickerLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010132 /* ForecastPickerLogic.swift */; };
 		010101010101010101010133 /* ForecastPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010133 /* ForecastPickerView.swift */; };
+		010101010101010101010139 /* ForecastProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010139 /* ForecastProvider.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,10 +93,16 @@
 		02010101010101010101010B /* ProductCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCopy.swift; sourceTree = "<group>"; };
 		020101010101010101010108 /* BurnTimeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnTimeCalculatorTests.swift; sourceTree = "<group>"; };
 		020101010101010101010109 /* UVWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVWorkflowTests.swift; sourceTree = "<group>"; };
+		020101010101010101010134 /* ForecastPickerLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastPickerLogicTests.swift; sourceTree = "<group>"; };
+		020101010101010101010135 /* ForecastProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastProviderTests.swift; sourceTree = "<group>"; };
+		020101010101010101010136 /* ForecastStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastStoreTests.swift; sourceTree = "<group>"; };
+		020101010101010101010137 /* ForecastUVResultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastUVResultTests.swift; sourceTree = "<group>"; };
+		020101010101010101010138 /* MainScreenCleanupContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenCleanupContractTests.swift; sourceTree = "<group>"; };
 		020101010101010101010130 /* ForecastSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastSnapshot.swift; sourceTree = "<group>"; };
 		020101010101010101010131 /* ForecastStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastStore.swift; sourceTree = "<group>"; };
 		020101010101010101010132 /* ForecastPickerLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastPickerLogic.swift; sourceTree = "<group>"; };
 		020101010101010101010133 /* ForecastPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastPickerView.swift; sourceTree = "<group>"; };
+		020101010101010101010139 /* ForecastProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastProvider.swift; sourceTree = "<group>"; };
 		02010101010101010101010C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		02010101010101010101010D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		02010101010101010101010E /* UVBurnTimerShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVBurnTimerShortcuts.swift; sourceTree = "<group>"; };
@@ -183,9 +195,10 @@
 			children = (
 				020101010101010101010105 /* BurnTimeCalculator.swift */,
 				020101010101010101010103 /* FitzpatrickSkinType.swift */,
+				020101010101010101010132 /* ForecastPickerLogic.swift */,
+				020101010101010101010139 /* ForecastProvider.swift */,
 				020101010101010101010130 /* ForecastSnapshot.swift */,
 				020101010101010101010131 /* ForecastStore.swift */,
-				020101010101010101010132 /* ForecastPickerLogic.swift */,
 				020101010101010101010104 /* SPFLevel.swift */,
 				020101010101010101010106 /* UVBurnTimerSession.swift */,
 				020101010101010101010107 /* UVWorkflow.swift */,
@@ -198,6 +211,11 @@
 			isa = PBXGroup;
 			children = (
 				020101010101010101010108 /* BurnTimeCalculatorTests.swift */,
+				020101010101010101010134 /* ForecastPickerLogicTests.swift */,
+				020101010101010101010135 /* ForecastProviderTests.swift */,
+				020101010101010101010136 /* ForecastStoreTests.swift */,
+				020101010101010101010137 /* ForecastUVResultTests.swift */,
+				020101010101010101010138 /* MainScreenCleanupContractTests.swift */,
 				020101010101010101010109 /* UVWorkflowTests.swift */,
 			);
 			path = Tests/UVBurnTimerCoreTests;
@@ -388,6 +406,7 @@
 				010101010101010101010130 /* ForecastSnapshot.swift in Sources */,
 				010101010101010101010131 /* ForecastStore.swift in Sources */,
 				010101010101010101010132 /* ForecastPickerLogic.swift in Sources */,
+				010101010101010101010139 /* ForecastProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,6 +415,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				010101010101010101010108 /* BurnTimeCalculatorTests.swift in Sources */,
+				010101010101010101010134 /* ForecastPickerLogicTests.swift in Sources */,
+				010101010101010101010135 /* ForecastProviderTests.swift in Sources */,
+				010101010101010101010136 /* ForecastStoreTests.swift in Sources */,
+				010101010101010101010137 /* ForecastUVResultTests.swift in Sources */,
+				010101010101010101010138 /* MainScreenCleanupContractTests.swift in Sources */,
 				010101010101010101010109 /* UVWorkflowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
