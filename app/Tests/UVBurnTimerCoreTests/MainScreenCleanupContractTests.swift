@@ -475,3 +475,118 @@ private func uvBurnTimerAppSwiftURL(file: StaticString = #filePath) -> URL {
         .deletingLastPathComponent()  // app/
         .appendingPathComponent("Sources/UVBurnTimer/UVBurnTimerApp.swift")
 }
+
+// MARK: - Group RR: Loop-13 Convergent HIGH findings
+
+// RR1 — Gaia M1 / ADR-0002 enforcement: `.primaryAction` must not be used for
+//        any ToolbarItem in a NavigationStack-owning parent view. On iOS 26,
+//        the Liquid Glass nav-bar composites `.primaryAction` items into a
+//        region that XCUI reports as `isHittable == false`, silently regressing
+//        `testSettingsSheetOpens` and `testToolbarRendersBothSettingsAndEstimateInfoButtons`.
+//        ADR-0002 (Loop-13, PR #58) canonises `.topBarTrailing` as the required
+//        placement; this test is the automated enforcement the ADR specifies.
+//
+// RR2 — Wheeler H-1: `fitzpatrickCitations` prose must describe Schalka & Reis
+//        2011 as a paper on SPF-as-MED-multiplier, not "real-world use".
+//        The 2011 An Bras Dermatol paper is a definitional SPF review;
+//        "real-world sunscreen/SPF use" was a residue of the retired 2009
+//        Cucé application-thickness paper. Corrected in Loop-13 bundle.
+//
+// RR3 — Suchi M3: Skin-type picker footer must contain the photosensitizer
+//        caveat phrase so Asha (P4) sees the medication warning at the picker.
+//
+// RR4 — Gaia H2: `WeatherKitForecastProvider` declares `ForecastProviding`
+//        conformance — the Core protocol seam is now plugged. This test
+//        guards the conformance at the source-text level so it cannot be
+//        silently removed.
+
+/// RR1 — `AppViews.swift` must not use `ToolbarItem(placement: .primaryAction)`
+/// inside any `.toolbar { }` block. All toolbar items on navigation-bar-owning
+/// views must use `.topBarTrailing` (ADR-0002).
+@Test func test_RR1_toolbarDoesNotUsePrimaryActionPlacement() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    #expect(
+        !source.contains("placement: .primaryAction"),
+        "ADR-0002: no ToolbarItem may use `.primaryAction` — iOS 26 Liquid Glass makes these XCUI-unhittable. Use `.topBarTrailing`. See `.squad/decisions/adr/ADR-0002-toolbar-topbartrailing-ios26.md`."
+    )
+}
+
+/// RR2 — Wheeler H-1: `fitzpatrickCitations` prose must describe the Schalka
+/// 2011 citation accurately as a paper on SPF-as-MED-multiplier, not the
+/// retired "real-world use" framing from the 2009 paper.
+@Test func test_RR2_fitzpatrickCitationsDescribesSchalka2011Accurately() {
+    #expect(
+        !ProductCopy.fitzpatrickCitations.contains("real-world sunscreen/SPF use"),
+        "fitzpatrickCitations must not say 'real-world sunscreen/SPF use' — the Schalka & Reis 2011 An Bras Dermatol paper is a definitional SPF-as-MED-multiplier review, not a real-world-use study. Wheeler H-1 Loop-13."
+    )
+    #expect(
+        ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("schalka")
+            && ProductCopy.fitzpatrickCitations.localizedCaseInsensitiveContains("2011"),
+        "fitzpatrickCitations must reference Schalka 2011 with the year so users fact-checking the citation can locate the correct paper."
+    )
+    #expect(
+        ProductCopy.fitzpatrickCitations.contains("multiplier")
+            || ProductCopy.fitzpatrickCitations.contains("MED")
+            || ProductCopy.fitzpatrickCitations.contains("erythemal"),
+        "fitzpatrickCitations Schalka description must convey the paper's actual topic (SPF/MED relationship). Wheeler H-1 Loop-13."
+    )
+}
+
+/// RR3 — Skin-type picker and settings footers must contain the photosensitizer
+/// caveat ("photosensitizing medications") so Asha (P4) encounters the warning
+/// at the picker, not only after the estimate fires. Suchi M3 Loop-13.
+@Test func test_RR3_skinTypePickerFooterCarriesPhotosensitizerCaveat() {
+    #expect(
+        ProductCopy.skinTypePickerFooter.localizedCaseInsensitiveContains("photosensitizing"),
+        "skinTypePickerFooter must contain 'photosensitizing' — Asha (P4, Accutane) must see the medication caveat at the picker, not only in AboutView. Suchi M3 Loop-13."
+    )
+    #expect(
+        ProductCopy.skinTypeSettingsFooter.localizedCaseInsensitiveContains("photosensitizing"),
+        "skinTypeSettingsFooter must contain 'photosensitizing' — same caveat required at the Settings re-select surface. Suchi M3 Loop-13."
+    )
+}
+
+/// RR4 — `WeatherLocationServices.swift` must declare `WeatherKitForecastProvider`
+/// with `ForecastProviding` conformance. This plugs the Core-protocol seam so
+/// `ForecastRefreshCoordinator` can drive refreshes without a direct WeatherKit
+/// dependency in Core. Gaia H2 Loop-13.
+@Test func test_RR4_weatherKitForecastProviderConformsToForecastProviding() throws {
+    let url = URL(fileURLWithPath: "\(#filePath)")
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimer/WeatherLocationServices.swift")
+    let source = try String(contentsOf: url, encoding: .utf8)
+    #expect(
+        source.contains("WeatherKitForecastProvider: Sendable, ForecastProviding")
+            || source.contains("WeatherKitForecastProvider: ForecastProviding"),
+        "WeatherKitForecastProvider must conform to ForecastProviding (Core protocol) — Gaia H2 Loop-13. The conformance allows ForecastRefreshCoordinator to drive refreshes without importing WeatherKit."
+    )
+    #expect(
+        source.contains("func fetchForecast(at coordinate: UVCoordinate)"),
+        "WeatherKitForecastProvider must implement fetchForecast(at:) — the ForecastProviding protocol method."
+    )
+}
+
+/// RR5 — `AboutView` Privacy section must render `ProductCopy.locationPrivacyLine`
+/// (with a stable `accessibilityIdentifier`) so the location-privacy disclosure is
+/// visible to users. Suchi L13-H3: the constant was audit-only; it must now be
+/// rendered on-screen so users can see the rounded-coordinate / approximate-location
+/// data practice before or after the iOS permission prompt fires.
+@Test func test_RR5_aboutViewRendersLocationPrivacyLine() throws {
+    let url = URL(fileURLWithPath: "\(#filePath)")
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimer/AppViews.swift")
+    let source = try String(contentsOf: url, encoding: .utf8)
+    #expect(
+        source.contains("ProductCopy.locationPrivacyLine"),
+        "AboutView must render ProductCopy.locationPrivacyLine — Suchi L13-H3: the string was audit-only and invisible to users."
+    )
+    #expect(
+        source.contains("AboutViewLocationPrivacyLine"),
+        "The locationPrivacyLine Text must carry accessibilityIdentifier(\"AboutViewLocationPrivacyLine\") so checklist audits can target it."
+    )
+}
+

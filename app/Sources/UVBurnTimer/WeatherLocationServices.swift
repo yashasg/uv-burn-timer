@@ -118,8 +118,11 @@ struct WeatherKitUVDataProvider: UVDataProviding {
 /// Fetches the 10-day UV forecast from WeatherKit in a single round-trip and
 /// maps it to a ForecastSnapshot for persistence in ForecastStore.
 ///
-/// WeatherKit calls are isolated here; ForecastStore never calls WeatherKit.
-struct WeatherKitForecastProvider: Sendable {
+/// Conforms to `ForecastProviding` (Core protocol) so `ForecastRefreshCoordinator`
+/// can drive the refresh cycle without a direct WeatherKit dependency in Core.
+/// Gaia-H2 (Loop-13): the conformance was declared in Core's doc comment but
+/// never implemented in the app target — now corrected.
+struct WeatherKitForecastProvider: Sendable, ForecastProviding {
 
     // UTC-based calendar used for all hour-slot coercions.
     // Stored as a let so it is initialised once per provider instance.
@@ -128,6 +131,13 @@ struct WeatherKitForecastProvider: Sendable {
         cal.timeZone = TimeZone(identifier: "UTC")!
         return cal
     }()
+
+    /// `ForecastProviding` conformance — bridges the protocol name to the
+    /// existing implementation. This allows `ForecastRefreshCoordinator` (Core)
+    /// to drive refreshes without importing WeatherKit.
+    func fetchForecast(at coordinate: UVCoordinate) async throws -> ForecastSnapshot {
+        try await fetchSnapshot(at: coordinate)
+    }
 
     /// Fetches daily + hourly forecasts in one WeatherKit call and returns a
     /// ForecastSnapshot ready for persistence.

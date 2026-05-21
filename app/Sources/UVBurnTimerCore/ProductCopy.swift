@@ -210,7 +210,12 @@ public enum ProductCopy {
     public static let uvSourceLine = "Source: Apple Weather"
     public static let disclaimerLinkLabel = "Informational only. Not medical advice."
     public static let fitzpatrickCitations =
-        "Picker descriptions are adapted and paraphrased from Fitzpatrick TB (1988) and Ward & Farma, Cutaneous Melanoma: Etiology and Therapy, NCBI Bookshelf NBK481857 (2017). UV guidance references WHO Global Solar UV Index practical guide (2002), https://iris.who.int/handle/10665/42459; Schalka & Reis on real-world sunscreen/SPF use; Diffey BL (1991) / CIE Standard S 007/E-1998."
+        // Wheeler-L13-H1: prose corrected to match the linked Schalka & Reis 2011 An Bras Dermatol
+        // review, which is a definitional paper on SPF as MED multiplier — not a real-world-use study.
+        // The "real-world sunscreen/SPF use" phrase was a leftover from when the 2009 Cucé application-
+        // thickness paper was cited. See `.squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md`
+        // §3.3 and QQ1 test for the locked source.
+        "Picker descriptions are adapted and paraphrased from Fitzpatrick TB (1988) and Ward & Farma, Cutaneous Melanoma: Etiology and Therapy, NCBI Bookshelf NBK481857 (2017). UV guidance references WHO Global Solar UV Index practical guide (2002), https://iris.who.int/handle/10665/42459; Schalka & Reis (2011) on SPF as a multiplier of minimal erythemal dose; Diffey BL (1991) / CIE Standard S 007/E-1998."
     public static let skinTypePickerFooter =
         "No default is selected. Choose deliberately before location or UV lookup. Skin type self-assessment is approximate; consult a dermatologist before using this estimate to plan sun exposure. This model assumes healthy skin and no photosensitizing medications. Use the result screen Learn more link for details."
     public static let skinTypeSettingsFooter =
@@ -228,7 +233,7 @@ public enum ProductCopy {
     public static let pediatricAndEscalationGuidance =
         "Children need pediatric guidance. Seek urgent care for severe sunburn symptoms such as blistering, fever, chills, dizziness, confusion, dehydration, or feeling very unwell."
     public static let aboutPrivacy =
-        "Skin type and SPF persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. UV values and burn estimates are not retained between launches. The version of the informational disclaimer you acknowledged is stored on this device so the app does not re-prompt unless the disclaimer materially changes. No accounts, analytics, ads, crash SDKs, or third-party tracking."
+        "Skin type and SPF persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. A 10-day UV forecast snapshot is cached on-device (app Caches directory) between launches for performance; it is never transmitted off-device and is cleared when the forecast expires or you use Clear saved location. UV burn-time estimates are not retained between launches. The version of the informational disclaimer you acknowledged is stored on this device so the app does not re-prompt unless the disclaimer materially changes. No accounts, analytics, ads, crash SDKs, or third-party tracking."
     public static let whatTheAppDoesNotDo =
         "UV Burn Timer does not diagnose, prevent, or treat sunburn; does not replace professional medical advice; does not track your exposure over time; does not send alerts or timers; and does not account for shade, clothing, altitude, reflected glare, water, sweat, toweling, or changing weather after the UV value is fetched."
     public static let lastUpdatedLine = "Last updated: 2026-05-20."

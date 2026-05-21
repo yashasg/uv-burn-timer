@@ -306,3 +306,100 @@ private func makeSnapshot(
     #expect(outOfRange == true,
             "isCoordOutOfRange must return true when inMemorySnapshot is nil — no snapshot ⇒ invalidated")
 }
+
+// MARK: - Group RR: Loop-13 Ma-Ti critical-path tests (H-1, H-2, M-1, M-11)
+//
+// Closes coverage gaps identified by Ma-Ti Loop-13 gap analysis.
+// H-1: malformed/truncated JSON path (load throws + deletes corrupt file)
+// H-2: hours-invariant violation path at load time
+// M-1: clear() no-op when no file exists
+// M-11: save() updates in-memory copy without requiring a reload
+
+/// Ma-Ti RR-H1 — `ForecastStore.load()` must throw and delete the file when
+/// the JSON is malformed (truncated/corrupt bytes on disk). Exercises the
+/// `do { try JSONDecoder().decode … } catch { remove + throw }` branch.
+@Test func test_load_throws_and_deletes_file_when_json_is_malformed() async throws {
+    let url = isolatedStoreURL()
+    defer { try? FileManager.default.removeItem(at: url) }
+    try Data("{ not valid json".utf8).write(to: url, options: .atomic)
+    let store = ForecastStore(fileURL: url)
+    var threw = false
+    do {
+        _ = try await store.load()
+    } catch {
+        threw = true
+    }
+    #expect(threw, "Malformed JSON must cause load() to throw")
+    #expect(
+        !FileManager.default.fileExists(atPath: url.path),
+        "Malformed file must be deleted by load() so the next launch gets a clean state"
+    )
+}
+
+/// Ma-Ti RR-H2 — `ForecastStore.load()` must throw and delete the file when
+/// the snapshot violates the hours-count invariant (hours.count != days.count × 24).
+/// Exercises the production safety-net validator at load time.
+@Test func test_load_throws_when_hours_count_violates_invariant() async throws {
+    let url = isolatedStoreURL()
+    defer { try? FileManager.default.removeItem(at: url) }
+    let base = Date(timeIntervalSince1970: 1_748_016_000)
+    let days: [DayForecast] = (0..<10).map { d in
+        DayForecast(
+            date: base.addingTimeInterval(Double(d) * 86400),
+            dailyMinUVI: 0, dailyMaxUVI: 6, sunrise: nil, sunset: nil
+        )
+    }
+    // 10 days × 24 = 240 expected, but write only 100 hours — invariant violation.
+    let hours: [HourForecast] = (0..<100).map { h in
+        HourForecast(timestamp: base.addingTimeInterval(Double(h) * 3600), uvIndex: 0)
+    }
+    let bad = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77, longitude: -122.42,
+        fetchedAt: base,
+        expirationDate: base.addingTimeInterval(3600),
+        days: days, hours: hours
+    )
+    try JSONEncoder().encode(bad).write(to: url, options: .atomic)
+    let store = ForecastStore(fileURL: url)
+    var threw = false
+    do {
+        _ = try await store.load()
+    } catch {
+        threw = true
+    }
+    #expect(threw, "hours.count != days.count × 24 must cause load() to throw .schemaMismatch")
+    #expect(
+        !FileManager.default.fileExists(atPath: url.path),
+        "Invariant-violating file must be deleted so the store self-heals on next launch"
+    )
+}
+
+/// Ma-Ti RR-M1 — `ForecastStore.clear()` is a no-op (must not throw) when
+/// no snapshot file exists on disk. Callers invoke clear() defensively on
+/// location-reset and GDPR erasure paths.
+@Test func test_clear_is_noop_when_no_file_exists() async throws {
+    let store = ForecastStore(fileURL: isolatedStoreURL())
+    try await store.clear()   // must not throw
+    #expect(try await store.load() == nil, "After clear() on empty store, load() must return nil")
+}
+
+/// Ma-Ti RR-M11 — `ForecastStore.save()` must update the in-memory snapshot
+/// so callers can immediately call `isStale(now:)` and `isCoordOutOfRange`
+/// without a subsequent `load()`.
+@Test func test_save_updates_in_memory_without_reload() async throws {
+    let url = isolatedStoreURL()
+    defer { try? FileManager.default.removeItem(at: url) }
+    let store = ForecastStore(fileURL: url)
+    let fresh = makeSnapshot(expirationDate: .distantFuture)
+    try await store.save(fresh)
+    // No load() between save() and the assertions:
+    #expect(
+        await !store.isStale(now: Date()),
+        "After save() the in-memory snapshot must be available — isStale must not require a reload"
+    )
+    #expect(
+        await !store.isCoordOutOfRange(latitude: 37.77, longitude: -122.42),
+        "After save() the in-memory coordinate must be set — isCoordOutOfRange must not require a reload"
+    )
+}
