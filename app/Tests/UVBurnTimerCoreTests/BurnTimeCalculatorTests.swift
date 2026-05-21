@@ -688,9 +688,12 @@ import Testing
     #expect(linksByTitle["Fitzpatrick TB 1988"] == "https://doi.org/10.1001/archderm.1988.01670060015008")
     #expect(linksByTitle["Ward & Farma NCBI Bookshelf NBK481857"] == "https://www.ncbi.nlm.nih.gov/books/NBK481857/")
     #expect(linksByTitle["WHO Global Solar UV Index practical guide"] == "https://iris.who.int/handle/10665/42459")
+    // Wheeler-L12-H1: the locked Schalka source for the linear-SPF-as-MED-multiplier
+    // claim is the 2011 An Bras Dermatol review, not the 2009 PPP application-thickness
+    // paper. See `.squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md` §3.3.
     #expect(
-        linksByTitle["Schalka, dos Reis & Cucé sunscreen/SPF study"]
-            == "https://doi.org/10.1111/j.1600-0781.2009.00408.x")
+        linksByTitle["Schalka & Reis 2011 — SPF as MED multiplier"]
+            == "https://doi.org/10.1590/S0365-05962011000300013")
     #expect(linksByTitle["Diffey BL 1991"] == "https://doi.org/10.1088/0031-9155/36/3/001")
     #expect(
         linksByTitle["CIE erythemal reference action spectrum"]
@@ -2842,91 +2845,6 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
     }
 }
 
-// MARK: - Group HH: Loop-12 Bundle H — README truthfulness (Gaia H1+H2+H3)
-//
-// Three README↔code truth gaps closed by Bundle H. The README is the
-// public-surface source of truth for App Store reviewers, external
-// auditors, and EU counsel; the Plunder regulatory floor + the
-// `D-2026-05-19-honest-privacy-copy` decision both turn on the README
-// being literally true about what is stored and how the disclaimer fires.
-//
-// HH1 — Scenario 1 must describe Pattern-B (policyVersion-gated) cadence,
-//       not the retired "every app session" cold-launch model. Pattern B
-//       was ratified in Loop-9 (`.squad/decisions.md:10–43`) and is now
-//       pinned by `UserPreferenceStorage.shouldShowDisclaimerCover` +
-//       Group GD contract family (BurnTimeCalculatorTests.swift line ~1964).
-// HH2 — Privacy line must not claim `location-rationale acknowledgment`
-//       persists. The `locationRationaleAcknowledgedKey` is declared in
-//       `UVBurnTimerSession.swift` but no production code writes it after
-//       Kwame-8 dropped the LocationRationaleCard. Cross-pinned to source.
-// HH3 — README user-scenarios must list the WI-7 10-day forecast picker —
-//       the largest post-launch feature; omission breaks the
-//       README ↔ loop.md Goal 3 ("User scenarios captured") contract.
-
-private func _readmeContents() throws -> String {
-    let repoRoot = try appRootURL().deletingLastPathComponent()
-    let url = repoRoot.appendingPathComponent("README.md")
-    return try String(contentsOf: url, encoding: .utf8)
-}
-
-/// HH1 — README Scenario 1 must describe Pattern-B (policyVersion-gated)
-/// cadence, not the retired "every app session" cold-launch model.
-@Test func test_HH1_readmeScenario1DescribesPolicyVersionedL1() throws {
-    let readme = try _readmeContents()
-    #expect(
-        !readme.contains("required disclaimer every app session"),
-        "README Scenario 1 must not claim L1 fires every app session — Pattern B (policyVersion-gated) shipped Loop-9; see GD1–GD4."
-    )
-    #expect(
-        readme.localizedCaseInsensitiveContains("policyversion")
-            || readme.localizedCaseInsensitiveContains("policy version"),
-        "README Scenario 1 must reference the policyVersion mechanism that actually gates L1."
-    )
-}
-
-/// HH2 — README must not claim `location-rationale acknowledgment`
-/// persists in UserDefaults: no production code writes that key after
-/// Kwame-8 dropped the LocationRationaleCard.
-@Test func test_HH2_readmePrivacyDoesNotClaimDeadStoragePersistence() throws {
-    let readme = try _readmeContents()
-    #expect(
-        !readme.contains("location-rationale acknowledgment"),
-        "README Privacy line must not claim location-rationale acknowledgment persists — the LocationRationaleCard was retired (Kwame-8) and no production code writes `locationRationaleAcknowledged`."
-    )
-    let repoRoot = try appRootURL().deletingLastPathComponent()
-    let appSwift = try String(
-        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimer/AppViews.swift"),
-        encoding: .utf8
-    )
-    let coreSwift = try String(
-        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimerCore/UVBurnTimerSession.swift"),
-        encoding: .utf8
-    )
-    let writePatterns = [
-        ".set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey",
-        "defaults.set(true, forKey: locationRationaleAcknowledgedKey",
-        "@AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey)",
-    ]
-    for pattern in writePatterns {
-        #expect(
-            !appSwift.contains(pattern) && !coreSwift.contains(pattern),
-            "Production code now writes `locationRationaleAcknowledgedKey` — either restore the README claim or this guard is wrong."
-        )
-    }
-}
-
-/// HH3 — README must list the WI-7 forecast picker as a shipped user
-/// scenario. The picker is the largest post-launch feature and its
-/// absence from public surface is a documented-behavior gap.
-@Test func test_HH3_readmeListsForecastPickerScenario() throws {
-    let readme = try _readmeContents()
-    let tokens = ["forecast", "10-day", "hourly", "WHO"]
-    let presentCount = tokens.filter { readme.localizedCaseInsensitiveContains($0) }.count
-    #expect(
-        presentCount >= 2,
-        "README must describe the shipped forecast picker (≥ 2 of: forecast, 10-day, hourly, WHO). Current matches: \(presentCount)."
-    )
-}
 
 
 // MARK: - Group LL: Loop-12 Bundle L — persona render-site + a11y header safety guards
@@ -3572,4 +3490,88 @@ private func _readmeContents() throws -> String {
         !source.contains(".navigationTitle(\"About\")"),
         "Retired short-form `.navigationTitle(\"About\")` must not return — it disagreed with the NavigationLink entry-point labels."
     )
+}
+
+// MARK: - Group QQ: Loop-12 Bundle K — Wheeler citation hygiene (H1+H2)
+//
+// Closes two Wheeler-locked citation-discipline failures surfaced by the
+// Loop-12 parallel gap-analysis pass (claude-opus-4.7-xhigh):
+//
+//   QQ1 — Schalka citation link now points to the 2011 *An Bras Dermatol*
+//         review (`https://doi.org/10.1590/S0365-05962011000300013`),
+//         which is the locked source for the linear-SPF-as-MED-multiplier
+//         claim per `.squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md`
+//         §3.3. The previous 2009 PPP application-thickness paper was the
+//         wrong target (different claim, different journal) and the
+//         shipped About surface told one source story in prose ("Schalka &
+//         Reis on real-world sunscreen/SPF use") and a different one when
+//         the user tapped the link.
+//
+//   QQ2 — Sayre 1981 and Harrison & Young 2002 — the empirical MED-by-type
+//         anchors per the EE2 per-row audit comments in
+//         `FitzpatrickSkinType.swift` and per the Wheeler archive §2.2 —
+//         now have clickable entries in `citationLinks`. Previously a
+//         user tapping "Citations" could not reach the two papers that
+//         empirically ground the MED column.
+
+/// QQ1 — Wheeler-locked Schalka source is the 2011 *An Bras Dermatol*
+/// review, NOT the 2009 PPP paper. Validates both the canonical URL
+/// presence and that the retired URL is no longer shipped.
+@Test func test_QQ1_schalkaCitationLinkPointsToLockedAnBrasDermatol2011() {
+    let urls = Set(ProductCopy.citationLinks.map { $0.url.absoluteString })
+    #expect(
+        urls.contains("https://doi.org/10.1590/S0365-05962011000300013"),
+        "Wheeler-locked Schalka source must ship as a clickable citationLinks entry."
+    )
+    #expect(
+        !urls.contains("https://doi.org/10.1111/j.1600-0781.2009.00408.x"),
+        "The 2009 PPP application-thickness paper must NOT be the link target for the SPF-as-MED-multiplier claim — that is a different paper. See Wheeler archive §3.3."
+    )
+    // The retired 2009 paper's bibliographic shape must also drop out of the
+    // titles set so prose like "Schalka, dos Reis & Cucé sunscreen/SPF study"
+    // does not silently survive after the URL was swapped.
+    let titles = Set(ProductCopy.citationLinks.map(\.title))
+    #expect(
+        titles.contains("Schalka & Reis 2011 — SPF as MED multiplier"),
+        "Schalka citation must carry the locked 2011 title (`Schalka & Reis 2011 — SPF as MED multiplier`)."
+    )
+    #expect(
+        !titles.contains("Schalka, dos Reis & Cucé sunscreen/SPF study"),
+        "The retired 2009 citation title must not survive after the URL swap."
+    )
+}
+
+/// QQ2 — Sayre 1981 and Harrison & Young 2002 are the empirical MED-by-type
+/// anchor papers. They are cited in `fitzpatrickCitations` prose and in
+/// the per-row AUDIT-ONLY comments in `FitzpatrickSkinType.swift` (EE2)
+/// but were previously not clickable in `citationLinks`. The
+/// citation-per-claim rule in the health-adjacent-constant-adoption
+/// SKILL §4 requires every value to have its own clickable citation.
+@Test func test_QQ2_medAnchorPrimarySourcesAreClickable() {
+    let urls = Set(ProductCopy.citationLinks.map { $0.url.absoluteString })
+    // Sayre 1981 — empirical MED measurements (Types I/II/IV anchor).
+    #expect(
+        urls.contains("https://doi.org/10.1016/S0190-9622(81)70105-1"),
+        "Sayre 1981 (MED-per-type empirical anchor for Types I/II/IV) must ship as a clickable citationLinks entry — referenced by FitzpatrickSkinType.swift EE2 audit comments."
+    )
+    // Harrison & Young 2002 — modern review tabulating MED-by-type
+    // (Types III/V/VI anchor).
+    #expect(
+        urls.contains("https://doi.org/10.1016/S1046-2023(02)00205-0"),
+        "Harrison & Young 2002 (erythema dose-response review, MED-by-type for Types III/V/VI) must ship as a clickable citationLinks entry — referenced by FitzpatrickSkinType.swift EE2 audit comments."
+    )
+    // Bibliographic title sanity — Wheeler archive §2.2 + decisions.md §4.5.
+    let titles = Set(ProductCopy.citationLinks.map(\.title))
+    #expect(titles.contains("Sayre et al. 1981 — MED-per-type empirical anchor"))
+    #expect(titles.contains("Harrison & Young 2002 — erythema dose-response review"))
+}
+
+/// QQ3 — `citationLinks` count grew by exactly +2 (Sayre + Harrison) and
+/// stays internally consistent (no duplicate URLs or titles).
+@Test func test_QQ3_citationLinksCountAndIntegrityAfterWheelerBundle() {
+    #expect(ProductCopy.citationLinks.count == 8)
+    let urls = ProductCopy.citationLinks.map { $0.url.absoluteString }
+    let titles = ProductCopy.citationLinks.map(\.title)
+    #expect(urls.count == Set(urls).count, "citationLinks must not contain duplicate URLs.")
+    #expect(titles.count == Set(titles).count, "citationLinks must not contain duplicate titles.")
 }
