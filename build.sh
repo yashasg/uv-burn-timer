@@ -27,6 +27,15 @@ if [[ -z "$derived_data_path" ]]; then
   derived_data_path="$(mktemp -d "${TMPDIR:-/tmp}/uv-burn-timer-derived-data.XXXXXX")"
 fi
 
+# ---------------------------------------------------------------------------
+# WI-j: project membership guard.
+# Fail fast (before any compilation) when a *.swift source or test file is on
+# disk but missing from app/app.xcodeproj/project.pbxproj. Such files would
+# be silently ignored by xcodebuild and produce a misleading "all tests
+# passed" CI result.
+# ---------------------------------------------------------------------------
+"$(dirname "$0")/scripts/check-test-membership.sh"
+
 # Build configuration(s) to run.
 # When CONFIGURATION is set (CI mode), run only that one configuration.
 # When not set (local dev), run Debug build + tests + Release build to match
