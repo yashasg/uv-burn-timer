@@ -992,9 +992,8 @@ struct UVIndexCard: View {
             }
             WeatherAttributionView()
         }
-        .padding()
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityHint("Current UV index and Apple Weather source.")
     }
 }
@@ -1011,9 +1010,8 @@ struct UVIndexPlaceholderCard: View {
                 .foregroundStyle(.secondary)
             WeatherAttributionView()
         }
-        .padding()
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityHint("Fetch UV index using the Use my location button.")
     }
 }

@@ -1825,3 +1825,70 @@ private func _forecastPickerSourceForGroupR() throws -> String {
     )
 }
 
+
+// MARK: - Group W: UVIndexCard chrome inversion (WI-r)
+//
+// Loop-9 Iris polish — after the Eighth-loop hero-card-wrapper-restore cycle
+// stripped the hero card's `.regularMaterial` + `cornerRadius: 24` chrome
+// (commit `9da54cf`, guarded by R4), the secondary `UVIndexCard` /
+// `UVIndexPlaceholderCard` continued to carry `.thinMaterial` + `cornerRadius:
+// 16` chrome. Iris's end-of-Eighth-loop review filed `wi-r-uvindexcard-chrome-
+// inversion` because the secondary card now visually outweighed the
+// chrome-free primary hero — a visual hierarchy inversion. WI-r strips the
+// material chrome from both UV cards so the secondary surface reads as data
+// (UV index number + Apple Weather source line) without competing chrome.
+// Section spacing in `navigationStackBase` (VStack spacing 20) preserves
+// breathing room.
+//
+// W1 — `UVIndexCard` must NOT re-add `.thinMaterial` / `cornerRadius: 16`
+//      card chrome. The card body is plain VStack with padding only; the
+//      parent ScrollView VStack spacing handles visual separation.
+// W2 — `UVIndexPlaceholderCard` (rendered when uvIndex is nil) must
+//      similarly not re-add the material chrome. Otherwise launching with
+//      no UV data still flashes a chromed card and reverses the hierarchy
+//      inversion.
+//
+// These guards pair with R4 (hero chrome retired) — together they pin
+// "no card-within-card chrome on the main screen" as an Iris-ratified
+// architectural rule.
+
+/// W1 — `UVIndexCard` body must NOT contain `.thinMaterial` background.
+@Test func test_W1_uvIndexCardChromeIsInverted() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct UVIndexCard: View") }) else {
+        Issue.record("UVIndexCard struct not found — guard the existence first, then inversion")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+    #expect(
+        !cardBody.contains(".thinMaterial"),
+        "UVIndexCard body must not re-add `.thinMaterial` background — WI-r inverted the secondary-card chrome so it no longer visually outweighs the chrome-free hero (R4)."
+    )
+    #expect(
+        !cardBody.contains("cornerRadius: 16"),
+        "UVIndexCard body must not re-add `cornerRadius: 16` chrome — the secondary card stays chrome-free to preserve the hero's primary-surface visual weight."
+    )
+}
+
+/// W2 — `UVIndexPlaceholderCard` body must NOT contain `.thinMaterial` background.
+@Test func test_W2_uvIndexPlaceholderCardChromeIsInverted() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct UVIndexPlaceholderCard: View") }) else {
+        Issue.record("UVIndexPlaceholderCard struct not found — guard the existence first, then inversion")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+    #expect(
+        !cardBody.contains(".thinMaterial"),
+        "UVIndexPlaceholderCard body must not re-add `.thinMaterial` background — WI-r inverted the secondary-card chrome so the no-UV placeholder also reads as plain data, not as a chromed card competing with the hero."
+    )
+    #expect(
+        !cardBody.contains("cornerRadius: 16"),
+        "UVIndexPlaceholderCard body must not re-add `cornerRadius: 16` chrome."
+    )
+}
+
