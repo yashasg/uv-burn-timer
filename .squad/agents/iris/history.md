@@ -59,3 +59,13 @@ Team approvals and implementations completed for approved redesign and paraphras
 
 All inbox decisions merged into decisions.md.
 
+## Learnings
+
+### 2026-05-21T00:06:23Z: Seventh-loop gap audit (loop 7)
+
+- **Audit scope:** COPY, LAYOUT, ACCESSIBILITY, CONTRAST, MOTION across `AppViews.swift`, `ProductCopy.swift`, `UVBurnTimerApp.swift` vs. `user-flow-onboarding-main-spec.md`, `iris-contrast-qa-checklist.md`, `iris-launch-readiness-checklist.md`.
+- **Verdict: GREEN.** No must-fix drift found. Loop 6's clean bill of health holds.
+- **One informational finding:** `DisclaimerCover` line 1009 uses `.foregroundColor(.accentColor)` on the "see About" `Text` span. The spec (spec.md line 52) documents the intended modifier as `.foregroundStyle(.link)`. Both render visually identically with the default iOS tint (blue), accessibility traits are correct, and the `.isLink` trait is present. Flagged as informational/nice-to-have only — not a must-fix.
+- **Checklists remain blocked:** `iris-contrast-qa-checklist.md` and `iris-launch-readiness-checklist.md` sign-off blocks remain blank/unsigned. Both require a physical OLED iPhone. No fabricated sign-offs. Pinned-blocked status unchanged per WI-21/WI-28.
+- **No new WI opened.** The `.foregroundColor` deprecation is informational; no loop action required unless Kwame wants to modernize deprecated API in a sweep.
+

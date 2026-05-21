@@ -48,3 +48,27 @@ All inbox decisions merged into decisions.md.
 - **Finding:** "Reapply sunscreen every 2 hours" is an upper-bound cadence, not a permission to rely on SPF-modeled burn protection beyond two hours. CDC/FDA/AAD-style guidance treats reapplication as at least every 2 hours and sooner after swimming, sweating, or toweling.
 - **Implementation handoff:** For any estimate where SPF is not `.none`, the user-facing burn/safe-window should be capped at `ProductTiming.sunscreenReapplicationIntervalSeconds` (120 minutes). If the raw SPF-adjusted burn model exceeds 120 minutes, display a 2-hour/reapply-capped result and copy that explains the model exceeded the sunscreen reapplication window rather than implying sunscreen protects longer.
 - **Nuance:** Keep unprotected (`SPF none`) estimates governed by the burn model; the 2-hour cap is a sunscreen-use claim bound, not a universal erythema threshold.
+
+### 2026-05-21T00:06:23Z — Loop 7 burn-time science + photosens copy audit
+
+- **Verdict:** GREEN. No science drift, no copy drift, no new WIs.
+- **What I verified (file-by-file):**
+  - `FitzpatrickSkinType.minimalErythemalDoseJoules` rows I/II/III/IV/V/VI = 200/250/300/450/600/1000 J·m⁻² erythemally weighted. Exact match to `archive/wheeler-fitzpatrick-and-med-anchor.md` §2.1 and locked by `BurnTimeCalculatorTests.fitzpatrickMEDConstantsRemainCanonical`. ✅
+  - `BurnTimeCalculator.estimate` uses `E_ery = UVI × 0.025` (WHO/WMO 2002 exact-by-definition), `t_sec = MED / E_ery`, `protected_min = unprotected_min × spf.modelMultiplier`. Identical to archive §3.1. ✅
+  - `SPFLevel.modelMultiplier`: 15/30/50 = raw; 70+ = 50 (conservative cap, FDA-labeling-consistent). Locked by `spfRawValuesMatchMultiplierContract` + `spfSeventyPlusUsesConservativeModelMultiplier`. ✅
+  - Sunscreen 2-hour reapplication cap on `effectiveWindowMinutes` matches my 2026-05-19T22:29 learning — raw model retained for science, display capped at 120 min for any `isSunscreen` case > 120 min, and `accessibilitySummary` explicitly explains the cap is a sunscreen-reapplication bound, not an erythema threshold. ✅
+  - Unprotected ≥ 240 min → "4+ hr"; sunscreen-protected over-cap → "Up to 2 hr"; UVI = 0 → "No UV". Matches LANE 3 callout #3 compact-duration cap format. ✅
+  - UVI < 0 rejected (`BurnTimeCalculatorError.negativeUVIndex`). ✅
+- **Copy integrity (spec → ProductCopy diff):**
+  - `photosensitizerDisclaimerLine` (L1) — Plunder-locked wording, no change since loop 4. ✅
+  - `disclaimerSeeAboutInlinePrompt` / Lead+Label+Tail — composes to the persona-overlay phrasing for Asha (P4); rendered via three-Text Button per WI-13. ✅
+  - `disclaimerTitle` + `disclaimerBody` — surfaces "not medical advice," "model calculation, not a measurement," "labeled SPF" assumption, "consult a dermatologist," and the "cover up / reapply / shade" tail. Locked by `requiredSafetyDisclaimerCopyIsCaptured`. ✅
+  - `photosensitizationBannerLabel` = "Meds or photosensitive conditions? Learn more" — matches LANE 2 #3 verbatim (WI-57 reconciliation). ✅
+  - `mainVerdictCaveatLinkLabel` = "Meds + conditions can shorten this. Learn more" — matches LANE 2 #4. ✅
+  - `disclaimerLinkLabel` = "Informational only. Not medical advice." — matches LANE 2 #7 (WI-60 dropped the spec-time `→` arrow). ✅
+  - `sunscreenCapHedge` (capped-estimate caveat) — scientifically aligned with my 2026-05-19T22:29 reapplication-cap rationale. ✅
+  - `aboutHowThisWorks` still says "SPF 70+ is conservatively modeled as SPF 50" — matches `modelMultiplier == 50`. ✅
+  - `aboutEstimateApplicability` still surfaces the "Fitzpatrick IV–VI carry wider uncertainty" qualifier from archive §2.4 confidence labels. ✅
+  - `fitzpatrickCitations` + `citationLinks` Schalka entry: still the 2009 three-author Photodermatol paper (DOI 10.1111/j.1600-0781.2009.00408.x). My 2026-05-19T16:30 audit flagged a 2009-vs-2011 mismatch; the resolved state is that the 2009 paper is the more apt clickable citation for the *real-world-SPF-achieved* caveat the app surfaces in `aboutHowThisWorks` / `aboutSunscreenAssumptions`, while the 2011 paper's SPF-multiplicative definitional claim is already covered by WHO 2002 + Diffey 1991. Title and URL are internally consistent. Not re-flagging.
+- **What I did NOT change:** no `app/` file touched — read-only audit per task brief.
+- **Reusable rule:** A loop-N science audit's job is *drift detection*, not citation re-litigation. If the spec, the constants, and the copy all still triangulate, the answer is GREEN — even if a sibling agent might want to upgrade a citation. Re-flagging settled items burns review budget that the team will need for future drift.
