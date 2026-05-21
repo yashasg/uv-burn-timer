@@ -33,6 +33,7 @@ Weather so the app can fetch a UV index.
 | Fitzpatrick skin type (I–VI) | UserDefaults on device only | Never | Lets the app remember your selection between launches and feeds the burn-time model. |
 | SPF selection (0 / 15 / 30 / 50 / 70+) | UserDefaults on device only | Never | Same as above. |
 | Last rounded approximate location (two decimal places) | UserDefaults on device only | Each time you tap Use my location / Recalculate: sent to Apple Weather to fetch the UV index | Required to look up the current UV index. The two-decimal rounding intentionally degrades the precision to ~1.1 km so the coordinate cannot identify a precise address. |
+| 10-day UV forecast snapshot (`forecast-snapshot.json`) | App Caches directory on device only | Never | Caches the WeatherKit 10-day/hourly UV forecast so the app can display UV data without a network request on every launch. Cleared automatically when the forecast expires or when you tap Clear saved location. iOS may also evict this file from the Caches directory under storage pressure. |
 | Disclaimer-version acknowledgment (the version of the informational disclaimer you acknowledged) | UserDefaults on device only (integer key `disclaimerPolicyVersion`) | Never | So we do not re-prompt you with the informational disclaimer every cold launch. If the disclaimer materially changes, this value bumps and the cover re-fires. |
 | UV index values, burn-time estimates | In-memory only | Never | Recomputed on each launch from the inputs above. |
 

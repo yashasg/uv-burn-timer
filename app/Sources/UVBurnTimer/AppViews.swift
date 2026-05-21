@@ -109,7 +109,7 @@ struct RootView: View {
             .navigationTitle("UV Burn Timer")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSettings = true
                     } label: {
@@ -1623,6 +1623,8 @@ struct AboutView: View {
                         .font(.title3.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
                     Text(ProductCopy.aboutPrivacy)
+                    Text(ProductCopy.locationPrivacyLine)
+                        .accessibilityIdentifier("AboutViewLocationPrivacyLine")
 
                     Text("Pricing")
                         .font(.title3.weight(.semibold))
