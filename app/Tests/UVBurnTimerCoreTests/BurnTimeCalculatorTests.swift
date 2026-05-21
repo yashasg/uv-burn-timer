@@ -2508,3 +2508,129 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
     #expect(!unprotected.isSunscreenProtected)
     #expect(protected.isSunscreenProtected)
 }
+
+
+// MARK: - Group EK: Loop-11 Bundle E — Gaia ADR maintenance + Suchi/Mati docs
+
+/// EK1 — WI-gaia-ii (R8 chip watchlist): `skinTypeChip` stays lightweight
+/// per ADR-0001 Addendum 2026-05-21. The chip is permitted as an inline
+/// computed property only while it (a) carries no `@State`/`@StateObject`
+/// and (b) stays short (≤ 40 LOC). If anyone adds local state or grows
+/// the chip into a substantive subtree, this guard fires and the chip
+/// must be extracted into `struct SkinTypeChip: View` to preserve the
+/// architectural invariant.
+@Test func test_EK1_skinTypeChipStaysLightweight() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let bodyStart = lines.firstIndex(where: { $0.contains("private var skinTypeChip: some View") }) else {
+        Issue.record("skinTypeChip property not found")
+        return
+    }
+    let bodyEnd: Int = lines[(bodyStart + 1)...].firstIndex(where: {
+        $0.contains("private var ") && !$0.contains("skinTypeChip")
+    }) ?? lines.endIndex
+    let body = lines[bodyStart..<bodyEnd]
+    let bodyText = body.joined(separator: "\n")
+
+    #expect(
+        !bodyText.contains("@State"),
+        "skinTypeChip must not declare its own @State — ADR-0001 Addendum (2026-05-21, WI-gaia-hh) requires extraction to `struct SkinTypeChip: View` if state is added."
+    )
+    #expect(
+        !bodyText.contains("@StateObject"),
+        "skinTypeChip must not declare its own @StateObject — ADR-0001 Addendum requires extraction if state is added."
+    )
+    #expect(
+        body.count <= 40,
+        "skinTypeChip body is now \(body.count) lines; ADR-0001 Addendum caps inline chip computed properties at ≤ 40 LOC. Extract to `struct SkinTypeChip: View` before growing further."
+    )
+}
+
+/// EK2 — WI-gaia-gg (line refresh): the ADR-0001 References § now cites
+/// the post-Loop-10 line numbers, not the WI-l-era ones. This guard
+/// reads the ADR and fails if it still cites the retired pointers.
+@Test func test_EK2_adr0001ReferencesPointAtCurrentLineNumbers() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let adrURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent(".squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md")
+    let adr = try String(contentsOf: adrURL, encoding: .utf8)
+
+    // The retired (pre-Loop-10) line refs must not appear in the
+    // References § block (test-file lines drifted +217 by Loop-10 close).
+    #expect(
+        !adr.contains("`test_R1_heroTimerCardWrapperStructStillExists` — line **1090**"),
+        "ADR-0001 must not cite the retired R1 line (was 1090, now 1307+)."
+    )
+    #expect(
+        !adr.contains("`test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1102**"),
+        "ADR-0001 must not cite the retired R2 line (was 1102, now 1319+)."
+    )
+    // The refreshed pointers must be present.
+    #expect(adr.contains("test_R1_heroTimerCardWrapperStructStillExists"))
+    #expect(adr.contains("test_R2_rootViewDelegatesToHeroTimerCardConstructor"))
+}
+
+/// EK3 — WI-gaia-hh (multi-sheet addendum): ADR-0001 carries the
+/// addendum naming the four presentation modifiers + two NavigationLink
+/// pushes that resolve against RootView's identity, plus the
+/// lightweight-inlining clarification.
+@Test func test_EK3_adr0001CarriesMultiSheetAddendum() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let adrURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent(".squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md")
+    let adr = try String(contentsOf: adrURL, encoding: .utf8)
+
+    #expect(
+        adr.contains("Multi-sheet / multi-cover on a single parent"),
+        "ADR-0001 must carry the WI-gaia-hh addendum naming the multi-sheet-on-parent pattern."
+    )
+    #expect(adr.contains("$showSkinTypeEdit"))
+    #expect(adr.contains("$showDisclaimer"))
+    #expect(adr.contains("$showSkinTypeOnboarding"))
+    #expect(adr.contains("EstimateInfoButton"))
+    #expect(adr.contains("PersistentFooter"))
+    // Worked examples block.
+    #expect(adr.contains("skinTypeChip"))
+    #expect(adr.contains("mainNavigationStack"))
+}
+
+/// EK4 — WI-suchi-g (persona-annotations Pattern-B reconcile): the
+/// persona doc no longer claims L1 fires "every cold launch"; it now
+/// names Pattern B + WI-ff Group GD as the gating mechanism.
+@Test func test_EK4_personaAnnotationsReconciledToPatternB() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let docURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent(".squad/files/suchi-persona-annotations.md")
+    let doc = try String(contentsOf: docURL, encoding: .utf8)
+
+    #expect(
+        doc.contains("Pattern B"),
+        "suchi-persona-annotations.md must reference Pattern B after WI-suchi-g (Loop-11) reconcile."
+    )
+    #expect(
+        doc.contains("disclaimerPolicyVersion"),
+        "suchi-persona-annotations.md must name the disclaimerPolicyVersion key — that is the Pattern-B gating mechanism."
+    )
+    #expect(
+        doc.contains("WI-ff Group GD"),
+        "suchi-persona-annotations.md must reference WI-ff Group GD (the Loop-10 PR that ratified Pattern B)."
+    )
+    // The Diagram-note line and the L1-hard-gate annotation must no
+    // longer carry the unconditional "every cold launch" wording.
+    #expect(
+        !doc.contains("L1 is a hard gate every cold launch (Donatello M1)."),
+        "Diagram note must no longer claim L1 is a hard gate every cold launch — reconciled to Pattern B per WI-suchi-g."
+    )
+}
