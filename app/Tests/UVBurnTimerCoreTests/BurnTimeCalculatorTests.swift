@@ -3601,6 +3601,7 @@ private func _readmeContents() throws -> String {
     )
 }
 
+
 // MARK: - Group QQ: Loop-12 Bundle K — Wheeler citation hygiene (H1+H2)
 //
 // Closes two Wheeler-locked citation-discipline failures surfaced by the
@@ -3869,4 +3870,111 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
         #expect(h < a, "Attribution must appear AFTER the hourlyStripSection in the source body.")
         #expect(h < i, "L3 reach-back button must appear AFTER the hourlyStripSection in the source body.")
     }
+}
+
+// MARK: - Group II: Loop-12 Bundle I — Disclaimer state coherence (Kwame H1)
+//
+// Closes a HIGH-severity Pattern-B regression surfaced by the Loop-12
+// Kwame gap-analysis pass (claude-opus-4.7-xhigh): the
+// `UserPreferenceStorage.shouldShowDisclaimerCover` `isExistingUser`
+// heuristic counted the existence of `selectedSkinTypeKey` in defaults
+// as a signal that the user is a returning user — but `@AppStorage` on
+// `RootView` writes the `unsetSkinTypeRawValue` (0) sentinel to disk
+// the first time `handleAppear()` runs, which happens *while L1 is
+// still on screen and unacknowledged*. If the user force-quits before
+// tapping "I understand", the next launch sees `storedVersion == 0`
+// AND `selectedSkinTypeKey != nil`, takes the migration branch, writes
+// `currentVersion` to disk, and never re-fires L1 — a direct breach of
+// the Plunder C6 / Asha "L1 must fire once on first launch" contract.
+//
+// Fix: require the stored rawValue to map to a real Fitzpatrick type
+// (excluding the 0 sentinel) before treating the user as existing.
+
+/// II1 — Fresh-install user who force-quits while L1 is on screen (no
+/// disclaimer ack written, no skin type committed, but RootView's
+/// `@AppStorage` already wrote the unset sentinel to disk) must still
+/// see L1 on the next launch. The unset sentinel is NOT an existing-user
+/// signal.
+@Test func test_II1_freshInstallForceQuitDuringL1RefiresL1OnNextLaunch() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    // Simulate handleAppear's @AppStorage write on first launch: the unset
+    // sentinel for skinType plus the default SPF land on disk before the
+    // user has interacted with the L1 cover.
+    defaults.set(UserPreferenceStorage.unsetSkinTypeRawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+    defaults.set(SPFLevel.spf30.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+    // User force-quits BEFORE acknowledging — disclaimerPolicyVersionKey is NEVER written.
+
+    let shouldShowOnRelaunch = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+
+    #expect(
+        shouldShowOnRelaunch,
+        "Force-quit-before-L1-ack must re-fire L1 on next launch. The unsetSkinTypeRawValue (0) is a placeholder written by @AppStorage before the user has interacted, NOT an existing-user signal. (Kwame-L12-H1 / Group II1)"
+    )
+
+    // And the migration write must NOT have fired — disclaimerPolicyVersionKey
+    // should still be 0 so the next launch also sees L1 until the user actually
+    // taps "I understand".
+    let storedVersionAfter = defaults.integer(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey)
+    #expect(
+        storedVersionAfter == 0,
+        "Migration branch must NOT fire when the only existing-user signal is the unset sentinel — disclaimerPolicyVersionKey should remain unwritten."
+    )
+}
+
+/// II2 — A user who genuinely picked a Fitzpatrick type and force-quit
+/// without writing the policy-version key (i.e., true pre-Pattern-B
+/// returning user OR a fresh-install user who tapped the cover, picked a
+/// type, and then crashed) must continue to follow the migration path:
+/// the existing-user heuristic still recognizes a genuine pick.
+@Test func test_II2_genuinePreviousSkinTypePickContinuesToBeRecognizedAsExistingUser() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    // Genuine pre-Pattern-B existing user — committed a Fitzpatrick type.
+    defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+    defaults.set(SPFLevel.spf30.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+    // No disclaimerPolicyVersionKey — the prior @State-only era never wrote it.
+
+    let shouldShowOnRelaunch = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+
+    #expect(
+        !shouldShowOnRelaunch,
+        "Genuine returning user (real Fitzpatrick raw value persisted) must continue to skip L1 on the migration path — Pattern-B contract preserved."
+    )
+    let migratedVersion = defaults.integer(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey)
+    #expect(
+        migratedVersion == UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        "Migration must persist currentDisclaimerPolicyVersion for the genuine returning user."
+    )
+}
+
+/// II3 — Negative guard: an invalid out-of-range stored rawValue (e.g.,
+/// corrupted defaults or a future schema version writing a value outside
+/// FitzpatrickSkinType's domain) must also fall back to "fresh install"
+/// rather than silently migrating an unrecognized state.
+@Test func test_II3_outOfRangeStoredSkinTypeRawValueDoesNotSuppressL1() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    // Synthesize an out-of-range value (rawValue 99 — outside I…VI).
+    defaults.set(99, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+    defaults.set(SPFLevel.spf30.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+
+    let shouldShowOnRelaunch = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+
+    #expect(
+        shouldShowOnRelaunch,
+        "Out-of-range stored skin-type rawValue must not satisfy the existing-user heuristic — fall back to first-install behaviour and present L1."
+    )
 }
