@@ -81,11 +81,11 @@ discourage child-targeted use.
 - **Access:** all data the app stores about you lives on your device.
   Open the app's Settings sheet to view your current skin type, SPF, and
   saved coordinate.
-- **Clear:** in the Settings sheet, tap **Clear stored skin type** and
-  **Clear saved location** to delete those values from your device. The
-  disclaimer-version acknowledgment is cleared automatically when you
-  delete the app from your device (iOS removes the app's UserDefaults
-  on uninstall).
+- **Clear:** in the Settings sheet, tap **Clear stored skin type**,
+  **Clear stored SPF**, and **Clear saved location** to delete those
+  values from your device. The disclaimer-version acknowledgment is
+  cleared automatically when you delete the app from your device (iOS
+  removes the app's UserDefaults on uninstall).
 - **Revoke location:** open iOS Settings → UV Burn Timer → Location and
   set it to **Never** or **While Using the App**.
 - **Delete the app:** uninstalling the app removes every value stored

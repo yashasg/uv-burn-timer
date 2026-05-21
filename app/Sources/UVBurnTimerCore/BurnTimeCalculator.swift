@@ -57,7 +57,12 @@ public struct BurnTimeEstimate: Equatable, Sendable {
 
     public var accessibilitySummary: String {
         if !rawMinutes.isFinite {
-            return "UV index is 0. No erythemal irradiance detected."
+            // Wheeler L13-H1 (Bundle Q) — UVI=0 is the rounded forecast value
+            // (WHO 2002 §2.1), so the true erythemal irradiance is not
+            // necessarily zero. Drop the categorical "no irradiance detected"
+            // claim and use the same time-bounded hedge as the visible-copy
+            // path (`ProductCopy.noUVAtThisHourAccessibilityLabel`).
+            return "UV index is 0 at this hour. Burn risk returns when the sun is up."
         }
 
         if isCappedForSunscreenReapplication {

@@ -181,17 +181,23 @@ else
       OTHER_SWIFT_FLAGS="-warnings-as-errors" \
       build
 
-  run_xcodebuild test.log \
-    xcodebuild -project app/app.xcodeproj \
-      -derivedDataPath "$derived_data_path" \
-      -scheme UVBurnTimer \
-      -configuration Debug \
-      -destination "$destination" \
-      -parallel-testing-enabled NO \
-      SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-      GCC_TREAT_WARNINGS_AS_ERRORS=YES \
-      OTHER_SWIFT_FLAGS="-warnings-as-errors" \
-      test
+  # WI-bundleQ / Gaia L13d (Loop-13) — honor RUN_TESTS in the local-dev
+  # branch too. Previously this block ran tests unconditionally even when
+  # the documented `RUN_TESTS=false` env var was set, contradicting the
+  # header contract on line 9 and producing a misleading dev experience.
+  if [[ "$run_tests" == "true" ]]; then
+    run_xcodebuild test.log \
+      xcodebuild -project app/app.xcodeproj \
+        -derivedDataPath "$derived_data_path" \
+        -scheme UVBurnTimer \
+        -configuration Debug \
+        -destination "$destination" \
+        -parallel-testing-enabled NO \
+        SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+        GCC_TREAT_WARNINGS_AS_ERRORS=YES \
+        OTHER_SWIFT_FLAGS="-warnings-as-errors" \
+        test
+  fi
 
   run_xcodebuild release-build.log \
     xcodebuild -project app/app.xcodeproj \

@@ -137,7 +137,11 @@ public struct ForecastPickerView: View {
             .accessibilityLabel("Source: \(ProductCopy.weatherAttributionServiceName)")
             .accessibilityHint("Opens the Apple Weather legal attribution page.")
             .accessibilityIdentifier("ForecastPickerAttribution")
-            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+            // WI-bundleQ / Iris L03 (Loop-13) — raise to 44pt HIG tap-target
+            // floor. Mirrors the sibling ForecastPickerEstimateInfoButton
+            // (line 129) and the L1 / L3 / footer reach-back rows.
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
             .padding(.horizontal, 16)
             .padding(.bottom, 4)
         }
