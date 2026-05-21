@@ -102,6 +102,7 @@ public struct ForecastPickerView: View {
     private var headerLabel: some View {
         Text("UV Forecast")
             .font(.headline)
+            .accessibilityAddTraits(.isHeader)
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
     }
@@ -364,6 +365,7 @@ public struct ForecastPickerView: View {
             Text("Hourly")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
+                .accessibilityAddTraits(.isHeader)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 

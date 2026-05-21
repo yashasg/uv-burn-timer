@@ -996,6 +996,7 @@ struct UVIndexCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("UV Index \(uvIndex.formatted(.number.precision(.fractionLength(1))))")
                 .font(.title3.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
             Text(sourceLine)
                 .font(.subheadline.weight(.medium))
             if let updatedText {
@@ -1018,6 +1019,7 @@ struct UVIndexPlaceholderCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("UV Index")
                 .font(.title3.weight(.semibold))
+                .accessibilityAddTraits(.isHeader)
             Text(sourceLine)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
@@ -1396,6 +1398,8 @@ struct SkinTypePickerList: View {
                     Text(ProductCopy.skinTypePickerPrompt)
                         .textCase(nil)
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("SkinTypePickerPromptHeader")
                     Text(ProductCopy.skinTypePickerSubtext)
                         .textCase(nil)
                         .font(.subheadline)
