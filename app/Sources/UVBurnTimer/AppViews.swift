@@ -14,16 +14,15 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Binding var session: UVBurnTimerSession
     @Binding var showDisclaimer: Bool
+    @Binding var showSkinTypeOnboarding: Bool
     @AppStorage("lastRoundedCoordinate") private var cachedRoundedCoordinateStorage = ""
     @AppStorage("lastUVSnapshot") private var legacyCachedUVSnapshotStorage = ""
     @AppStorage(UserPreferenceStorage.selectedSkinTypeKey) private var persistedSkinTypeRawValue =
         UserPreferenceStorage.unsetSkinTypeRawValue
     @AppStorage(UserPreferenceStorage.selectedSPFKey) private var persistedSPFRawValue = SPFLevel.spf30.rawValue
-    @AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey) private
-        var persistedLocationRationaleAcknowledged =
-        false
     @StateObject private var locationProvider = DeviceLocationProvider()
     @State private var showSettings = false
+    @State private var showSkinTypeEdit = false
     @State private var uvIndex: Double?
     @State private var fetchedAt: Date?
     @State private var roundedCoordinate: UVCoordinate?
@@ -32,7 +31,6 @@ struct RootView: View {
     @State private var isFetching = false
     @State private var locationFailureMessage: String?
     @State private var weatherFailureMessage: String?
-    @State private var locationPromptGate = LocationPromptGate()
     @State private var reattestationTracker = ForegroundReattestationTracker()
     // WI-7 — 10-day UV forecast
     @State private var forecastStore = ForecastStore()
@@ -76,6 +74,11 @@ struct RootView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showSkinTypeEdit) {
+                SkinTypeEditView(session: $session)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
             .sensoryFeedback(.success, trigger: uvIndex)
             .sensoryFeedback(.warning, trigger: isEstimateStale)
     }
@@ -85,13 +88,9 @@ struct RootView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    photosensitizationBanner
                     #if DEBUG
                     UITestRefreshableProbeButton(refreshAction: { await refreshUV() })
                     #endif
-                    if !locationPromptGate.hasAcknowledgedRationale {
-                        LocationRationaleCard()
-                    }
                     heroTimerCardView
                     uvIndexCardView
                     mainInputsRow
@@ -115,6 +114,14 @@ struct RootView: View {
                     }
                     .accessibilityLabel("Settings")
                     .accessibilityHint("Opens skin type, SPF, attribution, and app information.")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(destination: AboutView(highlightEstimateApplicability: true)) {
+                        Image(systemName: "info.circle")
+                    }
+                    .accessibilityLabel("About this estimate")
+                    .accessibilityHint("Opens photosensitization, medication, and sunscreen assumption caveats.")
+                    .accessibilityIdentifier("EstimateInfoButton")
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -244,53 +251,17 @@ struct RootView: View {
         )
     }
 
-    private var photosensitizationBanner: some View {
-        NavigationLink {
-            AboutView(highlightEstimateApplicability: true)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.orange)
-                Text(ProductCopy.photosensitizationBannerLabel)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Color.yellow.opacity(colorSchemeContrast == .increased ? 0.35 : 0.18),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(
-                        Color.orange.opacity(colorSchemeContrast == .increased ? 0.85 : 0.55),
-                        lineWidth: 1
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(ProductCopy.photosensitizationBannerLabel)
-        .accessibilityHint("Opens About with medication, condition, pregnancy, and recent skin-treatment caveats.")
-        .accessibilityIdentifier("PhotosensitizationBanner")
-    }
-
     @ViewBuilder
     private var mainInputsRow: some View {
         if dynamicTypeSize.isAccessibilitySize {
             VStack(spacing: 12) {
+                skinTypeChip
                 locationChip
                 spfChip
             }
         } else {
             HStack(spacing: 12) {
+                skinTypeChip
                 locationChip
                 spfChip
             }
@@ -334,6 +305,34 @@ struct RootView: View {
         .accessibilityIdentifier("SPFChip")
     }
 
+    private var skinTypeChip: some View {
+        Button {
+            if session.selectedSkinType != nil {
+                showSkinTypeEdit = true
+            } else {
+                showSkinTypeOnboarding = true
+            }
+        } label: {
+            Label(
+                session.selectedSkinType.map { "Type \($0.romanNumeral)" } ?? "Set skin type",
+                systemImage: "figure.person.crop.square"
+            )
+            .font(.caption.weight(.medium))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel(
+            session.selectedSkinType.map { "Skin type, Type \($0.romanNumeral)" } ?? "Skin type, not set"
+        )
+        .accessibilityHint(
+            session.selectedSkinType != nil
+                ? "Opens skin type settings to change your Fitzpatrick classification."
+                : "Opens skin type selector to set your Fitzpatrick classification."
+        )
+        .accessibilityIdentifier("SkinTypeChip")
+    }
+
     private var locationChipTitle: String {
         roundedCoordinate?.privacyDisplayText ?? "Location"
     }
@@ -368,7 +367,6 @@ struct RootView: View {
     private var primaryActionPresentation: LocationActionPresentation {
         LocationActionPresentation(
             hasUVIndex: uvIndex != nil,
-            hasAcknowledgedRationale: locationPromptGate.hasAcknowledgedRationale,
             isFetching: isFetching
         )
     }
@@ -419,11 +417,6 @@ struct RootView: View {
         do {
             guard session.selectedSkinType != nil else {
                 throw UVBurnTimerWorkflowError.missingSkinType
-            }
-
-            guard allowLocationRequestOrPersistRationale() else {
-                statusMessage = "Location rationale reviewed. Tap Use my location to continue."
-                return
             }
 
             #if DEBUG
@@ -502,7 +495,6 @@ struct RootView: View {
 
     private func handleAppear() {
         syncPreferenceStorageFromSession()
-        restoreLocationPromptChoice()
         restoreSavedRoundedCoordinate()
         applyUITestStaleEstimateSeedIfNeeded()
         applyUITestCappedEstimateSeedIfNeeded()
@@ -626,20 +618,6 @@ struct RootView: View {
         persistedSPFRawValue = (spf.isSunscreen ? spf : .spf30).rawValue
     }
 
-    private func restoreLocationPromptChoice() {
-        guard persistedLocationRationaleAcknowledged else {
-            return
-        }
-
-        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
-    }
-
-    private func allowLocationRequestOrPersistRationale() -> Bool {
-        let isAllowed = locationPromptGate.allowSystemPromptOrAcknowledgeRationale()
-        persistedLocationRationaleAcknowledged = locationPromptGate.hasAcknowledgedRationale
-        return isAllowed
-    }
-
     private func restoreSavedRoundedCoordinate() {
         legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
 
@@ -652,8 +630,6 @@ struct RootView: View {
                 from: cachedRoundedCoordinateStorage)
             {
                 roundedCoordinate = restoredCoordinate
-                locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
-                persistedLocationRationaleAcknowledged = true
             }
         } catch {
             cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
@@ -664,7 +640,6 @@ struct RootView: View {
         do {
             cachedRoundedCoordinateStorage = try CachedRoundedCoordinateStorage.storageValue(for: snapshot)
             legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
-            persistedLocationRationaleAcknowledged = true
         } catch {
             cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         }
@@ -690,7 +665,6 @@ struct RootView: View {
         uvIndex = 200
         fetchedAt = Date().addingTimeInterval(-15 * 60)
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
-        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
         statusMessage = "Seeded stale estimate for UI testing."
         #endif
     }
@@ -704,7 +678,6 @@ struct RootView: View {
         uvIndex = 8
         fetchedAt = Date()
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
-        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
         statusMessage = "Seeded capped estimate for UI testing."
         #endif
     }
@@ -718,7 +691,6 @@ struct RootView: View {
         uvIndex = 37.5
         fetchedAt = Date()
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
-        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
         statusMessage = "Seeded long estimate for UI testing."
         #endif
     }
@@ -744,7 +716,6 @@ struct RootView: View {
         uvIndex = 4.0
         fetchedAt = Date()
         roundedCoordinate = UVCoordinate(latitude: 37.77, longitude: -122.42)
-        locationPromptGate = LocationPromptGate(hasAcknowledgedRationale: true)
         now = Date()
         statusMessage = "UV index fetched from Apple Weather."
         #endif
@@ -827,19 +798,6 @@ struct HeroTimerCard: View {
                     .font(.title3.weight(.semibold))
                 burnRiskGauge
             }
-
-            if let estimate, estimate.rawMinutes.isFinite {
-                NavigationLink {
-                    AboutView(highlightEstimateApplicability: true)
-                } label: {
-                    Label(ProductCopy.mainVerdictCaveatLinkLabel, systemImage: "info.circle")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(.tint)
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens applicability and photosensitizing medication caveats.")
-                .accessibilityIdentifier("HeroVerdictCaveatLink")
-            }
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -859,7 +817,7 @@ struct HeroTimerCard: View {
 
     private var burnRiskGaugeUnavailableMessage: String {
         if let estimate, estimate.tier == .none {
-            return "No active burn window because the UV index is 0."
+            return "No active burn time because the UV index is 0."
         }
 
         if weatherFailureMessage != nil {
@@ -1038,9 +996,6 @@ struct UVIndexPlaceholderCard: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("UV Index")
                 .font(.title3.weight(.semibold))
-            Text("Use your location to fetch the current UV index.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
             Text(sourceLine)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
@@ -1049,7 +1004,7 @@ struct UVIndexPlaceholderCard: View {
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityHint("UV index is unavailable until location is used.")
+        .accessibilityHint("Fetch UV index using the Use my location button.")
     }
 }
 
@@ -1148,23 +1103,6 @@ struct TierBadge: View {
         case .moderate: Color("SeverityModerate")
         case .short: Color("SeverityShort")
         }
-    }
-}
-
-struct LocationRationaleCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Location permission", systemImage: "location.circle")
-                .font(.headline)
-            Text(ProductCopy.locationRationale)
-            Text(ProductCopy.locationPrivacyLine)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -1350,6 +1288,15 @@ struct SettingsSheet: View {
                     .disabled(!hasSavedLocation)
                     .accessibilityHint(
                         hasSavedLocation ? "Clears the last saved rounded coordinate." : "No saved location is stored.")
+
+                    Button(role: .destructive) {
+                        UserPreferenceStorage.persist(skinType: nil, to: .standard)
+                        session.selectedSkinType = nil
+                    } label: {
+                        Text("Clear stored skin type")
+                    }
+                    .disabled(session.selectedSkinType == nil)
+                    .accessibilityHint("Removes your stored Fitzpatrick skin type. You will be asked to set it again on next use.")
                 }
             }
             .navigationTitle("Settings")
@@ -1549,6 +1496,9 @@ struct AboutView: View {
                     Text(ProductCopy.aboutSunscreenAssumptions)
 
                     VStack(alignment: .leading, spacing: 12) {
+                        Text(ProductCopy.aboutSunSafetyActions)
+                            .font(.body)
+
                         Text("When this estimate may not apply")
                             .font(.title3.weight(.semibold))
                             .accessibilityAddTraits(.isHeader)
@@ -1788,28 +1738,16 @@ struct BurnRiskGaugeCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 4) {
-                Text("Burn window")
-                    .font(.headline)
-                Text(supportingText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-
             gauge
 
             if differentiateWithoutColor {
-                Text(percentText)
+                Text(supportingText)
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity, alignment: .center)
                     .accessibilityHidden(true)
             }
         }
-        .padding(20)
         .frame(maxWidth: .infinity)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var gauge: some View {
@@ -1824,10 +1762,10 @@ struct BurnRiskGaugeCard: View {
                 )
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 4) {
-                Text(percentText)
+                Text(remainingText)
                     .font(.system(size: 42, weight: .heavy, design: .rounded))
-                    .minimumScaleFactor(0.7)
-                Text("elapsed")
+                    .minimumScaleFactor(0.6)
+                Text("remaining")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -1836,9 +1774,9 @@ struct BurnRiskGaugeCard: View {
         .frame(width: gaugeDiameter, height: gaugeDiameter)
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Burn risk gauge. \(percentText) \(gaugeAccessibilityWindowDescription) elapsed.")
-        .accessibilityValue(percentText)
-        .accessibilityHint("Secondary risk indicator. The hero timer card shows the full estimate.")
+        .accessibilityLabel("Burn risk gauge. \(remainingText) remaining. \(percentText) \(gaugeAccessibilityWindowDescription) elapsed.")
+        .accessibilityValue(remainingText)
+        .accessibilityHint("Progress arc shows burn time elapsed.")
         .accessibilityIdentifier("BurnRiskGauge")
     }
 
@@ -1846,6 +1784,20 @@ struct BurnRiskGaugeCard: View {
         let elapsedSeconds = now.timeIntervalSince(fetchedAt)
         let burnWindowSeconds = estimate.effectiveWindowMinutes * 60
         return min(1.0, max(0.0, elapsedSeconds / burnWindowSeconds))
+    }
+
+    private var remainingText: String {
+        let elapsedSeconds = now.timeIntervalSince(fetchedAt)
+        let totalSeconds = estimate.effectiveWindowMinutes * 60
+        let remaining = max(0, totalSeconds - elapsedSeconds)
+        let minutes = Int((remaining / 60).rounded())
+        if minutes == 0 { return "Elapsed" }
+        if minutes >= 60 {
+            let h = minutes / 60
+            let m = minutes % 60
+            return m == 0 ? "~\(h) hr" : "~\(h) hr \(m) min"
+        }
+        return "~\(minutes) min"
     }
 
     private var percentText: String {
@@ -1857,7 +1809,7 @@ struct BurnRiskGaugeCard: View {
             return "\(percentText) of 2-hour sunscreen reapplication window elapsed"
         }
 
-        return "\(percentText) of burn window elapsed"
+        return "\(percentText) of estimated burn time elapsed"
     }
 
     private var gaugeAccessibilityWindowDescription: String {
@@ -1865,7 +1817,7 @@ struct BurnRiskGaugeCard: View {
             return "of 2-hour sunscreen reapplication window"
         }
 
-        return "of estimated burn window"
+        return "of estimated burn time"
     }
 
     private var tierColor: Color {
@@ -1890,17 +1842,13 @@ struct BurnRiskGaugeUnavailableCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 4) {
-                Text("Burn window")
-                    .font(.headline)
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-
             gauge
+
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
 
             if differentiateWithoutColor {
                 Text("Unavailable")
@@ -1909,9 +1857,7 @@ struct BurnRiskGaugeUnavailableCard: View {
                     .accessibilityHidden(true)
             }
         }
-        .padding(20)
         .frame(maxWidth: .infinity)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var gauge: some View {
@@ -1939,20 +1885,14 @@ struct BurnRiskGaugeUnavailableCard: View {
 
 struct PersistentFooter: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(ProductCopy.reapplicationFooter)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
-            NavigationLink {
-                AboutView(highlightEstimateApplicability: true)
-            } label: {
-                Label(ProductCopy.disclaimerLinkLabel, systemImage: "info.circle")
-                    .font(.caption.weight(.semibold))
-            }
-            .foregroundStyle(.tint)
-            .accessibilityHint("Opens About and applicability details.")
+        NavigationLink {
+            AboutView(highlightEstimateApplicability: true)
+        } label: {
+            Label(ProductCopy.disclaimerLinkLabel, systemImage: "info.circle")
+                .font(.caption.weight(.semibold))
         }
+        .foregroundStyle(.tint)
+        .accessibilityHint("Opens About and applicability details.")
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

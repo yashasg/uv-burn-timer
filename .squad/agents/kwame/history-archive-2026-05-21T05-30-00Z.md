@@ -1,53 +1,5 @@
-## Learnings — Main Screen Cleanup (K-1..K-11) — 2026-05-21T04:40:00Z
+# Kwame — History
 
-### Items shipped
-
-- **K-1**: Removed `photosensitizationBanner` call site (`AppViews.swift:88`) and its 37-line computed property (`AppViews.swift:247–283`). The `colorSchemeContrast` environment property was only used in this banner — no dangling reference.
-- **K-2**: Added second `ToolbarItem(placement: .topBarTrailing)` in `navigationStackBase` toolbar block wrapping a `NavigationLink(destination: AboutView(highlightEstimateApplicability: true))` with `Image(systemName: "info.circle")`. `.primaryAction` placement for the gear button and `.topBarTrailing` for the ⓘ button coexist cleanly on iOS — no HIG conflict.
-- **K-6**: `PersistentFooter` flattened from `VStack { Text(...) + NavigationLink }` to just `NavigationLink` directly, with `.frame(maxWidth: .infinity, alignment: .leading)` moved to the link itself.
-- **K-7**: Removed the `if let estimate, estimate.rawMinutes.isFinite { NavigationLink … }` block from `mainVerdictCard` in `HeroTimerCard`. Cleaned up the resulting empty `if let` stub.
-- **K-8**: Removed `Text("Use your location…")` from `UVIndexPlaceholderCard`. Rephrased `.accessibilityHint` to `"Fetch UV index using the Use my location button."`.
-- **K-9**: `statusMessage` after rationale gate simplified to `"Ready — tap Use my location."`.
-- **K-10/K-11**: Already present from a prior session — `ProductCopy.aboutSunSafetyActions` at `ProductCopy.swift:109` and its `Text(...)` at `AppViews.swift:1505` inside the `notForMeAnchor` VStack.
-
-### File:line touchpoints (post-cleanup)
-
-| Item | File | Lines |
-|---|---|---|
-| Toolbar ⓘ button | `AppViews.swift` | 115–123 |
-| `PersistentFooter` | `AppViews.swift` | ~1895–1910 |
-| `UVIndexPlaceholderCard` | `AppViews.swift` | ~990–1005 |
-| `statusMessage` simplification | `AppViews.swift` | ~391 |
-| `aboutSunSafetyActions` constant | `ProductCopy.swift` | 109 |
-| `aboutSunSafetyActions` in AboutView | `AppViews.swift` | ~1505 |
-
-### Quirks
-
-- **Prior session overlap**: `aboutSunSafetyActions` (K-10) and its placement in `AboutView` (K-11) were already implemented by a prior session. Attempting to add the ProductCopy constant a second time caused a `invalid redeclaration` build error. Always `grep` for the constant name before adding.
-- **`.primaryAction` vs `.topBarTrailing`**: On iOS, `.primaryAction` places the item at the far trailing edge of the navigation bar (right-most). Adding a second item with `.topBarTrailing` places it to the left of `.primaryAction`. This is correct — gear button stays outermost right, ⓘ sits next to it.
-- **Empty `if let` stub**: After removing the `mainVerdictCaveatLinkLabel` block, an empty `if let estimate, estimate.rawMinutes.isFinite { }` remained. Removed it cleanly to avoid Swift compiler unused-binding warnings.
-
-### Build + test result
-- `xcodebuild build`: ✅ BUILD SUCCEEDED (clean, no warnings)
-- All tests: ✅ all 114 pass (exit code 0)
-- Branch: `feature/main-screen-cleanup`, commit `9402465`
-
----
-
-## Post-session note: K-10/K-11 pre-shipped state
-
-**Learning (2026-05-21T05:30:00Z, UX-cleanup round):** The discovery that K-10 (`aboutSunSafetyActions` constant) and K-11 (its usage in `AboutView.notForMeAnchor`) were already present in the codebase from a prior session provided useful confirmation about build state. This is a valuable pattern for future code reviews: when implementing from spec, always search for related constants/text blocks first to avoid redeclaration errors. The prior session's work had actually pre-delivered the safety actions text needed to satisfy Plunder regulatory constraint C2, which meant the ratification of Iris v2 was immediately implementable without additional work. This kind of codebase state visibility (what's already present vs. what's still pending) is critical for coordinating multi-agent work in rapid sprints.
-
-
----
-
-## Learnings — LocationRationaleCard removal (2026-05-21, Kwame)
-
-### Context
-Yashas requested removal of `LocationRationaleCard` and its full plumbing. The card existed to explain to the user why location was needed before triggering the OS system prompt. Since the app uses `kCLLocationAccuracyReduced`, the OS already presents "Allow X to use your approximate location?" — making the custom pre-prompt redundant.
-
-### Architectural decision
-When an app requests only approximate/reduced-accuracy location (`kCLLocationAccuracyReduced`), the OS dialog text is self-explanatory. A custom in-app rationale card adds a tap with no privacy benefit. Prefer relying on the OS dialog unless the use case is non-obvious.
 **Latest Status (2026-05-21T04:15:00Z):** WI-7 COMPLETE. All 10 Iris §8 items shipped + verified. Final commits c772df1 (stale banner + error retry) + 7bee563 (Increase Contrast). 114 tests pass. Build clean. Branch feature/wi-7-uv-forecast ready for user GitLab MR.
 
 **Full History Archive:** See `history-archive-2026-05-21T04-15-00Z.md`
@@ -174,54 +126,7 @@ var selectedRowOpacity: Double { contrast == .increased ? 0.25 : 0.12 }
 - **Hours invariant coercion**: UTC-based slots (dayStart + offset×3600s) are DST-immune. Spring-forward gaps → pad 0; fall-back overlap → first 24 wins. Polar-night: all 24 slots naturally carry UVI=0 with no special code.
 - **C16 closed (2026-05-21T02:35:00Z)**: `uvIndex(at:)` missing-entry fallback changed from `.unavailable(.snapshotExpired)` to `.nighttime`, per polar-as-nighttime directive (Yashas, 2026-05-21). Critical distinction: dates *outside* the snapshot window still return `.unavailable(.snapshotExpired)`; only dates inside the window with an absent slot return `.nighttime`. Required adding a date-range guard (`firstHour…lastHour`) before the coercion so a date a year in the future still gets `.unavailable`, not `.nighttime`. `withKnownIssue` wrapper removed from C16 test. All 97 tests pass.
 
-### File:line touchpoints removed (post-cleanup, commit `22e98a5`)
 
-| Removed surface | File | Notes |
-|---|---|---|
-| `LocationRationaleCard` struct definition | `AppViews.swift` | ~1107–1122 |
-| `LocationRationaleCard` call site | `AppViews.swift` | ~91–93 |
-| `@State locationPromptGate` | `AppViews.swift` | state declaration |
-| `@AppStorage locationRationaleAcknowledgedKey` | `AppViews.swift` | state declaration |
-| `allowLocationRequestOrPersistRationale()` | `AppViews.swift` | guard in `refreshUV()` |
-| `restoreLocationPromptChoice()` | `AppViews.swift` | `handleAppear` call + function |
-| `persistedLocationRationaleAcknowledged = true` | `AppViews.swift` | 2 snapshot persistence sites |
-| `locationPromptGate = LocationPromptGate(...)` | `AppViews.swift` | 4 debug seed functions |
-| `locationRationale` copy constant | `ProductCopy.swift` | also removed from `auditCopySurfaces` |
-| `hasAcknowledgedRationale` param from `LocationActionPresentation` | `ProductCopy.swift` | "Continue to location request" branch also gone |
-| `locationRationaleAcknowledgedKey` set in `-uiTestSavedPreferences` | `UVBurnTimerApp.swift` | orphaned key |
-
-### What was kept and why
-
-| Kept | Reason |
-|---|---|
-| `LocationPromptGate` struct in `UVWorkflow.swift` | Still exercised by `locationPromptGateAcknowledgesRationaleBeforeAllowingSystemPrompt` unit test |
-| `UserPreferenceStorage.locationRationaleAcknowledgedKey` | Migration cleanup: `clearStoredPreferences()` still removes the stale key from existing installs |
-| `locationPrivacyLine` constant | Retained per explicit instruction; not rendered anywhere now but kept as a named constant |
-
-### Tests updated
-- `BurnTimeCalculatorTests.swift`: dropped `hasAcknowledgedRationale` param from 3 `LocationActionPresentation` tests; removed `locationRationale` assertion
-- `UVWorkflowTests.swift`: renamed `clearingCachedCoordinateDoesNotClearRationaleAcknowledgment` → `clearingCachedCoordinateDoesNotClearSkinTypeAndSPF`; removed 2 rationale-key assertions
-- `UVBurnTimerUITests.swift`: updated 6 UI tests to remove two-step rationale tap flow; renamed `testLocationRationaleAcknowledgementSurvivesRelaunch` → `testLocationRationaleCardIsNeverRendered`
-
-### Pre-existing test failures (NOT caused by this change)
-6 tests fail as pre-existing breakage from K-1 / K-6 / K-7 commits:
-- `testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero` — K-1 removed `PhotosensitizationBanner`
-- `testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor` — K-7 removed `HeroVerdictCaveatLink`
-- `testScenario4PhotosensitizationReachBackOpensAboutApplicability` — K-1 removed banner button
-- `testScenario1ColdLaunchShowsRequiredDisclaimerThenScenario2RequiresSkinTypeSelection` — K-6 removed `reapplicationFooter` from `PersistentFooter`
-- `testScenario5CappedEstimateRendersLongCaveatAndFooter` — same
-- `testScenario8StaleEstimateShowsWarningRecalculateAndAccessibleTierSeverity` — same
-
-### Build + test result
-- `xcodebuild build`: ✅ BUILD SUCCEEDED (no warnings)
-- `xcodebuild test`: ✅ 0 new failures introduced; 6 pre-existing failures unchanged
-- Branch: `feature/main-screen-cleanup`, commit `22e98a5`
-
----
-
-## Learnings — Skin-type Persistence + policyVersion L1 Trigger (K-1..K-11) — 2026-05-21T07:50:00Z
-
-### Pattern B implementation shipped
 ## Learnings — Iris §8 items 9 + 10 — 2026-05-21T03:35:00Z
 
 ### Items shipped this round
@@ -246,64 +151,7 @@ var selectedRowOpacity: Double { contrast == .increased ? 0.25 : 0.12 }
 - All tests: ✅ `Test Suite 'All tests' passed` (114 tests)
 - Both TODO markers removed from `ForecastPickerView.swift`
 
-- **K-1**: Added `disclaimerPolicyVersionKey = "disclaimerPolicyVersion"` and `currentDisclaimerPolicyVersion = 1` to `UserPreferenceStorage` in `UVBurnTimerSession.swift`.
-- **K-2**: Extracted `shouldShowDisclaimerCover(defaults:currentVersion:) -> Bool` as a `public static func` on `UserPreferenceStorage`. Handles three paths: migration (existing-user signal present, no version key → silently set v1, return false), first install / policy bump (stored < current → return true), already-seen (stored ≥ current → return false). Also added `disclaimerPolicyVersionKey` to `clearStoredPreferences` so debug `-uiTestResetDefaults` simulates a clean install correctly.
-- **K-3**: Replaced `var initialShowDisclaimer = true` in `UVBurnTimerApp.init` with `shouldShowDisclaimerCover` call. Debug stale/capped/uncapped paths still override to `false` explicitly. `-uiTestResetDefaults` path re-evaluates after the clear.
-- **K-4**: Wrote `currentDisclaimerPolicyVersion` to `UserDefaults` in `DisclaimerCover`'s `onAcknowledge` closure — synchronously before `showDisclaimer = false`.
-- **K-5**: Added `skinTypeChip` computed property to `RootView`. State A (type set): `"Type III"` with `figure.person.crop.square` icon. State B (nil): `"Set skin type"` with `.secondary` style. `.bordered` style, `minHeight: 44`, full VoiceOver spec per Iris §2.5. Tap branches: `showSkinTypeEdit = true` or `showSkinTypeOnboarding = true`.
-- **K-6**: `skinTypeChip` added first in `mainInputsRow` (both HStack and VStack branches). Order: SkinType → Location → SPF.
-- **K-7**: `.sheet(isPresented: $showSkinTypeEdit)` added to `mainNavigationStack` after the settings sheet.
-- **K-8**: "Clear stored skin type" destructive button added to `SettingsSheet` Privacy section. Disabled when `selectedSkinType == nil`. Calls `UserPreferenceStorage.persist(skinType: nil)` + sets `session.selectedSkinType = nil`.
-- **K-9**: `LAUNCH-PLAN.md` lines 293 and 296 replaced verbatim per Iris §5.
-- **K-10**: G27/G28 doc comments in `ForecastProviderTests.swift` updated — `"personalization stays @State-only"` removed; replaced with `"skin type and SPF must never be transmitted in ForecastSnapshot (server-visible payload)"`. Assertion logic unchanged.
-- **K-11**: `shouldShowDisclaimerCover` free function (K-2) is the prerequisite for Ma-Ti's G-D1..G-D4 tests. Function exists on branch, Ma-Ti can pull and write tests.
 
-### Persistence pattern chosen
-
-`UserPreferenceStorage.persist(skinType:to:)` / `persist(spf:to:)` — already implemented in a prior session. `@AppStorage(UserPreferenceStorage.selectedSkinTypeKey)` in `RootView` keeps the `persistedSkinTypeRawValue` in sync for `onChange` callbacks. `shouldShowDisclaimerCover` is injected with a `UserDefaults` instance (not `.standard` hardcoded) making it unit-testable.
-
-### policyVersion mechanism
-
-Integer in `UserDefaults` keyed `"disclaimerPolicyVersion"`. Value 0 = never written (Swift's `integer(forKey:)` default). Migration detection: existing-user signal = either `selectedSkinTypeKey` or `locationRationaleAcknowledgedKey` present. On migration: silently write current version, return false. On first install: stored < current → return true; write version only in `onAcknowledge` closure.
-
-### Key lesson: defensive @State-only rules should be revisited periodically
-
-The original `@State`-only skin-type rule was a reasonable precautionary stance when the regulatory floor was unclear. Once Plunder confirmed that local `UserDefaults` with explicit user selection satisfies GDPR Art.9(2)(a), and Wheeler confirmed the chip doesn't cause harmful re-attestation anchoring, the rule became over-tight. Design constraints that say "never X" should cite a specific regulatory or technical reason — if that reason expires or is superseded, the constraint should be revised. Periodic design review (as happened here with Iris/Plunder/Wheeler converging on Pattern B) is the mechanism for catching over-tight constraints.
-
-### File:line touchpoints (post-K-11)
-
-| Item | File | Notes |
-|---|---|---|
-| `disclaimerPolicyVersionKey` + `currentDisclaimerPolicyVersion` | `UVBurnTimerSession.swift:52–55` | After `locationRationaleAcknowledgedKey` |
-| `shouldShowDisclaimerCover` | `UVBurnTimerSession.swift:97–124` | Public static func, testable |
-| `clearStoredPreferences` (updated) | `UVBurnTimerSession.swift:97` | Now includes policyVersionKey |
-| `initialShowDisclaimer` (replaced) | `UVBurnTimerApp.swift:13–16` | Calls `shouldShowDisclaimerCover` |
-| `onAcknowledge` policyVersion write | `UVBurnTimerApp.swift:78–82` | Before `showDisclaimer = false` |
-| `showSkinTypeOnboarding` binding in `RootView` | `UVBurnTimerApp.swift:73`, `AppViews.swift:16` | Passed from App → View |
-| `skinTypeChip` property | `AppViews.swift:~307–333` | After `spfChip` |
-| `mainInputsRow` updated | `AppViews.swift:~248–265` | skinTypeChip first |
-| `.sheet(isPresented: $showSkinTypeEdit)` | `AppViews.swift:~75–80` | After settings sheet |
-| "Clear stored skin type" button | `AppViews.swift:~1258–1266` | SettingsSheet Privacy section |
-| LAUNCH-PLAN.md updated | `prototype/LAUNCH-PLAN.md:293–296` | Verbatim per Iris §5 |
-| G27/G28 doc comments | `ForecastProviderTests.swift:233–234, 252–253` | Assertion logic unchanged |
-
-### Build + test result
-- `xcodebuild build`: ✅ BUILD SUCCEEDED (clean, no warnings)
-- Unit tests: ✅ TEST SUCCEEDED (all pass)
-- Branch: `feature/main-screen-cleanup`, commits `af2205a`, `c23ed4e`, `93e7c3b`, `c66c93d`
-
-## 2026-05-21 Kwame-9: Pattern B Implementation (LAUNCH-PLAN Reversal)
-
-Kwame-9 executed Iris-6 spec. Full UserDefaults persistence shipped per Plunder/Wheeler/Suchi consensus. LAUNCH-PLAN @State-only rule reversed.
-
-**Deliverables (5 commits):**
-- `persist(skinType:)` and `persist(spf:)` now write UserDefaults (af2205a)
-- `shouldShowDisclaimerCover(defaults:currentVersion:) -> Bool` extracted as testable free function (c23ed4e)
-- Existing users silently receive `policyVersion = 1` on first upgrade (93e7c3b)
-- `skinTypeChip` added to mainInputsRow with full VoiceOver spec (c66c93d)
-- Migration path verified; no L1 re-fire on upgrade (8f31a25)
-
-**Open:** P-1/P-2 (copy confirm), P-3 (E13 gate — storage-disclosure sentence)
 WI-7 implementation and C16 fix complete. 11 commits (6 implementation + 1 fix), 97 tests all passing. Storage layer fully locked and ready for UI.
 
 
@@ -349,20 +197,3 @@ WI-7 implementation and C16 fix complete. 11 commits (6 implementation + 1 fix),
 - **`burnCardDatePrefix` uses UTC calendar**: Both the day picker and `burnCardDatePrefix` use UTC day boundaries. If the user's device timezone is significantly offset from UTC (e.g., UTC-8), "today" in the card header may lag by one day at midnight local time. Accept for now — aligns with picker's UTC-based day selection. Known limitation, document if it surfaces.
 - **2026-05-21 WI-7 Sprint Complete**: ForecastPickerView implementation shipped (6 commits). Pure logic in UVBurnTimerCore, synchronous snapshot read, Equatable models, NavigationStack split for type-checker, Date.FormatStyle for Swift 6 Sendable. All 97 baseline tests pass; ready for Ma-Ti testability sprint. Items 9–10 deferred.
 
----
-
-## Post-squash-merge conflict resolution (2026-05-21T08:25:00Z)
-
-**Context:** MR !29 (WI #7) was squash-merged to `main`. MR !30 (`feature/main-screen-cleanup`) auto-retargeted and had conflicts because its branch contained the individual WI #7 commits as ancestors while `main` only had the squash.
-
-**Conflicts resolved:**
-- `app/Tests/UVBurnTimerCoreTests/ForecastProviderTests.swift` — add/add conflict, both sides identical content. Took `--ours` (HEAD).
-- `app/Sources/UVBurnTimer/AppViews.swift` — 3 conflict regions:
-  1. `.sheet(isPresented: $showSkinTypeEdit)` block: HEAD had it, origin/main didn't. Kept HEAD.
-  2. `LocationRationaleCard` block: origin/main had it, HEAD intentionally removed it (cleanup). Kept HEAD (empty).
-  3. Large WI #7 block (~117 lines): origin/main added WI #7 computed properties + `photosensitizationBanner`; HEAD had closing braces + duplicate WI #7 props + unique !30 additions (`skinTypeChip`, 3-chip `mainInputsRow`). Resolution: took origin/main's WI #7 props (EXCLUDING `photosensitizationBanner` — intentionally removed by !30), then removed duplicates from HEAD, then kept HEAD's unique !30 additions.
-
-**Key insight:** In a post-squash-merge conflict, both branches' changes are logically intended. The conflict is an artifact of the squash strategy. Map each conflict region to its WI/PR ownership before resolving — "which team wrote this and for what purpose?" is the right question, not "which is newer?"
-
-**Build + test:** 69 unit tests ✅, 5 UI smoke tests ✅. No new warnings.
-**Merge commit:** `4b9afc0` pushed to `origin/feature/main-screen-cleanup`.

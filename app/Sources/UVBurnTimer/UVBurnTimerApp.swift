@@ -10,7 +10,10 @@ struct UVBurnTimerApp: App {
     init() {
         let defaults = UserDefaults.standard
         var initialSession = UserPreferenceStorage.restoredSession(from: defaults)
-        var initialShowDisclaimer = true
+        var initialShowDisclaimer = UserPreferenceStorage.shouldShowDisclaimerCover(
+            defaults: defaults,
+            currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+        )
 
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
@@ -19,11 +22,14 @@ struct UVBurnTimerApp: App {
             UserDefaults.standard.removeObject(forKey: "lastRoundedCoordinate")
             UserDefaults.standard.removeObject(forKey: "lastUVSnapshot")
             initialSession = UserPreferenceStorage.restoredSession(from: defaults)
+            initialShowDisclaimer = UserPreferenceStorage.shouldShowDisclaimerCover(
+                defaults: defaults,
+                currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+            )
         }
         if arguments.contains("-uiTestSavedPreferences") {
             defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
             defaults.set(SPFLevel.spf50.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
-            defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
             defaults.set(
                 #"{"roundedCoordinate":{"latitude":37.77,"longitude":-122.42}}"#,
                 forKey: "lastRoundedCoordinate"
@@ -71,12 +77,16 @@ struct UVBurnTimerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(session: $session, showDisclaimer: $showDisclaimer)
+            RootView(session: $session, showDisclaimer: $showDisclaimer, showSkinTypeOnboarding: $showSkinTypeOnboarding)
                 .disclaimerPresentation(
                     isPresented: $showDisclaimer,
                     onDismiss: presentSkinTypeOnboardingIfNeeded
                 ) {
                     DisclaimerCover {
+                        UserDefaults.standard.set(
+                            UserPreferenceStorage.currentDisclaimerPolicyVersion,
+                            forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+                        )
                         session.acknowledgedDisclaimer = true
                         showDisclaimer = false
                     }

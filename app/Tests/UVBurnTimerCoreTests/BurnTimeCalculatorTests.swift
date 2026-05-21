@@ -357,9 +357,7 @@ import Testing
     #expect(ProductCopy.photosensitizationBannerLabel.localizedCaseInsensitiveContains("meds"))
     #expect(ProductCopy.photosensitizationBannerLabel.localizedCaseInsensitiveContains("conditions"))
     #expect(
-        ProductCopy.locationRationale
-            == "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather.")
-    #expect(ProductCopy.locationPrivacyLine.contains("2 decimals"))
+        ProductCopy.locationPrivacyLine.contains("2 decimals"))
     #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("approximate location"))
     #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("last rounded coordinate"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("last rounded coordinate"))
@@ -803,7 +801,6 @@ import Testing
 @Test func locationActionPresentationShowsVisibleFetchProgress() {
     let fetching = LocationActionPresentation(
         hasUVIndex: false,
-        hasAcknowledgedRationale: true,
         isFetching: true
     )
 
@@ -816,7 +813,6 @@ import Testing
 @Test func locationActionPresentationPrioritizesFetchingOverRecalculate() {
     let fetching = LocationActionPresentation(
         hasUVIndex: true,
-        hasAcknowledgedRationale: true,
         isFetching: true
     )
 
@@ -828,19 +824,11 @@ import Testing
     #expect(
         LocationActionPresentation(
             hasUVIndex: false,
-            hasAcknowledgedRationale: false,
-            isFetching: false
-        ).title == "Continue to location request")
-    #expect(
-        LocationActionPresentation(
-            hasUVIndex: false,
-            hasAcknowledgedRationale: true,
             isFetching: false
         ).title == "Use my location")
     #expect(
         LocationActionPresentation(
             hasUVIndex: true,
-            hasAcknowledgedRationale: true,
             isFetching: false
         ).title == "Recalculate")
 }

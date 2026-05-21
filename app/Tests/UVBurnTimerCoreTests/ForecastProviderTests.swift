@@ -231,8 +231,8 @@ private func makeFullSnapshot(
 // MARK: - Group G: Persistence rule guards (LAUNCH-PLAN §9 compliance)
 
 /// G27 — A ForecastSnapshot must never contain a field encoding skin type.
-/// LAUNCH-PLAN §9 / Gi §1: personalization stays @State-only. This test is a
-/// regression guard against future contributors accidentally adding skinType to the snapshot.
+/// skin type and SPF must never be transmitted in `ForecastSnapshot` (server-visible payload).
+/// This test is a regression guard against future contributors accidentally adding skinType to the snapshot.
 @Test func test_skinType_is_never_in_snapshot() throws {
     let snapshot = makeFullSnapshot()
     let encoder = JSONEncoder()
@@ -250,7 +250,7 @@ private func makeFullSnapshot(
 }
 
 /// G28 — A ForecastSnapshot must never contain a field encoding SPF level.
-/// Same LAUNCH-PLAN §9 guard as G27, for SPF.
+/// skin type and SPF must never be transmitted in `ForecastSnapshot` (server-visible payload).
 @Test func test_spf_is_never_in_snapshot() throws {
     let snapshot = makeFullSnapshot()
     let encoder = JSONEncoder()
