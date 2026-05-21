@@ -128,6 +128,11 @@ public enum BurnTimeCalculator {
             return BurnTimeEstimate(rawMinutes: .infinity, tier: .none, isSunscreenProtected: spf.isSunscreen)
         }
 
+        // WI-wheeler-nn (Loop-11) AUDIT-ONLY: WHO 2002 Practical Guide §2 —
+        // UVI = E_ery × 40 m²/W ⇒ E_ery = UVI × 0.025 W/m². Definitional.
+        // The constant `0.025` is the inverse of WHO's 40 m²/W weighting
+        // factor and converts the unitless UV-Index back into erythemally
+        // weighted irradiance.
         let erythemalIrradianceWattsPerSquareMeter = uvIndex * 0.025
         let secondsToOneMED = skinType.minimalErythemalDoseJoules / erythemalIrradianceWattsPerSquareMeter
         let unprotectedMinutes = secondsToOneMED / 60

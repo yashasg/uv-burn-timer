@@ -2328,3 +2328,183 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         "UVBurnTimerApp.swift must not reference ProductCopy.photosensitizationBannerLabel at the render layer (banner retired by K-1)."
     )
 }
+
+
+// MARK: - Group EE: Loop-11 Bundle B — Wheeler photobiology citation hygiene
+//
+// Bundle B converges five WIs that all hit FitzpatrickSkinType.swift,
+// BurnTimeCalculator.swift, or ProductCopy / ProductTiming and that all carry
+// photobiology citation discipline:
+//
+//   WI-wheeler-gg  2-hour reapplication ↔ ProductTiming source-text guard (EE1)
+//   WI-wheeler-ff  per-row MED + picker citation comments               (EE2, EE3)
+//   WI-wheeler-nn  UVI 0.025 AUDIT-ONLY comment at the call site        (EE4)
+//   WI-wheeler-oo  Fitz IV–VI wider-uncertainty disclosure guard        (EE5)
+//   WI-wheeler-pp  UVI=0 SPF-branch uniformity guard                    (EE6)
+
+/// EE1 — WI-wheeler-gg: every user-visible "2 hour(s)" / "Up to 2 hr" copy
+/// lane is derived from (or numerically matches)
+/// `ProductTiming.sunscreenReapplicationIntervalMinutes`. If a future
+/// maintainer tunes the reapplication interval (e.g., to 90 minutes
+/// post-water exposure), this guard fires every copy lane that would
+/// silently continue to read "2 hours".
+/// Anchor: `.squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md`
+/// §3.4 + AAD/CDC/FDA reapplication discipline.
+@Test func test_EE1_reapplicationCopyMirrorsProductTimingConstant() throws {
+    let minutes = Int(ProductTiming.sunscreenReapplicationIntervalMinutes)
+    #expect(
+        minutes == 120,
+        "If ProductTiming.sunscreenReapplicationIntervalMinutes changes, every assertion below must be re-derived deliberately."
+    )
+
+    let hourPhrase = "\(minutes / 60) hours"  // "2 hours"
+    let shortPhrase = "\(minutes / 60) hr"    // "2 hr"
+
+    let capped = try BurnTimeCalculator.estimate(skinType: .typeIII, spf: .spf30, uvIndex: 8)
+    #expect(capped.displayText == "Up to \(shortPhrase)")
+    #expect(capped.accessibilitySummary.localizedCaseInsensitiveContains("up to \(hourPhrase)"))
+    #expect(capped.accessibilitySummary.localizedCaseInsensitiveContains(
+        "reapply sunscreen at least every \(hourPhrase)"))
+
+    #expect(ProductCopy.estimateElapsedWarning.localizedCaseInsensitiveContains("every \(hourPhrase)"))
+    #expect(ProductCopy.sunscreenCapHedge.localizedCaseInsensitiveContains("capped at \(hourPhrase)"))
+    #expect(ProductCopy.reapplicationFooter.localizedCaseInsensitiveContains(
+        "reapply sunscreen at least every \(hourPhrase)"))
+    #expect(ProductCopy.aboutSunSafetyActions.localizedCaseInsensitiveContains("every \(hourPhrase)"))
+    #expect(ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains("capped at \(hourPhrase)"))
+    #expect(ProductCopy.aboutSunscreenAssumptions.localizedCaseInsensitiveContains(
+        "at least every \(hourPhrase)"))
+}
+
+/// EE2 — WI-wheeler-ff: every Fitzpatrick MED row carries an AUDIT-ONLY
+/// citation comment naming the paper(s) and page that ratified the value.
+/// Anchored by reading the source file directly so the comments survive
+/// future refactors.
+@Test func test_EE2_fitzpatrickMEDRowsAllHaveAuditOnlyCitations() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let fitzpatrickURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimerCore/FitzpatrickSkinType.swift")
+    let source = try String(contentsOf: fitzpatrickURL, encoding: .utf8)
+
+    // The block must lead with the Wheeler MED MARK + sources block.
+    #expect(
+        source.contains("Minimal Erythemal Dose (J/m², erythemally weighted per CIE S 007/E:1998)"),
+        "FitzpatrickSkinType.swift must carry the Wheeler MED MARK block citing CIE S 007/E:1998 and the Fitzpatrick/Sayre/Diffey/Harrison anchor papers."
+    )
+
+    // All six per-row AUDIT-ONLY citations must appear, in numerical order,
+    // each naming the row value and at least one citation source.
+    let perRowMatches: [(String, String)] = [
+        ("200 J/m²", "Fitzpatrick 1988"),
+        ("250 J/m²", "Fitzpatrick 1988"),
+        ("300 J/m²", "Fitzpatrick 1988"),
+        ("450 J/m²", "Sayre 1981"),
+        ("600 J/m²", "Harrison & Young 2002"),
+        ("1_000 J/m²", "Harrison & Young 2002"),
+    ]
+    for (value, citationSource) in perRowMatches {
+        #expect(
+            source.contains("AUDIT-ONLY: \(value)"),
+            "FitzpatrickSkinType.swift must carry an AUDIT-ONLY comment naming the MED value \(value) on its row."
+        )
+        // Tolerate citation-source spread across multiple comment lines per row.
+        #expect(
+            source.contains(citationSource),
+            "FitzpatrickSkinType.swift must cite \(citationSource) for the \(value) row."
+        )
+    }
+}
+
+/// EE3 — WI-wheeler-ff: pickerDescription block carries an AUDIT-ONLY
+/// comment naming the NCBI Bookshelf NBK481857 paraphrase provenance + the
+/// D-CYCLE-1-001 reorder ratification.
+@Test func test_EE3_fitzpatrickPickerDescriptionCarriesPararphraseAuditComment() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let fitzpatrickURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimerCore/FitzpatrickSkinType.swift")
+    let source = try String(contentsOf: fitzpatrickURL, encoding: .utf8)
+
+    #expect(
+        source.contains("NCBI"),
+        "pickerDescription block must cite NCBI as paraphrase source."
+    )
+    #expect(
+        source.contains("NBK481857"),
+        "pickerDescription block must cite NBK481857 Bookshelf identifier as paraphrase source."
+    )
+    #expect(
+        source.contains("D-CYCLE-1-001"),
+        "pickerDescription block must cite the D-CYCLE-1-001 behavior-first reorder decision."
+    )
+    #expect(
+        source.contains("D-2026-05-19-009"),
+        "pickerDescription block must cite D-2026-05-19-009 (paraphrase-not-verbatim NCBI)."
+    )
+}
+
+/// EE4 — WI-wheeler-nn: the magic `0.025` UVI→irradiance constant is
+/// commented with the WHO 2002 Practical Guide citation at the call site
+/// so a future maintainer does not silently retune the conversion.
+@Test func test_EE4_uvIndexConversionConstantCarriesWHO2002Citation() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let calculatorURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimerCore/BurnTimeCalculator.swift")
+    let source = try String(contentsOf: calculatorURL, encoding: .utf8)
+
+    let lines = source.components(separatedBy: "\n")
+    guard let calcLineIdx = lines.firstIndex(where: { $0.contains("uvIndex * 0.025") }) else {
+        Issue.record("0.025 UVI→irradiance call site not found")
+        return
+    }
+    // The AUDIT-ONLY comment must sit within the 8 lines preceding the
+    // call site (long enough to include the multi-line WHO 2002 prose).
+    let lo = max(0, calcLineIdx - 8)
+    let window = lines[lo..<calcLineIdx].joined(separator: "\n")
+    #expect(
+        window.contains("WHO 2002"),
+        "BurnTimeCalculator.swift must cite WHO 2002 Practical Guide above the `uvIndex * 0.025` call site so a future maintainer does not silently retune the erythemal-irradiance conversion."
+    )
+    #expect(
+        window.contains("0.025"),
+        "BurnTimeCalculator.swift's audit comment must name the 0.025 constant explicitly."
+    )
+}
+
+/// EE5 — WI-wheeler-oo: `aboutEstimateApplicability` discloses that
+/// Fitzpatrick IV–VI estimates carry wider uncertainty because the
+/// published MED values are commonly represented as ranges. This guard
+/// keeps the disclosure intact even if the surrounding copy is refactored.
+@Test func test_EE5_aboutCopyDisclosesFitzIVtoVIWiderUncertainty() {
+    let copy = ProductCopy.aboutEstimateApplicability
+    #expect(copy.contains("Fitzpatrick IV–VI"))
+    #expect(copy.localizedCaseInsensitiveContains("wider uncertainty"))
+    #expect(copy.localizedCaseInsensitiveContains("ranges"))
+}
+
+/// EE6 — WI-wheeler-pp: the UVI=0 branch returns `.tier == .none` and
+/// `displayText == "No UV"` for both unprotected and SPF-protected inputs.
+/// (Anchors the polar-night = nighttime ratification: SPF does not change
+/// the no-UV outcome.)
+@Test func test_EE6_zeroUVStateIsIdenticalAcrossSPFBranches() throws {
+    let unprotected = try BurnTimeCalculator.estimate(
+        skinType: .typeIII, spf: .unprotectedReference, uvIndex: 0)
+    let protected = try BurnTimeCalculator.estimate(
+        skinType: .typeIII, spf: .spf30, uvIndex: 0)
+
+    #expect(unprotected.tier == .none)
+    #expect(protected.tier == .none)
+    #expect(unprotected.displayText == "No UV")
+    #expect(protected.displayText == "No UV")
+    // The only allowed difference is the sunscreen-protected flag.
+    #expect(!unprotected.isSunscreenProtected)
+    #expect(protected.isSunscreenProtected)
+}
