@@ -337,12 +337,126 @@ import Testing
     )
 }
 
+// MARK: - Group AA: Hero gauge countdown framing (WI-ee)
+//
+// Loop-10 Wheeler/Plunder safety follow-up `wi-ee-hero-gauge-countdown-framing`:
+// WI-o Group Z (in flight) closed the countdown-vs-estimate misread risk for
+// `HeroAccessibilitySummary.text()` — the static hero number's VoiceOver
+// summary. Wheeler's fresh gap-analysis identified that the *circular gauge*
+// (`BurnRiskGaugeCard`, AppViews.swift line ~1750) — which is the DOMINANT
+// visual surface in the chrome-less hero region — emits its own decrementing
+// number with the literal caption `"remaining"` and an a11y label of the
+// form `"... <X> remaining. <Y%> ... elapsed."`. That is exactly the
+// countdown framing Group Z forbids for the hero summary, but on a different
+// (un-guarded) surface. Asha (Accutane), Tomás (trail runner), and Maya
+// (open-water) glance at the gauge first.
+//
+// Mitigation: the visible caption is changed from "remaining" → "est. window"
+// and the a11y label is reframed as "<X> of estimated burn window. <Y%>
+// elapsed. Estimate, not a live timer." Group AA pins both contracts so a
+// future refactor cannot silently re-introduce the live-countdown framing.
+
+/// AA1 — `BurnRiskGaugeCard` body must NOT contain a standalone
+/// `Text("remaining")` caption. The visible caption must use estimate-framing
+/// language (e.g., "est. window", "estimate", "of estimate").
+@Test func test_AA1_burnRiskGaugeVisibleCaptionDoesNotImplyLiveCountdown() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct BurnRiskGaugeCard: View") }) else {
+        Issue.record("BurnRiskGaugeCard struct not found — guard the existence first, then framing")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    #expect(
+        !cardBody.contains(#"Text("remaining")"#),
+        "BurnRiskGaugeCard visible caption must NOT be a standalone `Text(\"remaining\")` — that reads as a live countdown to Asha/Tomás/Maya. Use `Text(\"est. window\")` or another estimate-framed phrase per Wheeler's Loop-10 wi-ee gap analysis."
+    )
+    let visibleEstimateFrames = [
+        #"Text("est. window")"#,
+        #"Text("estimate")"#,
+        #"Text("estimated")"#,
+        #"Text("of estimate")"#,
+        #"Text("est. left")"#,
+        #"Text("est.")"#,
+    ]
+    let hasFrame = visibleEstimateFrames.contains(where: { cardBody.contains($0) })
+    #expect(
+        hasFrame,
+        "BurnRiskGaugeCard visible caption must use one of \(visibleEstimateFrames) so the decrementing number reads as a modeled estimate rather than a live timer (Wheeler wi-ee mitigation)."
+    )
+}
+
+/// AA2 — `BurnRiskGaugeCard.gauge` `.accessibilityLabel(...)` must include
+/// explicit estimate framing AND must NOT use "remaining" without an
+/// "estimate" anchor in the same string. Asha's VoiceOver read-out must
+/// not mirror live-countdown semantics.
+@Test func test_AA2_burnRiskGaugeAccessibilityLabelIncludesEstimateFraming() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct BurnRiskGaugeCard: View") }) else {
+        Issue.record("BurnRiskGaugeCard struct not found")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+
+    guard let labelLineIndex = lines[cardStart..<cardEnd].firstIndex(where: {
+        $0.contains(".accessibilityLabel(") && $0.contains("Burn risk gauge")
+    }) else {
+        Issue.record("BurnRiskGaugeCard `.accessibilityLabel(...)` with `Burn risk gauge` prefix not found")
+        return
+    }
+    let labelLine = lines[labelLineIndex]
+
+    #expect(
+        labelLine.contains("Estimate, not a live timer")
+            || labelLine.contains("of estimated burn window")
+            || labelLine.contains("of estimated burn time"),
+        "BurnRiskGaugeCard accessibilityLabel must include explicit estimate framing such as 'Estimate, not a live timer' or 'of estimated burn window/time' so VoiceOver users (Asha P4, Tomás P5) do not parse the gauge as a live countdown. Actual: \(labelLine)"
+    )
+
+    if labelLine.contains(" remaining") {
+        #expect(
+            labelLine.contains("estimate") || labelLine.contains("Estimate"),
+            "BurnRiskGaugeCard accessibilityLabel uses 'remaining' — that wording reads as a live countdown unless an 'estimate' anchor is in the same string. Actual: \(labelLine)"
+        )
+    }
+}
+
+/// AA3 — `BurnRiskGaugeCard` body source contains at least one
+/// estimate-framing token (visible caption OR a11y label). Defense-in-depth
+/// against a refactor that drops both framings simultaneously.
+@Test func test_AA3_burnRiskGaugeBodyMentionsEstimateFraming() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct BurnRiskGaugeCard: View") }) else {
+        Issue.record("BurnRiskGaugeCard struct not found")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    let estimateTokens = ["est.", "estimate", "estimated", "Estimate"]
+    let hasEstimate = estimateTokens.contains(where: { cardBody.contains($0) })
+    #expect(
+        hasEstimate,
+        "BurnRiskGaugeCard body must reference estimate framing somewhere so the live-countdown misread risk is mitigated end-to-end (Wheeler wi-ee). Tokens checked: \(estimateTokens)."
+    )
+}
+
 // MARK: - Shared test helpers
 
 /// Resolve `app/Sources/UVBurnTimer/AppViews.swift` from this test file's
-/// `#filePath`. Used by P1, P2, O1, BB1, BB2 to read the live source text
-/// without depending on the UVBurnTimer app target being linked into
-/// UVBurnTimerCoreTests.
+/// `#filePath`. Used by P1, P2, O1, BB1, BB2, AA1/AA2/AA3 to read the live
+/// source text without depending on the UVBurnTimer app target being linked
+/// into UVBurnTimerCoreTests.
 private func appViewsSwiftURL(file: StaticString = #filePath) -> URL {
     URL(fileURLWithPath: "\(file)")
         .deletingLastPathComponent()  // UVBurnTimerCoreTests/
