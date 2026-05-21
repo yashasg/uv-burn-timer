@@ -1794,7 +1794,7 @@ struct BurnRiskGaugeCard: View {
                 Text(remainingText)
                     .font(.system(size: 42, weight: .heavy, design: .rounded))
                     .minimumScaleFactor(0.6)
-                Text("remaining")
+                Text("est. window")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -1803,7 +1803,7 @@ struct BurnRiskGaugeCard: View {
         .frame(width: gaugeDiameter, height: gaugeDiameter)
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Burn risk gauge. \(remainingText) remaining. \(percentText) \(gaugeAccessibilityWindowDescription) elapsed.")
+        .accessibilityLabel("Burn risk gauge. \(remainingText) of \(gaugeAccessibilityWindowName). \(percentText) elapsed. Estimate, not a live timer.")
         .accessibilityValue(remainingText)
         .accessibilityHint("Progress arc shows burn time elapsed.")
         .accessibilityIdentifier("BurnRiskGauge")
@@ -1841,12 +1841,12 @@ struct BurnRiskGaugeCard: View {
         return "\(percentText) of estimated burn time elapsed"
     }
 
-    private var gaugeAccessibilityWindowDescription: String {
+    private var gaugeAccessibilityWindowName: String {
         if estimate.isCappedForSunscreenReapplication {
-            return "of 2-hour sunscreen reapplication window"
+            return "estimated 2-hour sunscreen reapplication window"
         }
 
-        return "of estimated burn time"
+        return "estimated burn window"
     }
 
     private var tierColor: Color {
