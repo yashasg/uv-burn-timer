@@ -1595,6 +1595,7 @@ private func _forecastPickerSourceForGroupR() throws -> String {
     return try String(contentsOf: pickerURL, encoding: .utf8)
 }
 
+
 // MARK: - Group S: Toolbar ⓘ L3 Reach-Back (WI-i)
 //
 // The toolbar `info.circle` Button (accessibilityIdentifier
@@ -1695,5 +1696,91 @@ private func _forecastPickerSourceForGroupR() throws -> String {
     #expect(
         body.contains(#"NavigationLink(destination: AboutView(highlightEstimateApplicability: true))"#),
         "RootView toolbar EstimateInfoButton must remain a NavigationLink push (not a .sheet) so the standard back-chevron returns the user to the main screen — XCUI smoke testEstimateInfoNavigationRoundTripReturnsToMainScreen asserts the round-trip behaviour. See WI-i."
+    )
+}
+
+
+// MARK: - Group V: Forecast-vs-now affordance (WI-p)
+//
+// Loop-9 Wheeler/Iris polish — when the forecast picker selects a
+// non-current hour, HeroTimerCard renders `forecastDateContext` (e.g.
+// "Burn time on Wed at 6 PM") above the gauge. Prior to WI-p the
+// rendering was a bare `.caption` Text in `.secondary` foreground style
+// — visually quiet to the point of being easy to miss, even though it
+// indicates the displayed estimate is for a future hour, NOT now.
+// Wheeler's behavioral-safety follow-up flagged the
+// countdown-vs-estimate misread risk that grows when users do not
+// realise they are looking at a forecast.
+//
+// WI-p strengthens the affordance by wrapping the text in a SwiftUI
+// `Label` with a `clock.arrow.circlepath` SF Symbol icon. The icon is
+// the visual cue ("this is a different time, not now") while typography
+// stays `.caption` so R5 (forecastDateContext caption-style guard) and
+// the spec line ("rendered as a quiet `.font(.caption)` above the
+// gauge — NOT as a `.headline`") both stay green. The HeroAccessibility
+// Summary VoiceOver read-out (WI-s) already names the forecast time
+// explicitly, so the icon is the sighted-user equivalent affordance.
+//
+// V1 — HeroTimerCard renders `clock.arrow.circlepath` Image inside the
+//      same `if let forecastDateContext` block that owns the
+//      HeroForecastDateContext identifier.
+// V2 — typography remains `.font(.caption)` (regression guard paired
+//      with R5). Promotion to `.subheadline` / `.headline` would also
+//      fail R5, but V2 spells out the rule one more time at the new
+//      Label-wrapped surface so the next refactor sees an explicit
+//      guard naming the icon site.
+
+/// V1 — HeroTimerCard renders the `clock.arrow.circlepath` icon inside
+/// the forecastDateContext block.
+@Test func test_V1_heroForecastDateContextRendersClockArrowIcon() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct HeroTimerCard: View") }) else {
+        Issue.record("HeroTimerCard struct not found — covered by R1, skipping icon check")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    // The icon must live inside the same `if let forecastDateContext`
+    // block that carries the HeroForecastDateContext identifier — i.e.
+    // the icon appears within ~400 chars of the identifier.
+    let iconNearIdentifier = #"clock\.arrow\.circlepath[\s\S]{0,400}HeroForecastDateContext"#
+    let identifierNearIcon = #"HeroForecastDateContext[\s\S]{0,400}clock\.arrow\.circlepath"#
+    let hasCoLocation =
+        cardBody.range(of: iconNearIdentifier, options: .regularExpression) != nil
+        || cardBody.range(of: identifierNearIcon, options: .regularExpression) != nil
+
+    #expect(
+        hasCoLocation,
+        "HeroTimerCard must render `Image(systemName: \"clock.arrow.circlepath\")` inside the same conditional block as the HeroForecastDateContext identifier — WI-p uses the icon as the sighted-user 'this is a forecast time, not now' affordance while typography stays `.caption` (R5)."
+    )
+}
+
+/// V2 — forecastDateContext typography stays `.font(.caption)` even
+/// after the Label wrap. Reinforces R5 at the new icon site.
+@Test func test_V2_forecastDateContextLabelStaysCaptionTypography() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct HeroTimerCard: View") }) else {
+        Issue.record("HeroTimerCard struct not found — covered by R1")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    // After the WI-p Label wrap, the .font(.caption) modifier should
+    // still apply to the Label (which carries the
+    // HeroForecastDateContext identifier on the SAME line group).
+    let labelCaptionPattern = #"clock\.arrow\.circlepath[\s\S]{0,200}\.font\(\.caption\)"#
+    let identifierCaptionPattern = #"HeroForecastDateContext[\s\S]{0,200}\.font\(\.caption\)|\.font\(\.caption\)[\s\S]{0,200}HeroForecastDateContext"#
+
+    let captionApplied =
+        cardBody.range(of: labelCaptionPattern, options: .regularExpression) != nil
+        || cardBody.range(of: identifierCaptionPattern, options: .regularExpression) != nil
+
+    #expect(
+        captionApplied,
+        "After the WI-p Label wrap, the forecastDateContext surface must still apply `.font(.caption)` — promoting to `.subheadline` / `.headline` reverses the gauge-as-primary redesign (R5) and the spec's 'rendered as a quiet `.font(.caption)` above the gauge' contract."
     )
 }
