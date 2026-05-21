@@ -2831,3 +2831,86 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         #expect(s < a, "disclaimerStorageLine must precede DisclaimerSeeAboutLink (WI-w §2.2)")
     }
 }
+
+// MARK: - Group GG: Loop-12 Bundle G — ForecastPickerView WeatherKit attribution + L3 reach-back
+//
+// Closes two HIGH-severity regulatory-floor breaches surfaced by the
+// Loop-12 parallel gap-analysis pass (claude-opus-4.7-xhigh):
+//
+//   GG1 — WeatherKit license breach (§5.1.1): `ForecastPickerView` is a
+//         WeatherKit-derived data surface that previously did not display
+//         "Source: Apple Weather" anywhere in its rendered body. Apple's
+//         WeatherKit terms require attribution on every surface that
+//         consumes WeatherKit data; the hero/UV card carried the
+//         attribution but the 10-day forecast picker did not.
+//
+//   GG2 — Plunder C3 floor breach: `ForecastPickerView` had no L3
+//         photosensitizer reach-back surface. Users navigating to the
+//         picker and staying there had no tap target to reach the
+//         photosens cohort warning. The C3 floor (L3 reach-back from
+//         every result surface) was satisfied only on the main hero
+//         card via the toolbar ⓘ `EstimateInfoButton` — but the
+//         picker is its own result surface (selecting a future hour
+//         drives the burn-time gauge for that hour) and needs its own
+//         reach-back path.
+
+private func _forecastPickerSourceForGroupGG() throws -> String {
+    let appRoot = try appRootURL()
+    let url = appRoot.appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
+    return try String(contentsOf: url, encoding: .utf8)
+}
+
+/// GG1 — `ForecastPickerView` must render the Apple Weather attribution
+/// at the source-text level. Pinned by substring guard so any future
+/// refactor that drops the attribution surface fails CI.
+@Test func test_GG1_forecastPickerViewRendersAppleWeatherAttribution() throws {
+    let source = try _forecastPickerSourceForGroupGG()
+    #expect(
+        source.contains("ProductCopy.weatherAttributionServiceName"),
+        "ForecastPickerView must render `ProductCopy.weatherAttributionServiceName` (\"Apple Weather\") — WeatherKit §5.1.1 attribution requirement."
+    )
+    #expect(
+        source.contains("ProductCopy.weatherAttributionLegalURL")
+            || source.contains("ProductCopy.weatherAttributionLegalURLString"),
+        "ForecastPickerView must link to `ProductCopy.weatherAttributionLegalURL` so the attribution is a tappable WeatherKit-legal-page reference."
+    )
+    #expect(
+        source.contains(".accessibilityIdentifier(\"ForecastPickerAttribution\")"),
+        "ForecastPickerView must carry `accessibilityIdentifier(\"ForecastPickerAttribution\")` on its attribution surface so XCUI and the contrast checklist can find it."
+    )
+}
+
+/// GG2 — `ForecastPickerView` must carry an L3 photosensitizer reach-back
+/// surface — a NavigationLink that opens `AboutView(highlightEstimateApplicability: true)`
+/// from inside the picker, paired with a stable accessibility identifier
+/// so the contrast / launch-readiness checklists can target it.
+@Test func test_GG2_forecastPickerViewExposesL3PhotosensReachBack() throws {
+    let source = try _forecastPickerSourceForGroupGG()
+    #expect(
+        source.contains("AboutView(highlightEstimateApplicability: true)"),
+        "ForecastPickerView must navigate to `AboutView(highlightEstimateApplicability: true)` — Plunder C3 floor (L3 reach-back from result surface)."
+    )
+    #expect(
+        source.contains(".accessibilityIdentifier(\"ForecastPickerEstimateInfoButton\")"),
+        "ForecastPickerView must carry `accessibilityIdentifier(\"ForecastPickerEstimateInfoButton\")` on its L3 reach-back surface — parity with the main-screen `EstimateInfoButton`."
+    )
+}
+
+/// GG3 — Both the attribution surface and the L3 reach-back surface must
+/// be rendered AFTER the hourly strip section (footer placement, per the
+/// design intent that attribution + reach-back belong at the bottom of
+/// the data surface so they don't interrupt the day/hour selection flow).
+@Test func test_GG3_forecastPickerFooterSurfacesAppearAfterHourlyStrip() throws {
+    let source = try _forecastPickerSourceForGroupGG()
+    let lines = source.components(separatedBy: "\n")
+    let hourlyIdx = lines.firstIndex { $0.contains("hourlyStripSection") }
+    let attrIdx = lines.firstIndex { $0.contains("ForecastPickerAttribution") }
+    let infoIdx = lines.firstIndex { $0.contains("ForecastPickerEstimateInfoButton") }
+    #expect(hourlyIdx != nil, "hourlyStripSection must be present in ForecastPickerView body.")
+    #expect(attrIdx != nil, "ForecastPickerAttribution surface must be present.")
+    #expect(infoIdx != nil, "ForecastPickerEstimateInfoButton surface must be present.")
+    if let h = hourlyIdx, let a = attrIdx, let i = infoIdx {
+        #expect(h < a, "Attribution must appear AFTER the hourlyStripSection in the source body.")
+        #expect(h < i, "L3 reach-back button must appear AFTER the hourlyStripSection in the source body.")
+    }
+}
