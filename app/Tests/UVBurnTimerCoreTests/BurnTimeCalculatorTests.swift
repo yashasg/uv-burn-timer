@@ -2634,3 +2634,200 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         "Diagram note must no longer claim L1 is a hard gate every cold launch — reconciled to Pattern B per WI-suchi-g."
     )
 }
+
+// MARK: - Group FF: Loop-11 Bundle F — Plunder regulatory-floor audit hardening
+//
+// Source: Plunder gap-analysis (claude-opus-4.7-xhigh), 2026-05-21 loop-11
+// pass. Closes the §2/§3 gap candidates that were NOT covered by Bundle A
+// (Group CC) / Bundle B (Group EE) / Bundle C (Groups EG, EH, EI). Each
+// guard cites the regulation it protects and the failure-mode it prevents
+// so future contributors understand why the substring is load-bearing.
+
+/// FF1 — GDPR Art.17 erasure-path button "Clear stored skin type" routed
+/// through `ProductCopy` so the audit sieves apply, and so the L1 storage-
+/// line promise ("You can clear them anytime in Settings") preserves verb
+/// continuity with the button title.
+///
+/// **Regulatory anchor:** GDPR Art.17 (right to erasure); Plunder P-2; the
+/// docstring on `ProductCopy.disclaimerStorageLine` explicitly names this
+/// button by string as the erasure surface.
+@Test func test_FF1_clearStoredSkinTypeButtonTitleIsRoutedThroughProductCopy() throws {
+    #expect(ProductCopy.clearStoredSkinTypeButtonTitle == "Clear stored skin type")
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.clearStoredSkinTypeButtonTitle))
+    // Verb continuity with `disclaimerStorageLine` ("You can *clear* them …")
+    // — the GDPR Art.9(2)(a) consent specificity ↔ Art.17 erasure-affordance
+    // loop only holds while the button title keeps the verb "clear".
+    #expect(ProductCopy.clearStoredSkinTypeButtonTitle.localizedCaseInsensitiveContains("clear"))
+    #expect(ProductCopy.clearStoredSkinTypeButtonTitle.localizedCaseInsensitiveContains("skin type"))
+    // Render-site source-text guard: `SettingsSheet` must reference the
+    // ProductCopy constant and NOT carry the inline literal anymore.
+    let source = try _appViewsSourceForGroupR()
+    #expect(source.contains("ProductCopy.clearStoredSkinTypeButtonTitle"))
+    #expect(!source.contains("Text(\"Clear stored skin type\")"))
+}
+
+/// FF2 — Pattern-B `skinTypeChip` labels ("Type III" / "Set skin type")
+/// flow through `ProductCopy` so they cannot silently drift into
+/// measurement-like phrasing that would re-classify the chip from a
+/// self-declared input echo (general-wellness) to an output (MDR Annex
+/// VIII Rule 11 / MDCG 2019-11 §3.3 territory).
+///
+/// **Regulatory anchor:** Plunder P-1; FDA 2019 §III.B.2 foreseeable-
+/// misuse reachability for Asha (P4); `.squad/designs/plunder-skin-type-
+/// persistence-floor.md` §3 (Pattern B verdict) + §4.4 (🚫/✅ list).
+@Test func test_FF2_skinTypeChipLabelsAreRoutedThroughProductCopy() throws {
+    #expect(ProductCopy.skinTypeChipUnsetLabel == "Set skin type")
+    // The chip-set label is a Roman-numeral-parameterised format.
+    // Validate the format for every Fitzpatrick row.
+    for type in FitzpatrickSkinType.allCases {
+        let rendered = ProductCopy.skinTypeChipSetLabel(for: type)
+        #expect(rendered.hasPrefix("Type "), "Chip label must keep 'Type ' prefix: \(rendered)")
+        #expect(rendered.contains(type.romanNumeral), "Chip label must include Roman numeral: \(rendered)")
+        // Negative: no measurement-like phrasing per Plunder Pattern-B floor.
+        // A drift to any of these strings re-classifies the chip from
+        // self-declared input to inferred output and reopens the MDR
+        // Annex VIII Rule 11 / MDCG 2019-11 §3.3 stake.
+        #expect(!rendered.localizedCaseInsensitiveContains("score"))
+        #expect(!rendered.localizedCaseInsensitiveContains("risk"))
+        #expect(!rendered.localizedCaseInsensitiveContains("phototype"))
+        #expect(!rendered.localizedCaseInsensitiveContains("burn rating"))
+    }
+    // Audit-sieve membership: the unset label and a representative set-state
+    // rendering must flow through `auditCopySurfaces`.
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.skinTypeChipUnsetLabel))
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.skinTypeChipSetLabel(for: .typeIII)))
+    // Render-site source-text guard.
+    let source = try _appViewsSourceForGroupR()
+    #expect(source.contains("ProductCopy.skinTypeChipUnsetLabel"))
+    #expect(source.contains("ProductCopy.skinTypeChipSetLabel"))
+    #expect(!source.contains("\"Set skin type\""))
+    // The inline Roman-numeral interpolation is gone too — the only remaining
+    // "Type \(...romanNumeral)" pattern must live in ProductCopy.skinTypeChipSetLabel.
+    #expect(!source.contains("\"Type \\(\\(.+).romanNumeral)\""))
+}
+
+/// FF3 — `disclaimerBody` carries four SaMD-classification anchor
+/// phrasings that `requiredSafetyDisclaimerCopyIsCaptured` did not pin.
+/// Each is load-bearing per `.squad/designs/plunder-disclaimer-relocation-
+/// floor.md` §2.1 rows C/D and the FDA 2019 General Wellness §V.B.2
+/// carve-out.
+///
+/// **Failure mode:** Drift in any of these phrasings re-opens the
+/// classification gate (e.g., losing "informational only" weakens the
+/// labeling object's wellness-classification anchor; losing "is not
+/// prevention guidance" puts us on the wrong side of the disease-
+/// prevention exclusion).
+@Test func test_FF3_disclaimerBodyPinsPlunderSaMDClassificationAnchors() {
+    let body = ProductCopy.disclaimerBody
+    // FDA §V.B.2 wellness-classification anchor — the labeling object's
+    // SaMD/General-Wellness posture verb.
+    #expect(body.localizedCaseInsensitiveContains("informational only"))
+    // FDA §V.B.2 disease-prevention carve-out — Plunder explicitly enumerates
+    // "is not prevention guidance" (not "is not a prevention guide") as the
+    // load-bearing phrasing per the disclaimer-relocation memo §2.1 row C.
+    #expect(body.localizedCaseInsensitiveContains("is not prevention guidance"))
+    // Wellness-classification escalation phrasing. The substring
+    // "dermatologist" is pinned by `requiredSafetyDisclaimerCopyIsCaptured`,
+    // but the full clinician-escalation pattern was not — so drift to
+    // "see a dermatologist" alone would silently weaken the escalation lane.
+    #expect(body.localizedCaseInsensitiveContains("consult a dermatologist or qualified clinician"))
+    // FTC §5 individual-applicability hedge — also clause D of
+    // `reapplicationFooter` per the disclaimer-relocation memo §2.1 row D.
+    #expect(body.localizedCaseInsensitiveContains("skin response varies"))
+    // Negative: no clinical-recommendation verbs leak into disclaimerBody itself.
+    #expect(!body.localizedCaseInsensitiveContains("we recommend"))
+    #expect(!body.localizedCaseInsensitiveContains("prescribed"))
+    #expect(!body.localizedCaseInsensitiveContains("guaranteed"))
+}
+
+/// FF4 — `reapplicationFooter` carries all four Plunder regulatory clauses
+/// (A biological-feedback override, B reapplication-cadence, C SaMD
+/// classification anchor, D variance hedge). Clauses A/B/C are pinned
+/// piecewise elsewhere; clause D (FTC §5 variance hedge) was not.
+///
+/// **Source:** `.squad/designs/plunder-disclaimer-relocation-floor.md` §2.1.
+@Test func test_FF4_reapplicationFooterCarriesAllFourPlunderRegulatoryClauses() {
+    let footer = ProductCopy.reapplicationFooter
+    // Clause A — FDA §III.B.2 biological-feedback override.
+    #expect(footer.contains("Cover up if skin reddens."))
+    // Clause B — FDA 21 CFR §352.52(c)(2) reapplication cadence (mirrors
+    // `aboutSunSafetyActions` per Bundle B EE1).
+    #expect(footer.contains("Reapply sunscreen at least every 2 hours regardless of timer."))
+    // Clause C — SaMD classification anchor (two-sentence form).
+    #expect(footer.contains("Informational only."))
+    #expect(footer.contains("Not medical advice."))
+    // Clause D — FTC §5 individual-applicability variance hedge.
+    // Pinning this closes the lane that prior tests left open.
+    #expect(footer.contains("Skin response varies."))
+}
+
+/// FF5 — `photosensitizationAuthorityLine` keeps the Plunder-ratified
+/// cohort-disclosure trigger ("ask a clinician or pharmacist") and the
+/// wellness-classification carve-out prefix ("Informational overview:").
+///
+/// **Regulatory anchor:** GDPR Art.9(2)(a) explicit-consent specificity
+/// (EDPB Guidelines 05/2020 §3.2) — the cohort self-identification
+/// trigger names a discoverable third-party authority; FDA 2019 §III.B.2
+/// foreseeable-misuse reachability for Asha (P4 Accutane cohort).
+@Test func test_FF5_photosensitizationAuthorityLinePinsClinicianPharmacistTrigger() {
+    let line = ProductCopy.photosensitizationAuthorityLine
+    // Wellness-classification carve-out prefix.
+    #expect(line.hasPrefix("Informational overview:"))
+    // Cohort self-identification trigger naming third-party authority
+    // (Plunder-ratified phrasing per the skin-type persistence memo §2.5).
+    #expect(line.localizedCaseInsensitiveContains("ask a clinician or pharmacist"))
+    // Soft, non-prescriptive framing that avoids the FDA §V.B.2
+    // recommendation/prescription verbs.
+    #expect(line.localizedCaseInsensitiveContains("some medicines"))
+    // Cohort-self-identification cue (the lay-language synonym for the
+    // medical term "photosensitivity").
+    #expect(line.localizedCaseInsensitiveContains("sun sensitivity"))
+    // Negative: no recommendation/prescription verbs.
+    #expect(!line.localizedCaseInsensitiveContains("recommended"))
+    #expect(!line.localizedCaseInsensitiveContains("prescribed"))
+    #expect(!line.localizedCaseInsensitiveContains("we advise"))
+}
+
+/// FF6 — Pattern-B re-attestation cadence regulatory-floor pins:
+///   (a) `currentDisclaimerPolicyVersion == 1` so any future bump must be
+///       a deliberate test-edit (Plunder sign-off, per the source comment
+///       on `UVBurnTimerSession.swift`); the Group GD tests use this value
+///       parametrically but never assert it equals 1, so a drive-by bump
+///       to 2 silently re-fires L1 for every returning user (violating
+///       Greta's G-D2 friction-relief promise).
+///   (b) `disclaimerStorageLine` render-site source-text guard — the XCUI
+///       option (a) from WI-w §3.4 is foreclosed by the 2026-05-21T07:45Z
+///       user directive freezing the XCUI smoke set at 9; option (b) Core
+///       source-text substitute keeps the L1 GDPR Art.13 fair-processing
+///       surface from silently vanishing.
+///
+/// **Source:** `.squad/designs/plunder-skin-type-persistence-floor.md`
+/// §4.1(3); `.squad/orchestration-log/2026-05-21T-plunder-wi-w-l1-storage.md`
+/// §3.4.
+@Test func test_FF6_patternBRegulatoryFloorPinsCadenceAndStorageLineRender() throws {
+    // (a) Cadence pin.
+    #expect(UserPreferenceStorage.currentDisclaimerPolicyVersion == 1)
+    #expect(UserPreferenceStorage.disclaimerPolicyVersionKey == "disclaimerPolicyVersion")
+
+    // (b) DisclaimerCover render-site source-text guard.
+    let source = try _appViewsSourceForGroupR()
+    #expect(source.contains("Text(ProductCopy.disclaimerStorageLine)"))
+    #expect(source.contains(".accessibilityIdentifier(\"DisclaimerStorageLine\")"))
+
+    // Render-order check: storage line appears AFTER disclaimerBody and
+    // BEFORE the see-About button — per WI-w §2.2 placement requirement
+    // (consent-relevant prose grouped with disclaimerBody).
+    let lines = source.components(separatedBy: "\n")
+    let bodyIdx = lines.firstIndex { $0.contains("Text(ProductCopy.disclaimerBody)") }
+    let storeIdx = lines.firstIndex { $0.contains("Text(ProductCopy.disclaimerStorageLine)") }
+    let aboutIdx = lines.firstIndex {
+        $0.contains(".accessibilityIdentifier(\"DisclaimerSeeAboutLink\")")
+    }
+    #expect(bodyIdx != nil, "DisclaimerCover must render disclaimerBody")
+    #expect(storeIdx != nil, "DisclaimerCover must render disclaimerStorageLine")
+    #expect(aboutIdx != nil, "DisclaimerCover must carry DisclaimerSeeAboutLink button")
+    if let b = bodyIdx, let s = storeIdx, let a = aboutIdx {
+        #expect(b < s, "disclaimerStorageLine must follow disclaimerBody (WI-w §2.2)")
+        #expect(s < a, "disclaimerStorageLine must precede DisclaimerSeeAboutLink (WI-w §2.2)")
+    }
+}
