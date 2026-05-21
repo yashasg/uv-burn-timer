@@ -1355,6 +1355,17 @@ struct SettingsSheet: View {
                     }
                     .disabled(session.selectedSkinType == nil)
                     .accessibilityHint("Removes your stored Fitzpatrick skin type. You will be asked to set it again on next use.")
+                    .accessibilityIdentifier("ClearStoredSkinTypeButton")
+
+                    Button(role: .destructive) {
+                        UserPreferenceStorage.persist(spf: .spf30, to: .standard)
+                        session.selectedSPF = .spf30
+                    } label: {
+                        Text(ProductCopy.clearStoredSPFButtonTitle)
+                    }
+                    .disabled(session.selectedSPF == .spf30)
+                    .accessibilityHint("Resets your stored SPF to SPF 30 — the default value. Closes the GDPR Art.17 erasure-path loop on the L1 storage disclosure.")
+                    .accessibilityIdentifier("ClearStoredSPFButton")
                 }
             }
             .navigationTitle("Settings")
