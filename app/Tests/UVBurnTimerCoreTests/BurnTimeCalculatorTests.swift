@@ -3252,6 +3252,7 @@ private func _readmeContents() throws -> String {
     )
 }
 
+
 // MARK: - Group CC: Loop-11 Bundle A — persona safety + a11y critical
 //
 // Bundle A converges seven WIs that all hit ProductCopy or AppViews and that
@@ -3443,4 +3444,132 @@ private func _readmeContents() throws -> String {
 /// guards must apply to it.
 @Test func test_CC12_aboutSunSafetyActionsIsRegisteredInAuditCopySurfaces() {
     #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.aboutSunSafetyActions))
+}
+
+// MARK: - Group JJ: Loop-12 Bundle J — Iris VoiceOver hygiene (5 MEDIUM + 1 LOW + 1 HIGH)
+//
+// Closes six SF-Symbol auto-label leaks and the AboutView H2 duplication
+// surfaced by the Loop-12 Iris gap-analysis pass (claude-opus-4.7-xhigh).
+//
+// Every `Label(_:systemImage:)` Apple SwiftUI construct that hosts a
+// control or Plunder-load-bearing prose reads the icon's auto-generated
+// label ("Info, circle, Image", "Sun, dust, Image", …) ahead of the
+// semantic text unless an explicit `.accessibilityLabel(...)` overrides
+// it. The shipped main-screen surfaces that previously leaked were:
+// `spfChip`, `primaryAction`, `PersistentFooter`, `HeroForecastDateContext`,
+// `DisclaimerCover` photosensitizer + children Labels.
+//
+// Separately, IRIS-L12-H2: `AboutView` rendered two competing H1
+// headings — in-body `Text("About & Citations")` with `.title.bold()` +
+// `.accessibilityAddTraits(.isHeader)` AND `.navigationTitle("About")`.
+// VoiceOver rotor → Headings listed both with disagreeing wording.
+// Fix: rename `.navigationTitle` to match the in-body title, then drop
+// the in-body Text so a single H1 (the nav title) remains.
+
+/// JJ1 — `spfChip` Menu carries `.accessibilityLabel("SPF \(displayName)")`
+/// so the `sun.dust` icon's auto-label does NOT prefix every read.
+@Test func test_JJ1_spfChipAccessibilityLabelOverridesIconAutoLabel() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let chipStart = lines.firstIndex(where: { $0.contains("private var spfChip: some View {") }) else {
+        Issue.record("spfChip not found")
+        return
+    }
+    let chipEnd: Int = lines[(chipStart + 1)...].firstIndex(where: { $0.contains("private var ") || $0.contains("private func ") }) ?? lines.endIndex
+    let body = lines[chipStart..<chipEnd].joined(separator: "\n")
+    #expect(
+        body.contains(".accessibilityLabel(\"SPF \\(session.selectedSPF.displayName)\")"),
+        "spfChip must carry `.accessibilityLabel(\"SPF \\(...)\")` so the sun.dust icon's auto-label does not prefix the chip read in VoiceOver."
+    )
+}
+
+/// JJ2 — `PersistentFooter` NavigationLink carries
+/// `.accessibilityLabel(ProductCopy.disclaimerLinkLabel)` so the
+/// `info.circle` icon's auto-label does NOT prefix Plunder's L2 anchor.
+@Test func test_JJ2_persistentFooterAccessibilityLabelOverridesIconAutoLabel() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let footerStart = lines.firstIndex(where: { $0.contains("struct PersistentFooter: View") }) else {
+        Issue.record("PersistentFooter not found")
+        return
+    }
+    let footerEnd: Int = lines[(footerStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("#if DEBUG") }) ?? lines.endIndex
+    let body = lines[footerStart..<footerEnd].joined(separator: "\n")
+    #expect(
+        body.contains(".accessibilityLabel(ProductCopy.disclaimerLinkLabel)"),
+        "PersistentFooter must carry `.accessibilityLabel(ProductCopy.disclaimerLinkLabel)` so the info.circle icon does not noise the Plunder L2 anchor read."
+    )
+}
+
+/// JJ3 — `HeroForecastDateContext` Label carries
+/// `.accessibilityLabel(forecastDateContext)` so the
+/// `clock.arrow.circlepath` icon's auto-label does NOT prefix the
+/// date-context read. The icon was added for visual affordance only.
+@Test func test_JJ3_heroForecastDateContextLabelOverridesIconAutoLabel() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    // Look in a window starting at the forecastDateContext rendering site.
+    guard let renderIdx = lines.firstIndex(where: {
+        $0.contains("if let forecastDateContext {")
+    }) else {
+        Issue.record("forecastDateContext render site not found")
+        return
+    }
+    let windowEnd = min(renderIdx + 20, lines.endIndex)
+    let window = lines[renderIdx..<windowEnd].joined(separator: "\n")
+    #expect(
+        window.contains(".accessibilityLabel(forecastDateContext)"),
+        "HeroForecastDateContext Label must carry `.accessibilityLabel(forecastDateContext)` to override the clock.arrow.circlepath auto-label."
+    )
+}
+
+/// JJ4 — `primaryAction` Button carries
+/// `.accessibilityLabel(primaryActionPresentation.title)` so the
+/// `location` / `arrow.clockwise` / `location.fill` icon auto-labels
+/// do NOT prefix the primary CTA read.
+@Test func test_JJ4_primaryActionAccessibilityLabelOverridesIconAutoLabel() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".accessibilityLabel(primaryActionPresentation.title)"),
+        "primaryAction Button must carry `.accessibilityLabel(primaryActionPresentation.title)` to override the location/arrow.clockwise/location.fill icon auto-labels."
+    )
+}
+
+/// JJ5 — `DisclaimerCover` photosensitizer + children Labels carry
+/// explicit `.accessibilityLabel(...)` overrides so the
+/// `exclamationmark.triangle` and `figure.and.child.holdinghands` icon
+/// auto-labels do NOT noise the persona-load-bearing prose (Asha P4
+/// reads the photosensitizer line; pediatric guidance is an
+/// independent accessibility surface).
+@Test func test_JJ5_disclaimerCoverInnerLabelsOverrideIconAutoLabels() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".accessibilityLabel(ProductCopy.photosensitizerDisclaimerLine)"),
+        "DisclaimerCover photosensitizer Label must carry `.accessibilityLabel(ProductCopy.photosensitizerDisclaimerLine)` — Asha persona-load-bearing surface."
+    )
+    #expect(
+        source.contains(".accessibilityLabel(ProductCopy.childrenDisclaimerLine)"),
+        "DisclaimerCover children Label must carry `.accessibilityLabel(ProductCopy.childrenDisclaimerLine)` — pediatric accessibility surface."
+    )
+}
+
+/// JJ6 — `AboutView` ships exactly ONE H1 heading: the
+/// `.navigationTitle("About & Citations")`. The in-body
+/// `Text("About & Citations").font(.title.bold()).accessibilityAddTraits(.isHeader)`
+/// was retired because VoiceOver rotor → Headings was listing both as
+/// H1-equivalent with disagreeing wording ("About" vs "About & Citations").
+@Test func test_JJ6_aboutViewHasExactlyOneCanonicalH1() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".navigationTitle(\"About & Citations\")"),
+        "AboutView navigation title must be \"About & Citations\" — matches the three NavigationLink entry-point labels (SettingsSheet, SkinTypePickerList footer, EstimateInfoButton)."
+    )
+    #expect(
+        !source.contains("Text(\"About & Citations\")"),
+        "AboutView in-body H1 `Text(\"About & Citations\")` must be retired — duplicates the nav title and creates two H1 entries in VoiceOver's Headings rotor with disagreeing wording."
+    )
+    #expect(
+        !source.contains(".navigationTitle(\"About\")"),
+        "Retired short-form `.navigationTitle(\"About\")` must not return — it disagreed with the NavigationLink entry-point labels."
+    )
 }

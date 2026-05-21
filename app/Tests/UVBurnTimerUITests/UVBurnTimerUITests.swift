@@ -117,7 +117,7 @@ final class UVBurnTimerUITests: XCTestCase {
     /// WI-i smoke expansion — the toolbar `info.circle` Button is the L3
     /// "Reach-Back" for the photosensitization/medication/sunscreen caveat
     /// (see ADR-0001 + R6 in BurnTimeCalculatorTests). Tapping it must:
-    ///   1. Navigate to the AboutView (`navigationBar["About"]`).
+    ///   1. Navigate to the AboutView (`navigationBar["About & Citations"]`).
     ///   2. Surface the highlighted "When this estimate may not apply"
     ///      anchor (`accessibilityIdentifier == AboutEstimateApplicabilityHeader`),
     ///      which proves the `highlightEstimateApplicability: true` plumbing
@@ -140,10 +140,10 @@ final class UVBurnTimerUITests: XCTestCase {
         // so the tap is retried until About materialises (or the budget
         // expires). Matches the pattern used by the hero-card L3 caveat
         // deep-link test prior to K-1..K-9 cleanup.
-        tapUntilAppears(infoButton, app.navigationBars["About"])
+        tapUntilAppears(infoButton, app.navigationBars["About & Citations"])
 
         XCTAssertTrue(
-            app.navigationBars["About"].waitForExistence(timeout: 10),
+            app.navigationBars["About & Citations"].waitForExistence(timeout: 10),
             "EstimateInfoButton must navigate to the About screen"
         )
 
@@ -218,9 +218,9 @@ final class UVBurnTimerUITests: XCTestCase {
 
         // NavigationLink in ToolbarItem can drop the first synthesized tap
         // on iOS 26 simulator — retry until About appears.
-        tapUntilAppears(infoButton, app.navigationBars["About"])
+        tapUntilAppears(infoButton, app.navigationBars["About & Citations"])
 
-        let aboutNavBar = app.navigationBars["About"]
+        let aboutNavBar = app.navigationBars["About & Citations"]
         XCTAssertTrue(
             aboutNavBar.waitForExistence(timeout: 10),
             "EstimateInfoButton must navigate to About"
@@ -244,7 +244,7 @@ final class UVBurnTimerUITests: XCTestCase {
             "Tapping back from About must restore the main \"UV Burn Timer\" navigation bar"
         )
         XCTAssertFalse(
-            app.navigationBars["About"].exists,
+            app.navigationBars["About & Citations"].exists,
             "About navigation bar must be gone after popping back to the main screen"
         )
     }
