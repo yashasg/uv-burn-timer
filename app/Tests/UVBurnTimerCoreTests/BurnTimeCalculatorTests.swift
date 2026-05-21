@@ -363,6 +363,12 @@ import Testing
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("does not save UV values"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("skin type"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("SPF"))
+    // WI-iris-c (Loop-11) — Pattern-B truth fix: the line must NOT claim
+    // that "disclaimer acknowledgments" are not saved (the policy-version
+    // integer IS persisted) and MUST name the acknowledgment-version
+    // persistence explicitly.
+    #expect(!ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("disclaimer acknowledgments"))
+    #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("version of the informational disclaimer"))
     #expect(ProductCopy.clearSavedLocationButtonTitle == "Clear saved location")
     #expect(!ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("never saved"))
     #expect(ProductCopy.childrenDisclaimerLine == "For children, consult a pediatrician.")
@@ -649,6 +655,10 @@ import Testing
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("never transmitted off-device"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("last rounded coordinate"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("not retained between launches"))
+    // WI-iris-c (Loop-11) — Pattern-B truth fix.
+    #expect(!ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("disclaimer acknowledgments are not retained"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("version of the informational disclaimer"))
+    #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("does not re-prompt"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("no accounts"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("analytics"))
     #expect(ProductCopy.aboutPrivacy.localizedCaseInsensitiveContains("ads"))
@@ -2918,6 +2928,7 @@ private func _readmeContents() throws -> String {
     )
 }
 
+
 // MARK: - Group LL: Loop-12 Bundle L — persona render-site + a11y header safety guards
 //
 // Bundle L converges Loop-12 HIGH-priority parallel gap-analysis findings
@@ -3239,4 +3250,197 @@ private func _readmeContents() throws -> String {
         ProductCopy.auditCopySurfaces.contains(ProductCopy.disclaimerSeeAboutInlinePrompt),
         "The composed prompt must remain enrolled in `auditCopySurfaces` so the monetization-drift sieve applies (LL9)."
     )
+}
+
+// MARK: - Group CC: Loop-11 Bundle A — persona safety + a11y critical
+//
+// Bundle A converges seven WIs that all hit ProductCopy or AppViews and that
+// all carry persona-load-bearing safety, accessibility, or factual-truth
+// stakes:
+//
+//   WI-suchi-d  Asha L1 DisclaimerSeeAboutLink Button render-site guard (CC1–CC4)
+//   WI-iris-a   DisclaimerCover warning glyph hidden from VoiceOver       (CC5)
+//   WI-iris-b   HeroTimerCard sun.max + moon.fill decorative-icon a11y    (CC6, CC7)
+//   WI-iris-c   cacheRetentionLine + aboutPrivacy Pattern-B truth fix     (CC8 — see
+//                                                                          existing
+//                                                                          required-disclaimer-copy
+//                                                                          + about-privacy
+//                                                                          tests above;
+//                                                                          CC8 pins the two
+//                                                                          surfaces stay in
+//                                                                          sync with each
+//                                                                          other)
+//   WI-iris-d   UVI=0 copy convergence on `noUVAtThisHourLabel`           (CC9–CC11)
+//   WI-mati-1   aboutSunSafetyActions registered in auditCopySurfaces     (CC12)
+
+/// CC1 — DisclaimerCover Button retains the persona-load-bearing
+/// `DisclaimerSeeAboutLink` accessibility identifier at the rendering site.
+/// Without the identifier XCUI cannot find the Button, and Suchi's P4 Asha
+/// (Accutane) JTBD ("read the L1 prompt → tap inline see-About → read the
+/// applicability anchor → return → I understand") loses its tap surface
+/// guarantee.
+@Test func test_CC1_disclaimerSeeAboutLinkIdentifierIsAtRenderSite() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(#".accessibilityIdentifier("DisclaimerSeeAboutLink")"#),
+        "DisclaimerCover must expose accessibilityIdentifier(\"DisclaimerSeeAboutLink\") so XCUI and Asha (P4 Accutane) can find the inline see-About reach-back Button. See suchi-persona-annotations.md Screen 1 — Asha row."
+    )
+}
+
+/// CC2 — DisclaimerCover Button carries the `.isLink` a11y trait so
+/// VoiceOver announces it as a link, not a plain button.
+@Test func test_CC2_disclaimerSeeAboutLinkExposesLinkTrait() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".accessibilityAddTraits(.isLink)"),
+        "DisclaimerCover's see-About Button must `.accessibilityAddTraits(.isLink)` so VoiceOver users hear it as a link affordance, matching Plunder's body-prose intent and Suchi's Asha screen-reader flow."
+    )
+}
+
+/// CC3 — DisclaimerCover Button composes the prompt from the three
+/// audit-stable Text segments (lead + label + tail). If any of the three
+/// constants is dropped from the render site the prompt stops being
+/// substring-stable for copy audits.
+@Test func test_CC3_disclaimerSeeAboutLinkRendersAllThreeProductCopySegments() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("ProductCopy.disclaimerSeeAboutInlineLead"),
+        "DisclaimerCover Button label must reference ProductCopy.disclaimerSeeAboutInlineLead — keeps the prompt copy audit-stable."
+    )
+    #expect(
+        source.contains("ProductCopy.disclaimerSeeAboutInlineLinkLabel"),
+        "DisclaimerCover Button label must reference ProductCopy.disclaimerSeeAboutInlineLinkLabel — pins the 'see About' link span."
+    )
+    #expect(
+        source.contains("ProductCopy.disclaimerSeeAboutInlineTail"),
+        "DisclaimerCover Button label must reference ProductCopy.disclaimerSeeAboutInlineTail — completes the three-segment composition."
+    )
+}
+
+/// CC4 — DisclaimerCover Button carries the accessibilityLabel built from
+/// the plain-text `disclaimerSeeAboutInlinePrompt`, so VoiceOver reads the
+/// full cohort sentence rather than the styled three-segment concatenation
+/// (whose mid-segment underline would otherwise be announced).
+@Test func test_CC4_disclaimerSeeAboutLinkAccessibilityLabelUsesPlainTextPrompt() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".accessibilityLabel(ProductCopy.disclaimerSeeAboutInlinePrompt)"),
+        "DisclaimerCover Button must use ProductCopy.disclaimerSeeAboutInlinePrompt as its accessibilityLabel — VoiceOver hears the full cohort sentence as a single continuous read-out, not the three styled segments."
+    )
+}
+
+/// CC5 — WI-iris-a: DisclaimerCover's decorative warning glyph carries
+/// `.accessibilityHidden(true)` so Asha (P4 Accutane) hears the disclaimer
+/// title first, not "Exclamation mark, triangle, fill, Image".
+@Test func test_CC5_disclaimerCoverWarningIconIsAccessibilityHidden() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let iconLineIdx = lines.firstIndex(where: { $0.contains(#"Image(systemName: "exclamationmark.triangle.fill")"#) }) else {
+        Issue.record("DisclaimerCover warning glyph not found")
+        return
+    }
+    // The .accessibilityHidden(true) modifier must appear within 6 lines of
+    // the Image declaration (which is the modifier chain depth allowed for
+    // .font + .foregroundStyle + .accessibilityHidden).
+    let modifierWindow = lines[iconLineIdx..<min(iconLineIdx + 7, lines.count)].joined(separator: "\n")
+    #expect(
+        modifierWindow.contains(".accessibilityHidden(true)"),
+        "DisclaimerCover's exclamationmark.triangle.fill Image must carry .accessibilityHidden(true) — the warning glyph is decorative reinforcement; the load-bearing semantic is in `disclaimerTitle`. Without the modifier VoiceOver reads the SF Symbol's auto-generated label before the disclaimer title (Asha P4 flow)."
+    )
+}
+
+/// CC6 — WI-iris-b: HeroTimerCard's empty-state sun.max glyph carries
+/// `.accessibilityHidden(true)` so screen-reader users do not hear the
+/// SF Symbol's auto-generated label before the status message.
+@Test func test_CC6_heroTimerCardSunMaxIconIsAccessibilityHidden() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let iconLineIdx = lines.firstIndex(where: { $0.contains(#"Image(systemName: "sun.max")"#) }) else {
+        Issue.record("HeroTimerCard sun.max glyph not found")
+        return
+    }
+    let modifierWindow = lines[iconLineIdx..<min(iconLineIdx + 7, lines.count)].joined(separator: "\n")
+    #expect(
+        modifierWindow.contains(".accessibilityHidden(true)"),
+        "HeroTimerCard's sun.max empty-state Image must carry .accessibilityHidden(true) — the icon is decorative; the actual semantic payload is the status message. Without the modifier the .accessibilityElement(children: .contain) container leaks the SF Symbol's auto-generated label."
+    )
+}
+
+/// CC7 — WI-iris-b sibling: HeroTimerCard's UVI=0 moon.fill glyph also
+/// carries `.accessibilityHidden(true)` — same reasoning, different branch.
+@Test func test_CC7_heroTimerCardMoonFillIconIsAccessibilityHidden() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let iconLineIdx = lines.firstIndex(where: { $0.contains(#"Image(systemName: "moon.fill")"#) }) else {
+        Issue.record("HeroTimerCard moon.fill glyph not found")
+        return
+    }
+    let modifierWindow = lines[iconLineIdx..<min(iconLineIdx + 7, lines.count)].joined(separator: "\n")
+    #expect(
+        modifierWindow.contains(".accessibilityHidden(true)"),
+        "HeroTimerCard's UVI=0 moon.fill Image must carry .accessibilityHidden(true) — the .accessibilityLabel(noUVAtThisHourAccessibilityLabel) on the parent Label is the load-bearing read-out."
+    )
+}
+
+/// CC8 — WI-iris-c sibling: cacheRetentionLine and aboutPrivacy now both
+/// name the disclaimer-version persistence consistently. If one drifts but
+/// not the other, GDPR copy lanes desync.
+@Test func test_CC8_cacheRetentionAndAboutPrivacyAgreeOnDisclaimerVersionPersistence() {
+    let cache = ProductCopy.cacheRetentionLine
+    let about = ProductCopy.aboutPrivacy
+
+    #expect(cache.localizedCaseInsensitiveContains("version of the informational disclaimer"))
+    #expect(about.localizedCaseInsensitiveContains("version of the informational disclaimer"))
+    #expect(!cache.localizedCaseInsensitiveContains("disclaimer acknowledgments"))
+    #expect(!about.localizedCaseInsensitiveContains("disclaimer acknowledgments are not retained"))
+}
+
+/// CC9 — WI-iris-d: `ProductCopy.noUVAtThisHourLabel` is the single source
+/// of truth for the UVI=0 copy. The constant must read exactly "No UV at
+/// this hour" so polarized-OLED + Dynamic Type rows in
+/// `iris-contrast-qa-checklist.md` and `iris-launch-readiness-checklist.md`
+/// can pin the rendered string.
+@Test func test_CC9_noUVAtThisHourLabelIsSingleSourceOfTruth() {
+    #expect(ProductCopy.noUVAtThisHourLabel == "No UV at this hour")
+    #expect(ProductCopy.noUVAtThisHourAccessibilityLabel == "No UV at this hour. No burn risk.")
+}
+
+/// CC10 — WI-iris-d: `AppViews.swift` references the new constant from all
+/// three render sites and does NOT carry the retired alternate phrasings.
+@Test func test_CC10_uvZeroCopyConvergedOnSingleConstantAcrossThreeRenderSites() throws {
+    let source = try _appViewsSourceForGroupR()
+    let referencesCount = source.components(separatedBy: "ProductCopy.noUVAtThisHourLabel").count - 1
+    #expect(
+        referencesCount >= 2,
+        "AppViews.swift must reference ProductCopy.noUVAtThisHourLabel at least twice (TierBadge.title + heroContent UVI=0 branch + burnRiskGaugeUnavailableMessage UVI=0 branch). Found: \(referencesCount). WI-iris-d collapses the trio onto one constant."
+    )
+    #expect(
+        !source.contains(#""No UV detected""#),
+        "AppViews.swift must not carry the retired 'No UV detected' literal — WI-iris-d collapsed all three UVI=0 surfaces onto ProductCopy.noUVAtThisHourLabel."
+    )
+    #expect(
+        !source.contains(#""No active burn time because the UV index is 0.""#),
+        "AppViews.swift must not carry the retired 'No active burn time because the UV index is 0.' literal — collapsed onto noUVAtThisHourLabel."
+    )
+    #expect(
+        !source.contains(#"Text("No UV at this hour")"#),
+        "AppViews.swift must not carry the literal `Text(\"No UV at this hour\")` — it must reference `ProductCopy.noUVAtThisHourLabel` so the copy stays auditable and audit-surface-stable."
+    )
+}
+
+/// CC11 — WI-iris-d: the new constants are registered in
+/// `auditCopySurfaces` so the monetization-drift sieve and the banned-
+/// clinical-claim guard apply to them too.
+@Test func test_CC11_noUVCopyConstantsAreRegisteredInAuditCopySurfaces() {
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.noUVAtThisHourLabel))
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.noUVAtThisHourAccessibilityLabel))
+}
+
+/// CC12 — WI-mati-1: `aboutSunSafetyActions` (Plunder C2(i)+C2(ii)
+/// reapplication-cadence guidance, rendered in AboutView at the
+/// notForMeAnchor) was missing from `auditCopySurfaces`. Membership is the
+/// audit contract — the monetization-drift and banned-clinical-claim
+/// guards must apply to it.
+@Test func test_CC12_aboutSunSafetyActionsIsRegisteredInAuditCopySurfaces() {
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.aboutSunSafetyActions))
 }

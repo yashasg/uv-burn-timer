@@ -91,8 +91,20 @@ public enum ProductCopy {
         "If you take a photosensitizing medication or have a sun-sensitive condition — [see About](\(disclaimerSeeAboutLinkURL.absoluteString))."
     public static let locationPrivacyLine =
         "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
+
+    /// WI-iris-c (Loop-11) — Pattern-B truth fix.
+    ///
+    /// Before WI-ff (Pattern B, ratified 2026-05-21T07:00Z) the L1 cover
+    /// refired every cold launch; "disclaimer acknowledgments are NOT
+    /// retained" was true because the in-memory `@State` was the only ack
+    /// record. Under Pattern B `UserPreferenceStorage.disclaimerPolicyVersionKey`
+    /// IS written to `UserDefaults` on acknowledge (see
+    /// `UVBurnTimerApp.swift:88`), so the previous wording shipped factually
+    /// false GDPR-load-bearing prose. WI-iris-c rewrites the line to name
+    /// the acknowledgment-version persistence explicitly while keeping
+    /// Plunder's "what is NOT saved" lane intact.
     public static let cacheRetentionLine =
-        "The app stores skin type, SPF, and the last rounded coordinate on this device; it does not save UV values, burn estimates, or disclaimer acknowledgments between launches."
+        "The app stores skin type, SPF, the last rounded coordinate, and the version of the informational disclaimer you acknowledged on this device; it does not save UV values or burn estimates between launches."
 
     /// WI-w / Plunder-ratified 2026-05-21 — L1 storage-disclosure sentence.
     ///
@@ -165,6 +177,21 @@ public enum ProductCopy {
     public static let aboutSunSafetyActions =
         "Cover up if skin reddens. Reapply sunscreen at least every 2 hours regardless of timer."
     public static let mainVerdictCaveatLinkLabel = "Meds + conditions can shorten this. Learn more"
+
+    /// WI-iris-d (Loop-11) — single source of truth for "UVI = 0" copy.
+    ///
+    /// Three render sites used to ship three different glyphs for the same
+    /// state ("No UV detected" in `TierBadge`, "No UV at this hour" in
+    /// `HeroTimerCard.heroContent`, "No active burn time because the UV
+    /// index is 0" in `BurnRiskGaugeUnavailableCard`). A VoiceOver user
+    /// hearing one and reading another would mistrust the surface.
+    /// WI-iris-d collapses the trio onto this single Iris + Wheeler-approved
+    /// constant. The accessibility-label variant adds the "No burn risk"
+    /// tail because the hero `Label`'s VoiceOver read-out previously
+    /// spelled it that way.
+    public static let noUVAtThisHourLabel = "No UV at this hour"
+    public static let noUVAtThisHourAccessibilityLabel = "No UV at this hour. No burn risk."
+
     public static let skinTypePickerPrompt = "Choose by how your skin burns and tans, not by how it looks."
     public static let skinTypePickerSubtext =
         "Pick the row that best matches what your skin does after about 30 minutes of midday summer sun, with no sunscreen and no recent tan. Each row covers a range of natural skin tones."
@@ -191,7 +218,7 @@ public enum ProductCopy {
     public static let pediatricAndEscalationGuidance =
         "Children need pediatric guidance. Seek urgent care for severe sunburn symptoms such as blistering, fever, chills, dizziness, confusion, dehydration, or feeling very unwell."
     public static let aboutPrivacy =
-        "Skin type and SPF persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. UV values, burn estimates, and disclaimer acknowledgments are not retained between launches. No accounts, analytics, ads, crash SDKs, or third-party tracking."
+        "Skin type and SPF persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. UV values and burn estimates are not retained between launches. The version of the informational disclaimer you acknowledged is stored on this device so the app does not re-prompt unless the disclaimer materially changes. No accounts, analytics, ads, crash SDKs, or third-party tracking."
     public static let whatTheAppDoesNotDo =
         "UV Burn Timer does not diagnose, prevent, or treat sunburn; does not replace professional medical advice; does not track your exposure over time; does not send alerts or timers; and does not account for shade, clothing, altitude, reflected glare, water, sweat, toweling, or changing weather after the UV value is fetched."
     public static let lastUpdatedLine = "Last updated: 2026-05-20."
@@ -258,7 +285,10 @@ public enum ProductCopy {
         longEstimateHedge,
         sunscreenCapHedge,
         reapplicationFooter,
+        aboutSunSafetyActions,
         mainVerdictCaveatLinkLabel,
+        noUVAtThisHourLabel,
+        noUVAtThisHourAccessibilityLabel,
         skinTypePickerPrompt,
         skinTypePickerSubtext,
         skinTypeSourcePointer,
