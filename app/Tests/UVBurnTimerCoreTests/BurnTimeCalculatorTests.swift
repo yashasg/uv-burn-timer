@@ -2917,3 +2917,326 @@ private func _readmeContents() throws -> String {
         "README must describe the shipped forecast picker (≥ 2 of: forecast, 10-day, hourly, WHO). Current matches: \(presentCount)."
     )
 }
+
+// MARK: - Group LL: Loop-12 Bundle L — persona render-site + a11y header safety guards
+//
+// Bundle L converges Loop-12 HIGH-priority parallel gap-analysis findings
+// (Iris, Suchi, Ma-Ti — claude-opus-4.7-xhigh) that share the property
+// "the implementation is correct on main today, but a refactor could
+// silently break a load-bearing persona safety surface and every
+// existing test would still pass." Each LL test is a source-text or
+// audit-membership guard pinning a load-bearing render site.
+//
+//   LL1  Suchi P1 Greta — RootView .safeAreaInset(.bottom) hosts PersistentFooter
+//   LL2  Suchi P2 Maya  — NowViewScrollView carries .nowViewRefreshable { await refreshUV() }
+//   LL3  Suchi P5 Tomás — RootView carries .sensoryFeedback(.warning, trigger: isEstimateStale)
+//                         AND the fetch-completed .success sibling stays bound to uvIndex
+//   LL4  Ma-Ti — BurnRiskGaugeCard render-site existence guard (ADR-0001 pattern)
+//                + BurnRiskGauge a11y identifier stability
+//   LL5  Iris IR1 — SkinTypePickerList header .accessibilityAddTraits(.isHeader)
+//                   + accessibilityIdentifier("SkinTypePickerPromptHeader")
+//   LL6  Iris IR9 — UVIndexCard + UVIndexPlaceholderCard "UV Index" titles
+//                   carry .accessibilityAddTraits(.isHeader)
+//   LL7  Iris IR10 — ForecastPickerView "UV Forecast" + "Hourly" section
+//                    titles carry .accessibilityAddTraits(.isHeader)
+//   LL8  Ma-Ti GAP-4 — ProductCopy.weatherAttributionLegalURLString is
+//                      registered in auditCopySurfaces (the rendered string
+//                      must be subject to the monetization-drift and
+//                      banned-clinical-claim sieves alongside its sibling
+//                      weatherAttributionServiceName).
+//   LL9  Ma-Ti GAP-5 — DisclaimerCover renders the three see-About inline
+//                      fragments (lead + linkLabel + tail) as separate Text
+//                      nodes inside the Button label, and the composed
+//                      prompt round-trips to the audited
+//                      disclaimerSeeAboutInlinePrompt constant.
+
+/// LL1 — Suchi P1 Greta — RootView .safeAreaInset(.bottom) hosts PersistentFooter.
+///
+/// **Why this guard matters:** LANE 4 row 1 ★ of the user flow names the
+/// L2 footer as Greta's "primary reading on repeating use" and the
+/// Plunder C1 SaMD `Informational only. Not medical advice.` anchor. The
+/// `disclaimerLinkLabel` string itself is pinned (N4 + Bundle B EE6),
+/// but no existing test asserts that `PersistentFooter()` is actually
+/// **invoked** inside `RootView.body`'s `.safeAreaInset(edge: .bottom)`
+/// closure. A refactor that deletes the call site silently retires
+/// Greta's only persistent surface and the Plunder C1 render-site.
+@Test func test_LL1_persistentFooterIsHostedInRootViewBottomSafeAreaInset() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".safeAreaInset(edge: .bottom)"),
+        "RootView must keep `.safeAreaInset(edge: .bottom)` — Greta's L2 footer host (LANE 4 row 1) and the Plunder C1 SaMD anchor render-site."
+    )
+    #expect(
+        source.contains("PersistentFooter()"),
+        "RootView .safeAreaInset(.bottom) must invoke `PersistentFooter()` — Greta's primary reading on repeating use + Plunder C1 'Informational only. Not medical advice.' render-site (suchi-l12a / LL1)."
+    )
+
+    // Render-order check: PersistentFooter() must appear inside the
+    // .safeAreaInset(edge: .bottom) closure body, not as a stray reference
+    // elsewhere (e.g., in a comment block).
+    let lines = source.components(separatedBy: "\n")
+    let insetIdx = lines.firstIndex { $0.contains(".safeAreaInset(edge: .bottom)") }
+    let footerIdx = lines.firstIndex { $0.contains("PersistentFooter()") }
+    #expect(insetIdx != nil, "RootView must declare .safeAreaInset(edge: .bottom)")
+    #expect(footerIdx != nil, "RootView must invoke PersistentFooter()")
+    if let i = insetIdx, let f = footerIdx {
+        #expect(i < f, "PersistentFooter() must be invoked inside the .safeAreaInset(edge: .bottom) closure body (line below the opener) — LL1.")
+        #expect(f - i < 12, "PersistentFooter() must be within ~12 lines of .safeAreaInset(edge: .bottom) so the footer host binding is direct, not lost across an unrelated view tree (LL1).")
+    }
+}
+
+/// LL2 — Suchi P2 Maya — `NowViewScrollView` carries `.nowViewRefreshable`
+/// bound to `await refreshUV()`.
+///
+/// **Why this guard matters:** LANE 4 row 2 ★ names pull-to-refresh as
+/// Maya's "primary affordance on repeating use" (wet-handed mid-swim, the
+/// only re-fetch path). WI-47/WI-50 wired the modifier and the
+/// `UITestRefreshableProbeButton` two-signal probe, but no test asserts
+/// the modifier site itself. A refactor that drops the modifier or
+/// re-homes it to an unreachable view silently retires Maya's only
+/// re-fetch path while leaving the probe + machinery intact.
+@Test func test_LL2_nowViewScrollViewCarriesRefreshableBoundToRefreshUV() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".accessibilityIdentifier(\"NowViewScrollView\")"),
+        "RootView must keep `.accessibilityIdentifier(\"NowViewScrollView\")` on the main ScrollView — Maya pull-to-refresh probe target (LL2)."
+    )
+    #expect(
+        source.contains(".nowViewRefreshable {"),
+        "RootView ScrollView must keep `.nowViewRefreshable { ... }` — Maya's primary affordance per LANE 4 row 2 (suchi-l12b / LL2). Dropping this modifier silently retires the only re-fetch path she has mid-swim."
+    )
+    #expect(
+        source.contains("await refreshUV()"),
+        "RootView `.nowViewRefreshable` closure must still invoke `await refreshUV()` — the closure-body half of the WI-50 two-signal probe (LL2)."
+    )
+
+    // Bind the modifier to the NowViewScrollView identifier: the
+    // .nowViewRefreshable line must appear within a small window of the
+    // .accessibilityIdentifier("NowViewScrollView") line so a refactor
+    // that re-homes the modifier to a different view fails the guard.
+    let lines = source.components(separatedBy: "\n")
+    let idIdx = lines.firstIndex { $0.contains(".accessibilityIdentifier(\"NowViewScrollView\")") }
+    let refreshableIdx = lines.firstIndex { $0.contains(".nowViewRefreshable {") }
+    #expect(idIdx != nil, "RootView ScrollView must carry the NowViewScrollView identifier (LL2).")
+    #expect(refreshableIdx != nil, "RootView must declare .nowViewRefreshable on the main ScrollView (LL2).")
+    if let i = idIdx, let r = refreshableIdx {
+        let delta = abs(i - r)
+        #expect(delta < 4, "`.nowViewRefreshable` must be modifier-stacked within a few lines of `.accessibilityIdentifier(\"NowViewScrollView\")` so the modifier stays bound to the probe-target ScrollView (LL2). Observed delta=\(delta).")
+    }
+}
+
+/// LL3 — Suchi P5 Tomás — RootView carries the window-elapsed warning
+/// haptic AND the fetch-completed success haptic.
+///
+/// **Why this guard matters:** LANE 4 row 5 ★ names `.sensoryFeedback(.warning,
+/// trigger: isEstimateStale)` as Tomás's safety moment — he dismissed L1
+/// in 2 seconds, his phone is in his arm pocket at mile 8, and the
+/// warning haptic is the one signal that reaches him without a glance at
+/// the screen. BB2 guards the **visual** SafetyStatusCard wiring inside
+/// HeroTimerCard, but the haptic is bound at `RootView.body` and is
+/// untested. The `.success` sibling on `uvIndex` change is what confirms
+/// his fetch tap (persona-annotations Screen 5 location prompt) and
+/// would naturally be dropped alongside in a "remove all sensoryFeedback"
+/// refactor.
+@Test func test_LL3_rootViewCarriesWarningAndSuccessSensoryFeedback() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(".sensoryFeedback(.warning, trigger: isEstimateStale)"),
+        "RootView must keep `.sensoryFeedback(.warning, trigger: isEstimateStale)` — Tomás's window-elapsed warning haptic is the half of his safety moment that reaches him without looking at the screen (LANE 4 row 5; suchi-persona-annotations.md Screen 5+ + Branch 5). BB2 only guards the visual SafetyStatusCard (suchi-l12c / LL3)."
+    )
+    #expect(
+        source.contains(".sensoryFeedback(.success, trigger: uvIndex)"),
+        "RootView must keep `.sensoryFeedback(.success, trigger: uvIndex)` so the warning haptic's sibling fetch-completed signal — Tomás's primary tap-registered confirmation per persona-annotations.md Screen 5 location-prompt — is not silently removed alongside (LL3)."
+    )
+}
+
+/// LL4 — Ma-Ti — `BurnRiskGaugeCard` render-site existence guard (ADR-0001
+/// pattern) + `BurnRiskGauge` accessibility-identifier stability.
+///
+/// **Why this guard matters:** `BurnRiskGaugeCard` is the dominant visual
+/// surface in the hero region (post `9da54cf` chrome-less hero, per Group
+/// AA). It is invoked by `HeroTimerCard.burnRiskGauge` and carries the
+/// `accessibilityIdentifier("BurnRiskGauge")` that XCUI smoke + a11y
+/// audits depend on. The hero card itself is guarded (R1), but the gauge
+/// card has no source-text existence guard — an inliner refactor would
+/// silently retire the standalone struct and the a11y identifier in one
+/// motion (same failure mode ADR-0001 documents for HeroTimerCard).
+@Test func test_LL4_burnRiskGaugeCardStructAndIdentifierAreRenderSiteLocked() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("struct BurnRiskGaugeCard: View"),
+        "`BurnRiskGaugeCard` must remain a standalone View struct (ADR-0001 pattern: inlining the hero region's load-bearing surfaces caused the XCUI testSettingsSheetOpens regression). suchi-l12 + mati-G2 / LL4."
+    )
+    #expect(
+        source.contains("BurnRiskGaugeCard(estimate: estimate, fetchedAt: fetchedAt, now: now)"),
+        "`HeroTimerCard.burnRiskGauge` must invoke `BurnRiskGaugeCard(estimate:fetchedAt:now:)` with the canonical argument list — render-site lock for the gauge surface (LL4)."
+    )
+    #expect(
+        source.contains(".accessibilityIdentifier(\"BurnRiskGauge\")"),
+        "`BurnRiskGaugeCard.gauge` must keep `.accessibilityIdentifier(\"BurnRiskGauge\")` — XCUI smoke + Iris contrast-QA checklist row pinning depend on this identifier (LL4)."
+    )
+}
+
+/// LL5 — Iris IR1 — `SkinTypePickerList` section header carries
+/// `.accessibilityAddTraits(.isHeader)` and a stable accessibility
+/// identifier.
+///
+/// **Why this guard matters:** Suchi's persona spec names the
+/// `skinTypePickerPrompt` ("Pick the row that best matches what your
+/// skin does, not what color it is.") as load-bearing for Maya (SE Asia,
+/// Fitz III) — without it she risks Eurocentric "Type IV = olive
+/// Mediterranean" mis-mapping. SwiftUI does not auto-apply `.isHeader`
+/// to custom Section header content, so VoiceOver rotor "Headings"
+/// navigation skipped it entirely until this guard was added.
+@Test func test_LL5_skinTypePickerPromptHeaderCarriesHeaderTraitAndIdentifier() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let promptIdx = lines.firstIndex(where: { $0.contains("Text(ProductCopy.skinTypePickerPrompt)") }) else {
+        Issue.record("SkinTypePickerList must render Text(ProductCopy.skinTypePickerPrompt) (LL5)")
+        return
+    }
+    // The header trait + identifier modifiers must appear within a small
+    // window of the Text declaration (the modifier-chain depth allowed for
+    // .textCase + .font + .accessibilityAddTraits + .accessibilityIdentifier).
+    let modifierWindow = lines[promptIdx..<min(promptIdx + 8, lines.count)].joined(separator: "\n")
+    #expect(
+        modifierWindow.contains(".accessibilityAddTraits(.isHeader)"),
+        "`Text(ProductCopy.skinTypePickerPrompt)` must carry `.accessibilityAddTraits(.isHeader)` — VoiceOver rotor 'Headings' navigation depends on it, and the prompt is load-bearing for Maya (LANE 4 row 2 — Eurocentric mis-mapping protection). iris-IR1 / LL5."
+    )
+    #expect(
+        modifierWindow.contains(".accessibilityIdentifier(\"SkinTypePickerPromptHeader\")"),
+        "`Text(ProductCopy.skinTypePickerPrompt)` must carry `.accessibilityIdentifier(\"SkinTypePickerPromptHeader\")` so XCUI rotor walkthrough and future a11y audits can locate the prompt header (LL5)."
+    )
+}
+
+/// LL6 — Iris IR9 — `UVIndexCard` + `UVIndexPlaceholderCard` "UV Index"
+/// titles carry `.accessibilityAddTraits(.isHeader)`.
+///
+/// **Why this guard matters:** The secondary UV card sits below the hero
+/// region in the main scroll view. Without the header trait, VoiceOver
+/// rotor "Headings" navigation jumps from the hero card straight to the
+/// forecast picker, skipping the UV value entirely. Persona impact: Maya
+/// (mid-swim pull-to-refresh, must rotor-jump back to the UV Index card
+/// to check the latest fetched value).
+@Test func test_LL6_uvIndexCardTitlesCarryHeaderTrait() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+
+    // UVIndexCard — the live title that interpolates uvIndex.
+    guard let liveIdx = lines.firstIndex(where: { $0.contains(#"Text("UV Index \(uvIndex"#) }) else {
+        Issue.record("UVIndexCard must render the live 'UV Index <value>' Text (LL6)")
+        return
+    }
+    let liveWindow = lines[liveIdx..<min(liveIdx + 4, lines.count)].joined(separator: "\n")
+    #expect(
+        liveWindow.contains(".accessibilityAddTraits(.isHeader)"),
+        "`UVIndexCard` live title must carry `.accessibilityAddTraits(.isHeader)` — VoiceOver rotor 'Headings' must include the UV Index card so Maya can jump to the latest fetched value (iris-IR9 / LL6)."
+    )
+
+    // UVIndexPlaceholderCard — the empty-state placeholder title.
+    guard let placeholderIdx = lines.firstIndex(where: { $0.contains(#"Text("UV Index")"#) }) else {
+        Issue.record("UVIndexPlaceholderCard must render the placeholder 'UV Index' Text (LL6)")
+        return
+    }
+    let placeholderWindow = lines[placeholderIdx..<min(placeholderIdx + 4, lines.count)].joined(separator: "\n")
+    #expect(
+        placeholderWindow.contains(".accessibilityAddTraits(.isHeader)"),
+        "`UVIndexPlaceholderCard` placeholder title must carry `.accessibilityAddTraits(.isHeader)` — same rationale as the live title; placeholder must remain rotor-discoverable (LL6)."
+    )
+}
+
+/// LL7 — Iris IR10 — `ForecastPickerView` "UV Forecast" + "Hourly" section
+/// titles carry `.accessibilityAddTraits(.isHeader)`.
+///
+/// **Why this guard matters:** The Forecast picker card is its own
+/// result surface (selecting a future hour drives the burn-time gauge
+/// for that hour). Without header traits on the picker card title + the
+/// hourly strip section header, VoiceOver rotor "Headings" navigation
+/// skips the entire forecast block. Persona impact: every rotor-using
+/// VoiceOver user navigating the main scroll view.
+@Test func test_LL7_forecastPickerSectionTitlesCarryHeaderTrait() throws {
+    let source = try _forecastPickerSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+
+    guard let forecastIdx = lines.firstIndex(where: { $0.contains(#"Text("UV Forecast")"#) }) else {
+        Issue.record("ForecastPickerView must render the 'UV Forecast' headerLabel Text (LL7)")
+        return
+    }
+    let forecastWindow = lines[forecastIdx..<min(forecastIdx + 5, lines.count)].joined(separator: "\n")
+    #expect(
+        forecastWindow.contains(".accessibilityAddTraits(.isHeader)"),
+        "`ForecastPickerView.headerLabel` must carry `.accessibilityAddTraits(.isHeader)` — VoiceOver rotor 'Headings' must include the forecast card title (iris-IR10 / LL7)."
+    )
+
+    guard let hourlyIdx = lines.firstIndex(where: { $0.contains(#"Text("Hourly")"#) }) else {
+        Issue.record("ForecastPickerView must render the 'Hourly' hourlyStripSection header Text (LL7)")
+        return
+    }
+    let hourlyWindow = lines[hourlyIdx..<min(hourlyIdx + 6, lines.count)].joined(separator: "\n")
+    #expect(
+        hourlyWindow.contains(".accessibilityAddTraits(.isHeader)"),
+        "`ForecastPickerView.hourlyStripSection` 'Hourly' title must carry `.accessibilityAddTraits(.isHeader)` — the hourly strip is the inner sub-section of the forecast picker; without the trait the rotor jump lands on the day-list and the hourly grid is invisible to rotor users (LL7)."
+    )
+}
+
+/// LL8 — Ma-Ti GAP-4 — `ProductCopy.weatherAttributionLegalURLString`
+/// must be enrolled in `auditCopySurfaces`.
+///
+/// **Why this guard matters:** The string is rendered as `Text(...)` at
+/// two render sites (one in `WeatherAttributionView` body + one in
+/// `AttributionView` Settings sheet). Its sibling
+/// `weatherAttributionServiceName` is audit-enrolled; the URL string is
+/// not. Without enrolment, the monetization-drift sieve and banned-
+/// clinical-claim guard cannot apply to it — and any future edit that
+/// redirected the URL to an affiliate / non-WeatherKit page would pass
+/// CI silently (same defect class Bundle A closed for
+/// `cacheRetentionLine` / `aboutPrivacy`).
+@Test func test_LL8_weatherAttributionLegalURLStringIsAuditEnrolled() {
+    #expect(
+        ProductCopy.auditCopySurfaces.contains(ProductCopy.weatherAttributionLegalURLString),
+        "`ProductCopy.weatherAttributionLegalURLString` must be enrolled in `auditCopySurfaces` — the rendered legal-URL string is subject to the same monetization-drift and banned-clinical-claim sieves as its sibling `weatherAttributionServiceName` (mati-GAP-4 / LL8)."
+    )
+}
+
+/// LL9 — Ma-Ti GAP-5 — `DisclaimerCover` see-About Button renders the three
+/// inline fragments (lead + linkLabel + tail) as separate Text nodes, and
+/// the composed prompt round-trips to the audit-enrolled
+/// `disclaimerSeeAboutInlinePrompt` constant.
+///
+/// **Why this guard matters:** The three-fragment Button styling was
+/// introduced because iOS 17/18 Markdown a11y diverged (see
+/// `ProductCopy.swift:62-79`). Render-site truth lives in the fragments,
+/// not the composed prompt. Without a render-site source-text guard on
+/// the three Text nodes, a styled-Button refactor that drops one
+/// fragment (e.g., the tail period) would pass `composition == prompt`
+/// equality if the constants themselves were edited together, but would
+/// silently change DisclaimerCover output for Asha (P4 Accutane).
+@Test func test_LL9_disclaimerSeeAboutInlineFragmentsAreRenderedAsThreeTextNodes() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("Text(ProductCopy.disclaimerSeeAboutInlineLead)"),
+        "DisclaimerCover Button label must render `Text(ProductCopy.disclaimerSeeAboutInlineLead)` — first of the three audit-stable fragments (mati-GAP-5 / LL9)."
+    )
+    #expect(
+        source.contains("Text(ProductCopy.disclaimerSeeAboutInlineLinkLabel)"),
+        "DisclaimerCover Button label must render `Text(ProductCopy.disclaimerSeeAboutInlineLinkLabel)` — the styled 'see About' span (LL9)."
+    )
+    #expect(
+        source.contains("Text(ProductCopy.disclaimerSeeAboutInlineTail)"),
+        "DisclaimerCover Button label must render `Text(ProductCopy.disclaimerSeeAboutInlineTail)` — completes the three-segment composition (LL9)."
+    )
+
+    // Round-trip: the three fragments composed in order must equal the
+    // audit-enrolled disclaimerSeeAboutInlinePrompt constant.
+    let composed = ProductCopy.disclaimerSeeAboutInlineLead
+        + ProductCopy.disclaimerSeeAboutInlineLinkLabel
+        + ProductCopy.disclaimerSeeAboutInlineTail
+    #expect(
+        composed == ProductCopy.disclaimerSeeAboutInlinePrompt,
+        "The three rendered DisclaimerCover Button fragments must concatenate to `disclaimerSeeAboutInlinePrompt`; a drift between fragments and prompt would silently change Asha's L1 cohort-self-identification path (LL9)."
+    )
+    #expect(
+        ProductCopy.auditCopySurfaces.contains(ProductCopy.disclaimerSeeAboutInlinePrompt),
+        "The composed prompt must remain enrolled in `auditCopySurfaces` so the monetization-drift sieve applies (LL9)."
+    )
+}
