@@ -301,3 +301,30 @@ site), the author must:
 2. Add (or extend) an R-series source-text guard in
    `BurnTimeCalculatorTests.swift` for the new binding so a future
    inliner sees a green guard and reads this ADR.
+
+## Addendum (2026-05-22, Loop-13) — See ADR-0002 for toolbar *placement*
+
+This ADR establishes the **identity-boundary** contract for the
+toolbar (parent owns `.toolbar { ... }`; complex children live in
+their own `View` structs so the parent's identity-diff signature
+stays stable). It does **not** constrain which `ToolbarItem`
+placement enum the items use.
+
+On the Xcode 26 / iOS 26 toolchain, the choice of placement enum
+turned out to matter independently: SwiftUI's Liquid Glass rendering
+of `ToolbarItem(placement: .primaryAction)` produces a hit-test
+geometry that `XCUIElement.isHittable` reports as `false`,
+regressing `testSettingsSheetOpens` and
+`testToolbarRendersBothSettingsAndEstimateInfoButtons` even though
+the parent-identity contract above is satisfied.
+
+The follow-on decision — both toolbar items use `.topBarTrailing`,
+with declaration order determining horizontal position (first
+declared = rightmost; gear in the corner, ⓘ to its left) — is
+captured in
+[ADR-0002](./ADR-0002-toolbar-topbartrailing-ios26.md) (PR #57,
+branch `squad/wi-loop13-toolbar-ios26-hittability`). The R1/R2
+identity guards in this ADR remain in force; ADR-0002 layers a
+placement-enum guard (**S4**,
+`test_S4_toolbarGearButtonUsesTopBarTrailingNotPrimaryAction`) on
+top.
