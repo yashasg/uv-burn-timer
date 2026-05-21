@@ -1,4 +1,21 @@
-# Plunder — History
+## Summary (Recent Focus — 2026-05-20 to 2026-05-21)
+
+**Current role:** Legal & compliance reviewer; ensures health-adjacent features meet regulatory boundaries (MDCG, FDA, FTC, MDR, MHRA).
+
+**Recent major decisions:**
+1. **Location privacy rationale (2026-05-20):** Ratified that clearing saved location does NOT clear rationale ack; rationale ack persists across clears because it represents informed-consent state (static fact), not data point. Uninstall is the universal escape hatch.
+2. **UVI forecast compliance audit (2026-05-21):** Apple Weather analogue is **invalid** — they display atmospheric scalar; we output personalized health (UVI × Fitzpatrick × SPF → burn time). Photosensitized cohort (D-2026-05-19-007) is foreseeable; silence on forecast surface is non-compliant regardless of Apple's posture.
+3. **Minimum compliant surface (locked):** Reuse L3 chevron ("Is this estimate for me?") at forecast card foot, pointing to About anchor with photosensitizer enumeration (D-2026-05-19-011 locked string). Zero new copy. Satisfies MDCG 2019-11 §3.3, FDA foreseeable-misuse, FTC § 5, MDR Annex VIII Rule 11.
+
+**Key patterns established:**
+- Health-adjacent personalization (user data + formula output) crosses regulatory threshold that atmospheric-data-only products do not cross. Big-player precedent does not transfer.
+- Foreseeable-misuse doctrine: if a cohort exists and will use your feature, regulatory silence on that surface is deceptive omission.
+- Reusable pattern: L3 chevron "Is this estimate for me?" links to existing L4 About anchor, reducing new copy and new surface area while meeting disclosure requirement.
+
+**Skills created:**
+- `big-player-analogue-compliance-test/SKILL.md` — diagnostic for "if big-player-X doesn't have to, why should we?" claims. Checklist: same output type? same user cohort? same risk profile?
+
+---
 
 ## Core Context
 
@@ -91,3 +108,42 @@ WHO's open-access default is CC BY-NC-SA 3.0 IGO. WHO's published policy explici
 - **"What we DON'T claim"** — ✅ aligned with my §8.9. Team has converged.
 
 Wheeler's brief is shippable. Convergence on legally-defensible science + citation posture achieved across Wheeler, Suchi, Linka, and Plunder. Argos's App Store rewrites are the remaining ✅ blocker for submit-readiness.
+
+### 2026-05-20T17:43:54-07:00 — UVI 10-day forecast disclaimer call; "if Apple doesn't need it, we don't either" pushback
+
+Delivered: `.squad/decisions/inbox/plunder-uvi-forecast-disclaimer-call.md`. Verdict: **⚠️ borderline → rewrite required.** The user's premise (Apple-as-analogue) is regulatorily wrong; the user's preference (don't add visual noise) is honorable and can be met without giving up the safety boundary. Summary:
+
+**Apple Weather is not a valid analogue.** Apple shows raw atmospheric UVI in a general-weather product — no personalization layer, no health claim. Our app computes a body-keyed output: Fitzpatrick × SPF × UVI → personalized burn window today, personalized category band per day on the forecast. **The personalization layer that makes us valuable is the same layer that puts us inside the rule set Apple sits outside of.** Cite — the line that draws it: FDA 2019 *General Wellness Policy* §III.B (intended-use claim limited to general wellness; foreseeable cohort use creates a disclosure obligation); MDCG 2019-11 §3.3/§4.3 (software performing calculation on individual data is MDSW; lifestyle-and-well-being software is not, *provided intended use is unambiguously communicated to the user*). The L3 reach-back is the unambiguity mechanism. Drop it and we weaken our own MDSW-exclusion argument.
+
+**Foreseeable-misuse doctrine attaches even with Wheeler's §5.4 hedge** (no burn-time minutes on out-days). The category band itself is read inside our app's "your skin" context. For an Asha-class user (isotretinoin, tetracyclines, fluoroquinolones, thiazides, sulfonamides, amiodarone, voriconazole, methotrexate, St John's Wort; post-laser / post-peel / post-retinoid-initiation per D-2026-05-19-007), a "low UVI Thursday" forecast cell is foreseeably read as "Thursday is safe to plan exposure" — and we know (Wheeler says so in writing) that UVI is not the controlling variable for that cohort. Foreseeable-misuse doctrine (FDA 2019 §III.B.2; FTC §5 deceptive-omission line; emerging health-app duty-of-care case law e.g. *Babylon Health* MHRA 2020, US period-tracker class actions 2021–2023) requires the warning to be reachable from the result surface, not buried in Settings.
+
+**Prior decisions bind by their plain terms; cannot be implicitly satisfied.** D-2026-05-19-007 elevated photosensitization from "edge copy" to "safety boundary" — a safety boundary is a property of the product, not of a single screen. D-2026-05-19-013 explicitly required *visibility from the result surface*, not attestation, not Settings-buried. The forecast surface is a NEW result surface that produces personalized outputs. By the plain terms of both decisions, it requires its own re-surfacing of the L3 affordance. The L1 cover fires only at cold launch (won't survive into a forecast-only-tap user journey); L2 footer is reused and inert (gets us "not medical advice" but not the cohort reach-back); the verdict-card L3 doesn't render on the forecast tab. Therefore explicit re-surfacing is needed.
+
+**Minimum compliant surface — the actual answer Iris implements:**
+
+- One chevron-disclosure affordance at the foot of the forecast card. Label: *"Is this estimate for me?"* — the existing locked L3 string. **Zero new copy.** Deep-links to the existing About `notForMe` anchor where the D-2026-05-19-007 photosensitizer enumeration already lives.
+- Wheeler's drafted §5.3 paragraph relocates from "on-card seed copy" → "About destination paragraph." Same wording, different surface. The drug-class enumeration stays at the destination, never on the forecast card.
+- L2 footer is reused unchanged. No second footer line. No yellow box. No banner. No modal. No inline drug-class enumeration on-surface.
+- One sentence Iris can ship from: *"Forecast surface gets the existing 'Is this estimate for me?' chevron, pointed at the existing About anchor. No new copy. No new surface. Same L3 pattern, ported."*
+
+**Why this honors the user's underlying preference:** the user is right that Apple's clean visual rhythm is the design target. The L3 chevron is one secondary-color line — strictly smaller visual surface than Wheeler's full §5.3 paragraph proposal, strictly larger than zero. The Apple-restraint visual cadence is preserved; the safety-boundary obligation is preserved. Both honored.
+
+**Skill extracted:** `.squad/skills/big-player-analogue-compliance-test/SKILL.md` — generalizable protocol for evaluating "regulator X doesn't make big-player Y do this, so we shouldn't have to either" arguments. The pattern is recurring: it surfaced once on WeatherKit attribution (D-2026-05-19-003/004 — same fallacy, Apple's own attribution scheme was the right answer there), and now on the forecast disclaimer. It will recur. Codifying.
+
+**Open attorney escalations updated:** E9 (new) — confirm with outside counsel that the L3-chevron-only pattern on a numeric-suppressed (day-6+) burn-time-suppressed (all out-days) forecast surface holds general-wellness intended-use under FDA 2019 + MDCG 2019-11. Pre-counsel read: yes. Confirm-before-submit, not a build-blocker.
+
+**Cross-check with Wheeler and Suchi:**
+- Wheeler (WI-7 §5.3): wording preserved; relocation from on-card to About destination preserves scientific intent. Wheeler to confirm the relocation.
+- Suchi ("non-negotiable" Asha-reachability): the chevron-on-result-surface pattern is precisely the architecture Suchi was protecting. Substance honored; form minimized. Asking Suchi to confirm.
+
+**No code modifications by this proposal** — Scribe to merge; Kwame to wire the existing L3 NavigationLink into the forecast view; Iris owns chevron placement.
+
+### 2026-05-21T00:55:49Z — Round 2 verdict: Apple analogue is not valid; L3 chevron pattern required
+
+- **Apple Weather is not a valid analogue.** They display atmospheric scalar (UVIndex from NOAA / meteorological model). We personalize: UVI × Fitzpatrick × SPF → BurnTime (health-adjacent output). Personalization triggers regulatory scope (MDCG 2019-11 §3.3, FDA foreseeable-misuse, FTC § 5 deceptive-omission, MDR Annex VIII Rule 11, UK MHRA 2022).
+- **Photosensitized cohort is foreseeable:** D-2026-05-19-007 enumerates them (isotretinoin, tetracyclines, fluoroquinolones, thiazides, sulfonamides, amiodarone, voriconazole, NSAIDs, phenothiazines, methotrexate, St John's Wort; conditions: lupus, porphyrias, XP, post-procedure). Silence on the forecast surface while they use the picker is non-compliant.
+- **Minimum compliant surface:** Reuse existing L3 chevron ("Is this estimate for me?") at foot of forecast card, navigating to About anchor where photosensitizer enumeration already lives. Zero new copy required — reuses locked D-2026-05-19-011 string. This pattern satisfies both D-2026-05-19-013 and D-2026-05-19-007 by their plain terms on the forecast surface.
+- **Reusable diagnostic created:** `.squad/agents/plunder/skills/big-player-analogue-compliance-test/SKILL.md` — for future "if big-player-X doesn't have to, why should we?" challenges. Checklist: (1) same output type? (2) same user cohort? (3) same risk profile? If any mismatch, analogue fails.
+- **Handoffs:** Card footnote copy finalized (Iris); picker sheet body hedge ("Estimated; UV forecasts can be off by ±1–2 UVI beyond a few days"); day-8–10 picker refusal message; photosensitization re-disclosure on picker sheet (carry from D-2026-05-19-013 wording).
+- **Orchestration log:** `.squad/orchestration-log/2026-05-21T00:55:49Z-plunder.md`
+

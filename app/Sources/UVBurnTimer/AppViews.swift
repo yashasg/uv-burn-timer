@@ -34,10 +34,54 @@ struct RootView: View {
     @State private var weatherFailureMessage: String?
     @State private var locationPromptGate = LocationPromptGate()
     @State private var reattestationTracker = ForegroundReattestationTracker()
+    // WI-7 — 10-day UV forecast
+    @State private var forecastStore = ForecastStore()
+    @State private var forecastSnapshot: ForecastSnapshot?
+    @State private var isFetchingForecast = false
+    @State private var forecastRefreshState: ForecastRefreshState = .idle
+    // WI-7 Picker — selected day-and-hour timestamp.
+    // Default: current UTC hour (rounded down). Never stored in UserDefaults per LAUNCH-PLAN.
+    @State private var selectedDate: Date = ForecastPickerLogic.roundedDownToHour(Date())
+    // True once the user has manually tapped a day or hour cell.
+    // Prevents system snap-to-nearest from overriding an explicit user choice.
+    @State private var selectedDateIsUserOverridden: Bool = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
+        mainNavigationStack
+    }
+
+    /// Navigation stack shell — contains only the chrome (toolbar, bottom bar, sheets).
+    /// The heavy modifier chain is split across navigationStackBase + mainNavigationStack
+    /// to stay within the Swift type-checker's expression complexity budget.
+    private var mainNavigationStack: some View {
+        navigationStackBase
+            .onAppear(perform: handleAppear)
+            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
+            .onChange(of: scenePhase) { _, phase in handleScenePhaseChange(phase) }
+            .onChange(of: statusMessage) { _, newValue in announceStatusForAccessibility(newValue) }
+            .onChange(of: session.selectedSkinType) { _, skinType in persist(skinType: skinType) }
+            .onChange(of: session.selectedSPF) { _, spf in persist(spf: spf) }
+            .onChange(of: forecastSnapshot) { _, snapshot in
+                guard !selectedDateIsUserOverridden else { return }
+                selectedDate = ForecastPickerLogic.snapToNearest(selectedDate, in: snapshot)
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet(
+                    session: $session,
+                    hasSavedLocation: roundedCoordinate != nil || !cachedRoundedCoordinateStorage.isEmpty,
+                    onClearSavedLocation: clearSavedRoundedCoordinate
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+            .sensoryFeedback(.success, trigger: uvIndex)
+            .sensoryFeedback(.warning, trigger: isEstimateStale)
+    }
+
+    /// Navigation stack content — title, toolbar, bottom bar, and the main scroll area.
+    private var navigationStackBase: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -48,32 +92,11 @@ struct RootView: View {
                     if !locationPromptGate.hasAcknowledgedRationale {
                         LocationRationaleCard()
                     }
-                    HeroTimerCard(
-                        estimate: estimate,
-                        uvIndex: uvIndex,
-                        fetchedAt: fetchedAt,
-                        now: now,
-                        contextLine: estimateContextLine,
-                        statusMessage: displayedStatusMessage,
-                        locationFailureMessage: locationFailureMessage,
-                        weatherFailureMessage: weatherFailureMessage,
-                        isEstimateStale: isEstimateStale,
-                        onRecalculate: {
-                            Task {
-                                await refreshUV()
-                            }
-                        }
-                    )
-                    if let uvIndex {
-                        UVIndexCard(
-                            uvIndex: uvIndex,
-                            sourceLine: ProductCopy.uvSourceLine,
-                            updatedText: updatedText
-                        )
-                    } else {
-                        UVIndexPlaceholderCard(sourceLine: ProductCopy.uvSourceLine)
-                    }
+                    heroTimerCardView
+                    uvIndexCardView
                     mainInputsRow
+                    // WI-7: Forecast day-and-hour picker.
+                    forecastPickerCardView
                 }
                 .padding()
             }
@@ -103,49 +126,6 @@ struct RootView: View {
                 .padding(.top, 8)
                 .background(.bar)
             }
-            .onAppear(perform: handleAppear)
-            .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { newValue in
-                now = newValue
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                switch newPhase {
-                case .active:
-                    now = Date()
-                    if reattestationTracker.shouldPresentOnForeground(
-                        acknowledgedDisclaimer: session.acknowledgedDisclaimer,
-                        estimateWindowElapsed: isEstimateStale
-                    ) {
-                        session.requireDisclaimerReattestation()
-                        showDisclaimer = true
-                    }
-                case .background:
-                    reattestationTracker.recordBackgroundEntry()
-                case .inactive:
-                    break
-                @unknown default:
-                    break
-                }
-            }
-            .onChange(of: statusMessage) { _, newValue in
-                announceStatusForAccessibility(newValue)
-            }
-            .onChange(of: session.selectedSkinType) { _, selectedSkinType in
-                persist(skinType: selectedSkinType)
-            }
-            .onChange(of: session.selectedSPF) { _, selectedSPF in
-                persist(spf: selectedSPF)
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsSheet(
-                    session: $session,
-                    hasSavedLocation: roundedCoordinate != nil || !cachedRoundedCoordinateStorage.isEmpty,
-                    onClearSavedLocation: clearSavedRoundedCoordinate
-                )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-            }
-            .sensoryFeedback(.success, trigger: uvIndex)
-            .sensoryFeedback(.warning, trigger: isEstimateStale)
         }
     }
 
@@ -158,6 +138,109 @@ struct RootView: View {
             skinType: skinType,
             spf: session.selectedSPF,
             uvIndex: uvIndex
+        )
+    }
+
+    // MARK: - WI-7 Picker → Burn Timer wiring
+
+    /// UV result for the picker-selected date, derived synchronously from the
+    /// in-memory snapshot (no actor hop required).
+    private var selectedDateUVResult: UVResult {
+        ForecastPickerLogic.uvResult(from: forecastSnapshot, at: selectedDate, now: now)
+    }
+
+    /// The UV index to display on the burn card.
+    /// Prefers the forecast value for the selected date; falls back to the live
+    /// reading when the snapshot is unavailable or expired.
+    private var activeUVIndex: Double? {
+        switch selectedDateUVResult {
+        case .value(let uvi):
+            return uvi
+        case .nighttime:
+            return 0.0
+        default:
+            return uvIndex  // live reading fallback
+        }
+    }
+
+    /// Burn-time estimate driven by the selected date's UV (forecast or live).
+    private var activeEstimate: BurnTimeEstimate? {
+        guard let skinType = session.selectedSkinType, let uvi = activeUVIndex else { return nil }
+        return try? BurnTimeCalculator.estimate(
+            skinType: skinType,
+            spf: session.selectedSPF,
+            uvIndex: uvi
+        )
+    }
+
+    /// Context line for the burn card, using the active UV index.
+    private var activeEstimateContextLine: String? {
+        guard let selectedSkinType = session.selectedSkinType, let uvi = activeUVIndex else {
+            return nil
+        }
+        return EstimateContextLine.text(
+            skinType: selectedSkinType,
+            spf: session.selectedSPF,
+            uvIndex: uvi
+        )
+    }
+
+    /// Optional date prefix for the burn card header.
+    /// Non-nil when the selected time is not the current hour
+    /// (e.g., "Burn time on Wed, 6 PM").
+    private var forecastDateContext: String? {
+        ForecastPickerLogic.burnCardDatePrefix(for: selectedDate, now: now)
+    }
+
+    /// True only when the selected date is the current UTC hour —
+    /// future forecast selections are never "stale".
+    private var isCurrentHourSelected: Bool {
+        ForecastPickerLogic.roundedDownToHour(now)
+            == ForecastPickerLogic.roundedDownToHour(selectedDate)
+    }
+
+    // MARK: - Extracted card views (split from body for Swift type-checker performance)
+
+    private var heroTimerCardView: some View {
+        HeroTimerCard(
+            estimate: activeEstimate,
+            uvIndex: activeUVIndex ?? uvIndex,
+            fetchedAt: fetchedAt,
+            now: now,
+            contextLine: activeEstimateContextLine,
+            statusMessage: displayedStatusMessage,
+            locationFailureMessage: locationFailureMessage,
+            weatherFailureMessage: weatherFailureMessage,
+            isEstimateStale: isEstimateStale,
+            forecastDateContext: forecastDateContext,
+            onRecalculate: {
+                Task { await refreshUV() }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var uvIndexCardView: some View {
+        if let uvIndex {
+            UVIndexCard(
+                uvIndex: uvIndex,
+                sourceLine: ProductCopy.uvSourceLine,
+                updatedText: updatedText
+            )
+        } else {
+            UVIndexPlaceholderCard(sourceLine: ProductCopy.uvSourceLine)
+        }
+    }
+
+    private var forecastPickerCardView: some View {
+        ForecastPickerView(
+            selectedDate: $selectedDate,
+            forecastDays: forecastDays,
+            forecastHours: forecastHours,
+            now: now,
+            forecastRefreshState: forecastRefreshState,
+            onRetry: { Task { await performForecastRefresh() } },
+            onUserSelection: { _ in selectedDateIsUserOverridden = true }
         )
     }
 
@@ -260,23 +343,13 @@ struct RootView: View {
     }
 
     private var isEstimateStale: Bool {
+        // Future-date forecast estimates are never stale in the burn-window sense.
+        guard isCurrentHourSelected else { return false }
         guard let fetchedAt, let estimate else {
             return false
         }
 
         return estimate.isElapsed(fetchedAt: fetchedAt, now: now)
-    }
-
-    private var estimateContextLine: String? {
-        guard let selectedSkinType = session.selectedSkinType, let uvIndex else {
-            return nil
-        }
-
-        return EstimateContextLine.text(
-            skinType: selectedSkinType,
-            spf: session.selectedSPF,
-            uvIndex: uvIndex
-        )
     }
 
     /// Hero `statusMessage` is `@State` and mutates on transient events
@@ -384,6 +457,8 @@ struct RootView: View {
             now = Date()
             persist(snapshot: result.snapshot)
             statusMessage = "UV index fetched from Apple Weather."
+            // WI-7: after a fresh location fix, kick off forecast refresh too.
+            await performForecastRefresh()
         } catch UVBurnTimerWorkflowError.missingSkinType {
             locationFailureMessage = nil
             weatherFailureMessage = nil
@@ -432,6 +507,110 @@ struct RootView: View {
         applyUITestStaleEstimateSeedIfNeeded()
         applyUITestCappedEstimateSeedIfNeeded()
         applyUITestLongUncappedEstimateSeedIfNeeded()
+    }
+
+    private func handleScenePhaseChange(_ newPhase: ScenePhase) {
+        switch newPhase {
+        case .active:
+            now = Date()
+            // Reset picker selection to current day + current hour on every foreground (Iris §4).
+            // Never persist day/hour selection across sessions — forecast data is time-relative.
+            selectedDateIsUserOverridden = false
+            selectedDate = ForecastPickerLogic.defaultSelectedDate(in: forecastSnapshot, now: now)
+            if reattestationTracker.shouldPresentOnForeground(
+                acknowledgedDisclaimer: session.acknowledgedDisclaimer,
+                estimateWindowElapsed: isEstimateStale
+            ) {
+                session.requireDisclaimerReattestation()
+                showDisclaimer = true
+            }
+            // WI-7: refresh forecast if nil, expired, or coord-far (>50 km).
+            Task { await refreshForecastIfNeeded() }
+        case .background:
+            reattestationTracker.recordBackgroundEntry()
+        case .inactive:
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    // MARK: - WI-7 Forecast refresh
+
+    /// Forecast days for the picker. Internal (not private) so the picker can read it.
+    var forecastDays: [DayForecast] {
+        forecastSnapshot?.days ?? []
+    }
+
+    /// Forecast hours for the picker. Internal (not private) so the picker can read it.
+    var forecastHours: [HourForecast] {
+        forecastSnapshot?.hours ?? []
+    }
+
+    /// Called on scenePhase → .active.
+    /// Loads the cached snapshot; kicks off a refresh when:
+    ///   1. No snapshot exists on disk (nil).
+    ///   2. Snapshot is stale (now ≥ expirationDate).
+    ///   3. Snapshot coords are > 50 km from the current rounded coordinate.
+    /// Otherwise keeps the existing valid snapshot — no WeatherKit call made.
+    private func refreshForecastIfNeeded() async {
+        let existing: ForecastSnapshot?
+        do {
+            existing = try await forecastStore.load()
+        } catch {
+            // Schema mismatch or corrupt file — file already deleted by the store.
+            // Fall through to performForecastRefresh with existing = nil.
+            existing = nil
+        }
+
+        if let snapshot = existing {
+            forecastSnapshot = snapshot
+
+            let stale = snapshot.isStale()
+            let outOfRange: Bool
+            if let coord = roundedCoordinate {
+                outOfRange = await forecastStore.isCoordOutOfRange(
+                    latitude: coord.latitude,
+                    longitude: coord.longitude
+                )
+            } else {
+                outOfRange = false
+            }
+
+            if outOfRange {
+                // Coord-eviction: discard the stored snapshot before refetching.
+                try? await forecastStore.clear()
+                forecastSnapshot = nil
+                await performForecastRefresh()
+            } else if stale {
+                await performForecastRefresh()
+            }
+            // else: snapshot is fresh and coord-valid — nothing to do.
+        } else {
+            // No snapshot (cold start or evicted) — fetch immediately.
+            await performForecastRefresh()
+        }
+    }
+
+    /// Fetches a fresh ForecastSnapshot from WeatherKit and persists it.
+    /// Requires roundedCoordinate to be set; silently no-ops if it is nil.
+    /// Sets forecastRefreshState: .refreshing → .idle on success, .error(message) on failure.
+    /// Network errors keep the existing stale snapshot visible; the banner surfaces the failure.
+    private func performForecastRefresh() async {
+        guard !isFetchingForecast, let coord = roundedCoordinate else { return }
+        isFetchingForecast = true
+        forecastRefreshState = .refreshing
+        defer { isFetchingForecast = false }
+        do {
+            let provider = WeatherKitForecastProvider()
+            let snapshot = try await provider.fetchSnapshot(at: coord)
+            try await forecastStore.save(snapshot)
+            forecastSnapshot = snapshot
+            forecastRefreshState = .idle
+        } catch {
+            // Keep the existing stale snapshot; the banner surfaces the error with a Retry button.
+            forecastRefreshState = .error(error.localizedDescription)
+        }
     }
 
     private func syncPreferenceStorageFromSession() {
@@ -495,6 +674,10 @@ struct RootView: View {
         cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         legacyCachedUVSnapshotStorage = CachedRoundedCoordinateStorage.clearedStorageValue
         roundedCoordinate = nil
+        forecastSnapshot = nil
+        forecastRefreshState = .idle
+        // WI-7: forecast is keyed to location — clear it when location is cleared.
+        Task { try? await forecastStore.clear() }
         statusMessage = "Saved location cleared."
     }
 
@@ -586,6 +769,11 @@ struct HeroTimerCard: View {
     let locationFailureMessage: String?
     let weatherFailureMessage: String?
     let isEstimateStale: Bool
+    /// WI-7: Optional date context for forecast-selected times.
+    /// When non-nil (e.g., "Burn time on Wed, 6 PM"), shown in place of the default header.
+    /// Nil means "now" — no date prefix needed.
+    /// IRIS-HOOK: typography + layout of this label.
+    let forecastDateContext: String?
     let onRecalculate: () -> Void
     @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -594,7 +782,9 @@ struct HeroTimerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(ProductCopy.burnTimeEstimateTitle)
+            // When a future date is selected, show its date label as the card header.
+            // IRIS-HOOK: visual differentiation between "now" and forecast states.
+            Text(forecastDateContext ?? ProductCopy.burnTimeEstimateTitle)
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
@@ -688,14 +878,17 @@ struct HeroTimerCard: View {
         if let estimate, isEstimateStale {
             staleEstimateContent(estimate)
         } else if let estimate, estimate.tier == .none {
-            VStack(alignment: .leading, spacing: 12) {
-                Image(systemName: "moon.zzz")
-                    .font(.system(size: heroIconSize))
-                    .foregroundStyle(.secondary)
-                Text("UV index is 0 — no erythemal irradiance detected.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+            // UVI = 0 at selected hour — moon.fill + "No UV at this hour" per Iris §5.
+            Label {
+                Text("No UV at this hour")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
+            } icon: {
+                Image(systemName: "moon.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color(.secondaryLabel))
             }
+            .accessibilityLabel("No UV at this hour. No burn risk.")
         } else if let estimate {
             estimateText(estimate)
         } else if let weatherFailureMessage {
