@@ -102,7 +102,25 @@ public enum UserPreferenceStorage {
         defaults.removeObject(forKey: selectedSPFKey)
         defaults.removeObject(forKey: locationRationaleAcknowledgedKey)
         defaults.removeObject(forKey: disclaimerPolicyVersionKey)
+        // WI-bundleR / Kwame L13-3 (Loop-13) — GDPR Art.17 erasure-path
+        // completeness. The L1 storage-disclosure sentence advertises the
+        // last rounded coordinate as a persisted item; the legacy UV
+        // snapshot key from the pre-Pattern-B era is also still cleared
+        // by the UI-test reset path (see UVBurnTimerApp.swift:28-29).
+        // Centralizing both removals here makes `clearStoredPreferences`
+        // a single source of truth for any future erasure entry point
+        // (Settings → "Clear everything", future "Reset app" Shortcut,
+        // automation harness, etc.).
+        defaults.removeObject(forKey: lastRoundedCoordinateKey)
+        defaults.removeObject(forKey: legacyUVSnapshotKey)
     }
+
+    /// WI-bundleR / Kwame L13-3 — `@AppStorage` raw keys owned by
+    /// `RootView` (AppViews.swift). Lifted into `UserPreferenceStorage`
+    /// so `clearStoredPreferences` is the single GDPR Art.17 entry
+    /// point and tests can pin the constant ↔ AppStorage drift.
+    public static let lastRoundedCoordinateKey = "lastRoundedCoordinate"
+    public static let legacyUVSnapshotKey = "lastUVSnapshot"
 
     /// K-2 / G-D1..G-D4 contract: evaluate whether L1 DisclaimerCover should be shown.
     ///

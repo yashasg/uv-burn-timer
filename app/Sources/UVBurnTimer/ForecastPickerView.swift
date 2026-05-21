@@ -252,9 +252,19 @@ public struct ForecastPickerView: View {
         }
     }
 
-    /// Black text on light bands (Low/Moderate), white on darker bands (High+).
+    /// WI-bundleR / Iris L01 (Loop-13) — WCAG 2.2 AA contrast for WHO-band
+    /// pills. Apple system colors against white at `.headline` size:
+    /// - `.systemGreen` / `.systemYellow` / `.systemOrange` / `.systemRed`
+    ///   all measure < 4.5:1 against white in Light Mode (~2.0–3.9:1).
+    /// - `.systemPurple` against white sits at ~4.7:1 (passes AA at the
+    ///   `.headline` weight we render).
+    /// Switching the load-bearing pill / chip / band-bar text to `.black`
+    /// for everything below the Extreme band restores AA across every
+    /// surface that reads this color. Black-on-Purple measures only
+    /// ~4.4:1 (fails AA), so the Extreme band is the one row where
+    /// `.white` is the better choice. Pinned by `test_R1_*`.
     private func whoBandTextColor(for uvi: Double) -> Color {
-        uvi < 6 ? .black : .white
+        uvi < 11 ? .black : .white
     }
 
     // MARK: - Day list

@@ -71,7 +71,8 @@ struct RootView: View {
                 SettingsSheet(
                     session: $session,
                     hasSavedLocation: roundedCoordinate != nil || !cachedRoundedCoordinateStorage.isEmpty,
-                    onClearSavedLocation: clearSavedRoundedCoordinate
+                    onClearSavedLocation: clearSavedRoundedCoordinate,
+                    onClearStoredSkinType: clearStoredSkinTypeAndRequireReattestation
                 )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -637,6 +638,23 @@ struct RootView: View {
 
     private func persist(skinType: FitzpatrickSkinType?) {
         persistedSkinTypeRawValue = skinType?.rawValue ?? UserPreferenceStorage.unsetSkinTypeRawValue
+    }
+
+    /// WI-bundleR / Suchi L01 (Loop-13) — Asha P4 erasure-with-re-attestation.
+    /// Tapping "Clear stored skin type" in Settings must (a) wipe the
+    /// Fitzpatrick rawValue, (b) reset the disclaimer policy version on
+    /// disk so a future cold launch re-fires L1, (c) flip
+    /// `session.acknowledgedDisclaimer = false`, and (d) immediately
+    /// present the L1 cover so the photosens reach-back is on screen
+    /// before the next interaction. Pinned by `test_R3_*`.
+    private func clearStoredSkinTypeAndRequireReattestation() {
+        UserPreferenceStorage.persist(skinType: nil, to: .standard)
+        session.selectedSkinType = nil
+        UserDefaults.standard.removeObject(
+            forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+        )
+        session.requireDisclaimerReattestation()
+        showDisclaimer = true
     }
 
     private func persist(spf: SPFLevel) {
@@ -1297,6 +1315,18 @@ struct SettingsSheet: View {
     @Binding var session: UVBurnTimerSession
     let hasSavedLocation: Bool
     let onClearSavedLocation: () -> Void
+    /// WI-bundleR / Suchi L01 (Loop-13) — Asha P4 photosens cohort safety.
+    /// The L1 storage-disclosure advertises "Clear stored skin type" as the
+    /// erasure path for the Fitzpatrick value, but tapping it previously
+    /// only wiped `session.selectedSkinType`. Asha's mental model is that
+    /// clearing the type resets the photosens self-attestation, which means
+    /// the next session must re-fire L1 so she can re-read the photosens
+    /// reach-back before re-committing. The parent now routes this through
+    /// `clearStoredSkinTypeAndRequireReattestation()` which: clears the
+    /// stored Fitzpatrick rawValue, resets the disclaimer policy version
+    /// on disk to 0, flips `session.acknowledgedDisclaimer = false`, and
+    /// re-presents the L1 cover. Pinned by `test_R3_*`.
+    let onClearStoredSkinType: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -1358,13 +1388,17 @@ struct SettingsSheet: View {
                         hasSavedLocation ? "Clears the last saved rounded coordinate." : "No saved location is stored.")
 
                     Button(role: .destructive) {
-                        UserPreferenceStorage.persist(skinType: nil, to: .standard)
-                        session.selectedSkinType = nil
+                        // WI-bundleR / Suchi L01 — defer the L1 re-fire +
+                        // erasure to the parent so the Settings sheet
+                        // dismisses, then L1 takes over the screen with the
+                        // photosens reach-back Asha needs to re-read.
+                        onClearStoredSkinType()
+                        dismiss()
                     } label: {
                         Text(ProductCopy.clearStoredSkinTypeButtonTitle)
                     }
                     .disabled(session.selectedSkinType == nil)
-                    .accessibilityHint("Removes your stored Fitzpatrick skin type. You will be asked to set it again on next use.")
+                    .accessibilityHint("Removes your stored Fitzpatrick skin type and re-presents the informational disclaimer so you can re-attest before continuing.")
                     .accessibilityIdentifier("ClearStoredSkinTypeButton")
 
                     Button(role: .destructive) {
