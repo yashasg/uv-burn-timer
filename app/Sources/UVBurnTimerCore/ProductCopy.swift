@@ -31,6 +31,18 @@ public enum ProductCopy {
     public static let photosensitizationAuthorityLine =
         "Informational overview: NIH MedlinePlus notes that some medicines can increase sun sensitivity; ask a clinician or pharmacist whether this applies to you."
     public static let childrenDisclaimerLine = "For children, consult a pediatrician."
+
+    /// AUDIT-ONLY — not rendered at runtime since the K-1 banner retirement
+    /// (Loop-7 / `.squad/decisions.md` ~L739). The yellow photosens banner
+    /// was retired in favor of the toolbar ⓘ button (`EstimateInfoButton` →
+    /// `AboutView(highlightEstimateApplicability: true)`) per K-7 /
+    /// WI-50–WI-53; this constant is retained for spec/audit fidelity
+    /// because LANE 2 #3 of `.squad/files/user-flow-onboarding-main-spec.md`
+    /// (pre-WI-cc reconcile) referenced the row by this exact wording, and
+    /// any future banner-style L3 surface should re-use the same prose to
+    /// preserve Plunder review continuity. Pinned by
+    /// `requiredSafetyDisclaimerCopyIsCaptured` so accidental drift still
+    /// fails CI.
     public static let photosensitizationBannerLabel = "Meds or photosensitive conditions? Learn more"
 
     /// AUDIT-ONLY — not used at runtime. In-app deep-link URL that documents the
