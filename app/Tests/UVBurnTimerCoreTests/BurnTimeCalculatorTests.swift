@@ -2868,6 +2868,92 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
 }
 
 
+// MARK: - Group HH: Loop-12 Bundle H — README truthfulness (Gaia H1+H2+H3)
+//
+// Three README↔code truth gaps closed by Bundle H. The README is the
+// public-surface source of truth for App Store reviewers, external
+// auditors, and EU counsel; the Plunder regulatory floor + the
+// `D-2026-05-19-honest-privacy-copy` decision both turn on the README
+// being literally true about what is stored and how the disclaimer fires.
+//
+// HH1 — Scenario 1 must describe Pattern-B (policyVersion-gated) cadence,
+//       not the retired "every app session" cold-launch model. Pattern B
+//       was ratified in Loop-9 (`.squad/decisions.md:10–43`) and is now
+//       pinned by `UserPreferenceStorage.shouldShowDisclaimerCover` +
+//       Group GD contract family (BurnTimeCalculatorTests.swift line ~1964).
+// HH2 — Privacy line must not claim `location-rationale acknowledgment`
+//       persists. The `locationRationaleAcknowledgedKey` is declared in
+//       `UVBurnTimerSession.swift` but no production code writes it after
+//       Kwame-8 dropped the LocationRationaleCard. Cross-pinned to source.
+// HH3 — README user-scenarios must list the WI-7 10-day forecast picker —
+//       the largest post-launch feature; omission breaks the
+//       README ↔ loop.md Goal 3 ("User scenarios captured") contract.
+
+private func _readmeContents() throws -> String {
+    let repoRoot = try appRootURL().deletingLastPathComponent()
+    let url = repoRoot.appendingPathComponent("README.md")
+    return try String(contentsOf: url, encoding: .utf8)
+}
+
+/// HH1 — README Scenario 1 must describe Pattern-B (policyVersion-gated)
+/// cadence, not the retired "every app session" cold-launch model.
+@Test func test_HH1_readmeScenario1DescribesPolicyVersionedL1() throws {
+    let readme = try _readmeContents()
+    #expect(
+        !readme.contains("required disclaimer every app session"),
+        "README Scenario 1 must not claim L1 fires every app session — Pattern B (policyVersion-gated) shipped Loop-9; see GD1–GD4."
+    )
+    #expect(
+        readme.localizedCaseInsensitiveContains("policyversion")
+            || readme.localizedCaseInsensitiveContains("policy version"),
+        "README Scenario 1 must reference the policyVersion mechanism that actually gates L1."
+    )
+}
+
+/// HH2 — README must not claim `location-rationale acknowledgment`
+/// persists in UserDefaults: no production code writes that key after
+/// Kwame-8 dropped the LocationRationaleCard.
+@Test func test_HH2_readmePrivacyDoesNotClaimDeadStoragePersistence() throws {
+    let readme = try _readmeContents()
+    #expect(
+        !readme.contains("location-rationale acknowledgment"),
+        "README Privacy line must not claim location-rationale acknowledgment persists — the LocationRationaleCard was retired (Kwame-8) and no production code writes `locationRationaleAcknowledged`."
+    )
+    let repoRoot = try appRootURL().deletingLastPathComponent()
+    let appSwift = try String(
+        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimer/AppViews.swift"),
+        encoding: .utf8
+    )
+    let coreSwift = try String(
+        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimerCore/UVBurnTimerSession.swift"),
+        encoding: .utf8
+    )
+    let writePatterns = [
+        ".set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey",
+        "defaults.set(true, forKey: locationRationaleAcknowledgedKey",
+        "@AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey)",
+    ]
+    for pattern in writePatterns {
+        #expect(
+            !appSwift.contains(pattern) && !coreSwift.contains(pattern),
+            "Production code now writes `locationRationaleAcknowledgedKey` — either restore the README claim or this guard is wrong."
+        )
+    }
+}
+
+/// HH3 — README must list the WI-7 forecast picker as a shipped user
+/// scenario. The picker is the largest post-launch feature and its
+/// absence from public surface is a documented-behavior gap.
+@Test func test_HH3_readmeListsForecastPickerScenario() throws {
+    let readme = try _readmeContents()
+    let tokens = ["forecast", "10-day", "hourly", "WHO"]
+    let presentCount = tokens.filter { readme.localizedCaseInsensitiveContains($0) }.count
+    #expect(
+        presentCount >= 2,
+        "README must describe the shipped forecast picker (≥ 2 of: forecast, 10-day, hourly, WHO). Current matches: \(presentCount)."
+    )
+}
+
 
 // MARK: - Group LL: Loop-12 Bundle L — persona render-site + a11y header safety guards
 //
@@ -3701,4 +3787,84 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         body.contains(".frame(minHeight: 44"),
         "PersistentFooter must apply `.frame(minHeight: 44…)` to its Label/NavigationLink — Plunder's always-visible disclaimer-reach surface must not fall below the 44 pt HIG hit-target floor at default Dynamic Type. See AppViews.swift chips at lines 295 / 315 / 337 for the existing pattern."
     )
+// MARK: - Group GG: Loop-12 Bundle G — ForecastPickerView WeatherKit attribution + L3 reach-back
+//
+// Closes two HIGH-severity regulatory-floor breaches surfaced by the
+// Loop-12 parallel gap-analysis pass (claude-opus-4.7-xhigh):
+//
+//   GG1 — WeatherKit license breach (§5.1.1): `ForecastPickerView` is a
+//         WeatherKit-derived data surface that previously did not display
+//         "Source: Apple Weather" anywhere in its rendered body. Apple's
+//         WeatherKit terms require attribution on every surface that
+//         consumes WeatherKit data; the hero/UV card carried the
+//         attribution but the 10-day forecast picker did not.
+//
+//   GG2 — Plunder C3 floor breach: `ForecastPickerView` had no L3
+//         photosensitizer reach-back surface. Users navigating to the
+//         picker and staying there had no tap target to reach the
+//         photosens cohort warning. The C3 floor (L3 reach-back from
+//         every result surface) was satisfied only on the main hero
+//         card via the toolbar ⓘ `EstimateInfoButton` — but the
+//         picker is its own result surface (selecting a future hour
+//         drives the burn-time gauge for that hour) and needs its own
+//         reach-back path.
+
+private func _forecastPickerSourceForGroupGG() throws -> String {
+    let appRoot = try appRootURL()
+    let url = appRoot.appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
+    return try String(contentsOf: url, encoding: .utf8)
+}
+
+/// GG1 — `ForecastPickerView` must render the Apple Weather attribution
+/// at the source-text level. Pinned by substring guard so any future
+/// refactor that drops the attribution surface fails CI.
+@Test func test_GG1_forecastPickerViewRendersAppleWeatherAttribution() throws {
+    let source = try _forecastPickerSourceForGroupGG()
+    #expect(
+        source.contains("ProductCopy.weatherAttributionServiceName"),
+        "ForecastPickerView must render `ProductCopy.weatherAttributionServiceName` (\"Apple Weather\") — WeatherKit §5.1.1 attribution requirement."
+    )
+    #expect(
+        source.contains("ProductCopy.weatherAttributionLegalURL"),
+        "ForecastPickerView must link to `ProductCopy.weatherAttributionLegalURL` so the attribution is a tappable WeatherKit-legal-page reference."
+    )
+    #expect(
+        source.contains(".accessibilityIdentifier(\"ForecastPickerAttribution\")"),
+        "ForecastPickerView must carry `accessibilityIdentifier(\"ForecastPickerAttribution\")` on its attribution surface so XCUI and the contrast checklist can find it."
+    )
+}
+
+/// GG2 — `ForecastPickerView` must carry an L3 photosensitizer reach-back
+/// surface — a NavigationLink that opens `AboutView(highlightEstimateApplicability: true)`
+/// from inside the picker, paired with a stable accessibility identifier
+/// so the contrast / launch-readiness checklists can target it.
+@Test func test_GG2_forecastPickerViewExposesL3PhotosensReachBack() throws {
+    let source = try _forecastPickerSourceForGroupGG()
+    #expect(
+        source.contains("AboutView(highlightEstimateApplicability: true)"),
+        "ForecastPickerView must navigate to `AboutView(highlightEstimateApplicability: true)` — Plunder C3 floor (L3 reach-back from result surface)."
+    )
+    #expect(
+        source.contains(".accessibilityIdentifier(\"ForecastPickerEstimateInfoButton\")"),
+        "ForecastPickerView must carry `accessibilityIdentifier(\"ForecastPickerEstimateInfoButton\")` on its L3 reach-back surface — parity with the main-screen `EstimateInfoButton`."
+    )
+}
+
+/// GG3 — Both the attribution surface and the L3 reach-back surface must
+/// be rendered AFTER the hourly strip section (footer placement, per the
+/// design intent that attribution + reach-back belong at the bottom of
+/// the data surface so they don't interrupt the day/hour selection flow).
+@Test func test_GG3_forecastPickerFooterSurfacesAppearAfterHourlyStrip() throws {
+    let source = try _forecastPickerSourceForGroupGG()
+    let lines = source.components(separatedBy: "\n")
+    let hourlyIdx = lines.firstIndex { $0.contains("hourlyStripSection") }
+    let attrIdx = lines.firstIndex { $0.contains("ForecastPickerAttribution") }
+    let infoIdx = lines.firstIndex { $0.contains("ForecastPickerEstimateInfoButton") }
+    #expect(hourlyIdx != nil, "hourlyStripSection must be present in ForecastPickerView body.")
+    #expect(attrIdx != nil, "ForecastPickerAttribution surface must be present.")
+    #expect(infoIdx != nil, "ForecastPickerEstimateInfoButton surface must be present.")
+    if let h = hourlyIdx, let a = attrIdx, let i = infoIdx {
+        #expect(h < a, "Attribution must appear AFTER the hourlyStripSection in the source body.")
+        #expect(h < i, "L3 reach-back button must appear AFTER the hourlyStripSection in the source body.")
+    }
 }
