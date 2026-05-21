@@ -258,19 +258,29 @@ struct RootView: View {
 
     @ViewBuilder
     private var mainInputsRow: some View {
-        if dynamicTypeSize.isAccessibilitySize {
-            VStack(spacing: 12) {
-                skinTypeChip
-                locationChip
-                spfChip
-            }
-        } else {
-            HStack(spacing: 12) {
-                skinTypeChip
-                locationChip
-                spfChip
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Inputs")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .accessibilityIdentifier("MainInputsRowHeader")
+                .accessibilityAddTraits(.isHeader)
+
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: 12) {
+                    skinTypeChip
+                    locationChip
+                    spfChip
+                }
+            } else {
+                HStack(spacing: 12) {
+                    skinTypeChip
+                    locationChip
+                    spfChip
+                }
             }
         }
+        .accessibilityElement(children: .contain)
     }
 
     private var locationChip: some View {
