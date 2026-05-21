@@ -66,14 +66,15 @@ build can ship.
 | TierBadge Moderate (`SeverityModerate`) text on capsule | __:1 | __:1 | __:1 | __:1 | ☐ | |
 | TierBadge Short (`SeverityShort`) text on capsule | __:1 | __:1 | __:1 | __:1 | ☐ | |
 | BurnRiskGauge progress arc (per-tier) vs ring track | __:1 | __:1 | __:1 | __:1 | ☐ | Tracks `Color.secondary.opacity(0.22)` (AppViews ~line 1553). |
-| Hero number against card material | __:1 | __:1 | __:1 | __:1 | ☐ | `.contentTransition(.numericText())` |
+| Hero number against scroll background (no card chrome — `.regularMaterial` retired per WI-r predecessor `9da54cf`) | __:1 | __:1 | __:1 | __:1 | ☐ | `.contentTransition(.numericText())`. **WI-cc re-measurement note (Loop-10):** the hero number now blends against the scroll background directly (not the previous `.regularMaterial`). Re-shoot this row before the next TestFlight pass. |
+| Hero `HeroForecastDateContext` caption (when forecast hour ≠ current) | __:1 | __:1 | __:1 | __:1 | ☐ | `.font(.caption).foregroundStyle(.secondary)` with `clock.arrow.circlepath` Label-wrap (WI-p V1/V2). Most contrast-fragile combination in the hero region — `.secondary` against scroll background at AX5-scaled `.caption`. Identifier `HeroForecastDateContext`. |
 
 ### Banner + safety surfaces
 
 | Surface | Light · Std | Light · HC | Dark · Std | Dark · HC | Pass? | Notes |
 |---|---|---|---|---|---|---|
-| Photosens banner text on yellow fill | __:1 | __:1 | __:1 | __:1 | ☐ | `Color.yellow.opacity(0.18/0.35)` + `Color.orange.opacity(0.55/0.85)` border |
-| Photosens banner chevron + link text | __:1 | __:1 | __:1 | __:1 | ☐ | Inline NavigationLink to AboutView |
+| ~~Photosens banner text on yellow fill~~ | — | — | — | — | n/a (retired) | **Surface retired by K-1 cleanup + commit `9da54cf` (Loop-10 WI-cc reconcile).** The standalone yellow `Photosensitization loop banner` (320×40) was removed; L3 reach-back is now carried by the toolbar ⓘ `EstimateInfoButton` (see new row below) + the `PersistentFooter` `Informational only. Not medical advice.` link (existing row). Source-text guard `MainScreenCleanupContractTests.test_O1_photosensitizationBannerSymbolAbsentFromAppViews` hard-fails CI if the banner is reintroduced. `ProductCopy.photosensitizationBannerLabel` constant retained AUDIT-ONLY in `auditCopySurfaces`. |
+| ~~Photosens banner chevron + link text~~ | — | — | — | — | n/a (retired) | Same retirement as row above (Loop-10 WI-cc). Toolbar ⓘ chevron + footer link carry the load. |
 | SafetyStatusCard "Recalculate..." text on orange fill | __:1 | __:1 | __:1 | __:1 | ☐ | `Color.orange.opacity(0.14/0.28)` — **WI-n re-measurement required.** Background blend changed twice: (1) commit `9da54cf` retired hero card `.regularMaterial` chrome so SafetyStatusCard now blends against the scroll background directly; (2) commit `WI-r` (chrome inversion, Group W/T1+T2) stripped the secondary UV card's `.thinMaterial` so the orange-tint blend behaviour next to the UV row is also altered. Re-shoot this row before the next TestFlight; if it fails, escalate per `wi-n-recheck-safetystatuscard-contrast`. |
 | SafetyStatusCard `exclamationmark.shield.fill` icon vs fill | __:1 | __:1 | __:1 | __:1 | ☐ | Same WI-n re-measurement note as above. |
 | Hero ↔ UV `Divider()` (WI-t / Group X) vs scroll background | __:1 | __:1 | __:1 | __:1 | ☐ | New surface added by Loop-9 WI-t: SwiftUI `Divider()` rendered between `heroTimerCardView` and `uvIndexCardView` in `navigationStackBase`. Divider uses system separator color; must remain visible (not extinguished) in both Standard + Increased contrast modes. Pair-check with the polarized-OLED gate in `iris-launch-readiness-checklist.md`. |
@@ -82,10 +83,13 @@ build can ship.
 
 | Surface | Light · Std | Light · HC | Dark · Std | Dark · HC | Pass? | Notes |
 |---|---|---|---|---|---|---|
-| Persistent footer disclaimer link copy | __:1 | __:1 | __:1 | __:1 | ☐ | `Informational only. Not medical advice.` |
+| Persistent footer disclaimer link copy | __:1 | __:1 | __:1 | __:1 | ☐ | `Informational only. Not medical advice.` Now also doubles as the L3 photosensitizer reach-back surface (paired with toolbar ⓘ row below) per Loop-10 WI-cc reconcile after the standalone banner retired. |
+| Compact Skin-type chip (Fitzpatrick chip on main, post-K-5/K-6) | __:1 | __:1 | __:1 | __:1 | ☐ | Added by Loop-10 WI-cc. `skinTypeChip` (AppViews.swift `mainInputsRow` region) — 44pt min tap target carrying the high-stakes Fitzpatrick input. Tap opens `SkinTypeEditView` (when type committed) or returns to onboarding (when none set). Per WI-aa (Loop-9) the chip is the ambient repeat-use surface. |
 | Compact Location chip | __:1 | __:1 | __:1 | __:1 | ☐ | 44pt min hit target — `minHeight: 44` |
 | Compact SPF chip | __:1 | __:1 | __:1 | __:1 | ☐ | Menu trigger, 44pt min |
 | Weather attribution `Apple Weather` link | __:1 | __:1 | __:1 | __:1 | ☐ | Required to remain visible on every weather-derived surface |
+| Toolbar ⓘ `EstimateInfoButton` (top-bar trailing `info.circle` glyph) | __:1 | __:1 | __:1 | __:1 | ☐ | Added by Loop-10 WI-cc. The L3 photosensitizer reach-back **single-point-of-failure** surface now that the banner is retired (paired with footer row above). Small monochrome SF Symbol glyph against the nav-bar background — contrast must clear ≥ 4.5:1 (Std) and ≥ 7:1 (HC) at the system tint. Identifier `EstimateInfoButton`. |
+| L1 cover `DisclaimerStorageLine` (`Your skin type and SPF are saved on this device only…`) | __:1 | __:1 | __:1 | __:1 | ☐ | Added by Loop-10 WI-cc. WI-w (commit `626e261`) introduced the storage-disclosure sentence on the L1 cover with `accessibilityIdentifier("DisclaimerStorageLine")`. Consent-related copy — must be legible at every contrast mode. |
 | "I understand" prominent action on L1 cover | __:1 | __:1 | __:1 | __:1 | ☐ | `.buttonStyle(.borderedProminent)` |
 
 ## Procedure per row
