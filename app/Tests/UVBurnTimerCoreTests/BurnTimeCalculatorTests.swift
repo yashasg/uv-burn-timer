@@ -2156,3 +2156,175 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         "Forecast read-out must still close with the estimate disclaimer so a future-hour read-out does not drop the medical-advice guard. Actual: \(withForecast)"
     )
 }
+
+
+// MARK: - Group EG: Loop-11 Bundle C — Plunder regulatory polish (M1, M2, M4)
+//
+// Bundle C converges three Plunder WIs:
+//
+//   WI-plunder-m1  Hosted Privacy Policy stub + on-device-copy sync guard (EH1, EH2)
+//   WI-plunder-m2  Apple Weather AX5 attribution adjacency source-text guard (EG1, EG2)
+//   WI-plunder-m4  EU counsel pre-submit checklist (docs-only — sibling
+//                  file at .squad/files/plunder-eu-counsel-checklist.md)
+
+/// EG1 — WI-plunder-m2: `UVIndexCard` body renders `Text(sourceLine)` and
+/// `WeatherAttributionView()` as immediate siblings, with no other view
+/// between them. Per D-2026-05-19-002/003/004 the Apple Weather
+/// attribution is a launch-blocker; this guard fires if a future refactor
+/// silently moves the attribution out of the same card surface.
+@Test func test_EG1_uvIndexCardSourceLineAndAttributionAreAdjacent() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct UVIndexCard: View") }) else {
+        Issue.record("UVIndexCard struct not found")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let body = lines[cardStart..<cardEnd]
+
+    guard let sourceLineIdx = body.firstIndex(where: { $0.contains("Text(sourceLine)") }) else {
+        Issue.record("UVIndexCard body must render Text(sourceLine)")
+        return
+    }
+    guard let attributionIdx = body.firstIndex(where: { $0.contains("WeatherAttributionView()") }) else {
+        Issue.record("UVIndexCard body must render WeatherAttributionView()")
+        return
+    }
+    #expect(
+        sourceLineIdx < attributionIdx,
+        "UVIndexCard must render `Text(sourceLine)` BEFORE `WeatherAttributionView()` so the source line precedes the legal attribution block visually and in VoiceOver order."
+    )
+    // The two view literals must be within 12 lines of each other (allowing
+    // for `if let updatedText` interstitial). If a substantive new view
+    // wedges between them this guard fires.
+    #expect(
+        attributionIdx - sourceLineIdx <= 12,
+        "UVIndexCard's Text(sourceLine) and WeatherAttributionView() must remain adjacent (currently \(attributionIdx - sourceLineIdx) lines apart). Per D-2026-05-19-003 the Apple Weather attribution must visually accompany every render of the UV index."
+    )
+}
+
+/// EG2 — WI-plunder-m2: `UVIndexPlaceholderCard` (the no-UV-fetched
+/// placeholder) also renders the same source-line ↔ attribution adjacency
+/// so cold-launch and post-failure render paths cannot drop the
+/// attribution either.
+@Test func test_EG2_uvIndexPlaceholderCardSourceLineAndAttributionAreAdjacent() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct UVIndexPlaceholderCard: View") }) else {
+        Issue.record("UVIndexPlaceholderCard struct not found")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let body = lines[cardStart..<cardEnd]
+
+    guard let sourceLineIdx = body.firstIndex(where: { $0.contains("Text(sourceLine)") }) else {
+        Issue.record("UVIndexPlaceholderCard body must render Text(sourceLine)")
+        return
+    }
+    guard let attributionIdx = body.firstIndex(where: { $0.contains("WeatherAttributionView()") }) else {
+        Issue.record("UVIndexPlaceholderCard body must render WeatherAttributionView()")
+        return
+    }
+    #expect(sourceLineIdx < attributionIdx)
+    #expect(
+        attributionIdx - sourceLineIdx <= 12,
+        "UVIndexPlaceholderCard's Text(sourceLine) and WeatherAttributionView() must remain adjacent (currently \(attributionIdx - sourceLineIdx) lines apart)."
+    )
+}
+
+// MARK: - Group EH: WI-plunder-m1 — hosted Privacy Policy stub ↔ in-app copy
+
+/// EH1 — WI-plunder-m1: the hosted Privacy Policy stub at
+/// `.squad/files/privacy-policy.md` carries the load-bearing on-device
+/// data sentences that mirror `ProductCopy.aboutPrivacy`. If a copy
+/// editor changes only the stub OR only the in-app copy, this guard
+/// fires.
+@Test func test_EH1_hostedPrivacyPolicyStubMirrorsOnDeviceCopy() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let policyURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent(".squad/files/privacy-policy.md")
+    let policy = try String(contentsOf: policyURL, encoding: .utf8)
+
+    // Substrings present in both sources of truth.
+    let sharedPhrases = [
+        "two decimal places",
+        "Apple Weather",
+        "device only",
+        "version of the informational disclaimer",
+        "no advertising identifier",
+        "third-party",
+        "informational only",
+        "not medical advice",
+    ]
+    for phrase in sharedPhrases {
+        #expect(
+            policy.localizedCaseInsensitiveContains(phrase),
+            "Hosted Privacy Policy stub at .squad/files/privacy-policy.md must contain '\(phrase)' — keeps the hosted-URL copy aligned with `ProductCopy.aboutPrivacy` and `ProductCopy.locationPrivacyLine` lanes."
+        )
+    }
+}
+
+/// EH2 — WI-plunder-m1: the hosted Privacy Policy stub explicitly
+/// covers the Pattern-B disclaimer-version persistence (matching the
+/// WI-iris-c truth fix in `cacheRetentionLine` and `aboutPrivacy`).
+@Test func test_EH2_hostedPrivacyPolicyDescribesDisclaimerVersionPersistence() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let policyURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent(".squad/files/privacy-policy.md")
+    let policy = try String(contentsOf: policyURL, encoding: .utf8)
+
+    #expect(
+        policy.contains("disclaimerPolicyVersion"),
+        "Hosted Privacy Policy stub must name the `disclaimerPolicyVersion` UserDefaults key so a hosted-policy reviewer sees the same Pattern-B implementation reference as the in-app reviewer."
+    )
+    #expect(
+        policy.localizedCaseInsensitiveContains("re-prompt"),
+        "Hosted Privacy Policy stub must describe the re-prompt cadence (the `disclaimerPolicyVersion` bump → cover re-fires) consistently with `ProductCopy.aboutPrivacy`."
+    )
+}
+
+// MARK: - Group EI: WI-iris-i — orphan photosensitizationBannerLabel
+//                              AUDIT-ONLY annotation
+
+/// EI1 — WI-iris-i: `photosensitizationBannerLabel` is still in
+/// `ProductCopy` but is no longer rendered at runtime (the K-1 banner
+/// retirement, see `.squad/decisions.md` ~L739, moved L3 reach-back to
+/// the toolbar ⓘ button). The constant is retained for spec/audit
+/// fidelity; this guard pins that **no Swift source file under
+/// `Sources/UVBurnTimer/`** references the constant for rendering.
+@Test func test_EI1_photosensitizationBannerLabelIsNotRenderedAtRuntime() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let appViewsURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimer/AppViews.swift")
+    let appViews = try String(contentsOf: appViewsURL, encoding: .utf8)
+    let appURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimer/UVBurnTimerApp.swift")
+    let app = try String(contentsOf: appURL, encoding: .utf8)
+
+    #expect(
+        !appViews.contains("photosensitizationBannerLabel"),
+        "AppViews.swift must not reference ProductCopy.photosensitizationBannerLabel at the render layer — the K-1 banner retirement moved L3 reach-back to the toolbar ⓘ button. The constant is retained AUDIT-ONLY in ProductCopy for spec fidelity."
+    )
+    #expect(
+        !app.contains("photosensitizationBannerLabel"),
+        "UVBurnTimerApp.swift must not reference ProductCopy.photosensitizationBannerLabel at the render layer (banner retired by K-1)."
+    )
+}

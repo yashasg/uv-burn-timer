@@ -175,4 +175,19 @@ within the last build cycle. Add a one-line pointer in `loop.md`
 referencing both files so future loops know to run them before
 declaring launch-ready.
 
+## Companion gates (Loop-11 additions)
+
+For App Store submission (and especially EU / EEA / UK submission)
+the following sibling gates ALSO need a green Plunder sign-off
+before the same TestFlight build is promoted to production:
+
+- `.squad/files/privacy-policy.md` — hosted Privacy Policy stub
+  (WI-plunder-m1). Substring-pinned against `ProductCopy.aboutPrivacy`
+  + `cacheRetentionLine` by Group EH in `BurnTimeCalculatorTests.swift`.
+  Hosting at a stable public URL is a Plunder + repo-owner action
+  that cannot be performed by an automated agent.
+- `.squad/files/plunder-eu-counsel-checklist.md` — EU pre-submit
+  counsel checklist (WI-plunder-m4). 10 sign-off rows owned by
+  Plunder; cannot be signed by an automated agent or CI.
+
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
