@@ -278,6 +278,7 @@ public enum ProductCopy {
         lastUpdatedLine,
         outdoorReadabilityTip,
         weatherAttributionServiceName,
+        weatherAttributionLegalURLString,
         weatherDataAttributionBody,
         pricingLine,
     ]
