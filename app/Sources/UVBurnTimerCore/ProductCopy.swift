@@ -258,15 +258,35 @@ public enum EstimateContextLine {
 }
 
 public enum HeroAccessibilitySummary {
+    /// Compose the VoiceOver read-out for the hero card.
+    ///
+    /// - Parameter forecastDateContext: WI-s — optional date prefix the
+    ///   hero card renders above the gauge when the user selects a
+    ///   forecast time other than "now" (e.g., "Burn time on Wed, 6 PM").
+    ///   When non-nil and non-blank, the resulting summary leads with the
+    ///   context as its own sentence so screen reader users know they
+    ///   are inspecting a forecasted moment rather than the live UV
+    ///   reading. When nil or blank (whitespace-only), the read-out is
+    ///   byte-for-byte identical to the pre-WI-s shape — preserving the
+    ///   "now" backward-compatibility contract pinned by
+    ///   `heroAccessibilitySummaryCombinesSafetyCriticalVerdictContext`.
     public static func text(
         estimate: BurnTimeEstimate,
         uvIndex: Double?,
-        verdict: String
+        verdict: String,
+        forecastDateContext: String? = nil
     ) -> String {
         let uvText =
             uvIndex.map { "Current UV index: \($0.formatted(.number.precision(.fractionLength(1))))." }
             ?? "UV index unavailable."
-        return "\(estimate.accessibilitySummary) \(uvText) \(verdict) tier. Estimated only, not medical advice."
+        let baseSummary = "\(estimate.accessibilitySummary) \(uvText) \(verdict) tier. Estimated only, not medical advice."
+
+        guard let trimmed = forecastDateContext?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
+            return baseSummary
+        }
+
+        let terminated = trimmed.last.map { ".!?".contains($0) } == true ? trimmed : "\(trimmed)."
+        return "\(terminated) \(baseSummary)"
     }
 }
 
