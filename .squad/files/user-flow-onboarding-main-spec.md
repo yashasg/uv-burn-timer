@@ -172,4 +172,4 @@ Per Suchi's note "**Don't reify an architecture we deliberately don't have**":
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
 
-*Last reconciled with code: `8a3406a` — 2026-05-20 (WI-41: §LANE 2 #6 location chip example updated to `UVCoordinate.privacyDisplayText` rounded-coordinate string; no city name / reverse-geocoding in v1)*
+*Last reconciled with code: `da22498` — 2026-05-21 (WI-h: ADR-0001 hero card wrapper preserves toolbar hit-test — R7a/R7b causal-binding guards in BurnTimeCalculatorTests; cycle also shipped WI-g/WI-j dead-test wiring + CI membership guard `d1530a5`, WI-l ADR-0001 ratification `4efacbb`, WI-w L1 storage-disclosure sentence `626e261`, and the toolbar ⓘ EstimateInfoButton chrome-less hero card `8f2f16d`/`9da54cf`. Previous reconciliation: `8a3406a` — 2026-05-20 (WI-41).)*
