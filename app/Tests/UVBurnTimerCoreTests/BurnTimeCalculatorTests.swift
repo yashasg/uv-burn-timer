@@ -1788,6 +1788,7 @@ private func _forecastPickerSourceForGroupR() throws -> String {
 
 
 
+
 // MARK: - Group X: Hero ↔ UVIndex separator (WI-t, AX5 pass)
 //
 // Loop-9 Iris polish — at non-AX dynamic type sizes the previous
@@ -1889,6 +1890,60 @@ private func _forecastPickerSourceForGroupR() throws -> String {
     #expect(
         !cardBody.contains("cornerRadius: 16"),
         "UVIndexPlaceholderCard body must not re-add `cornerRadius: 16` chrome."
+    )
+}
+
+// MARK: - Group Y: mainInputsRow inputs-vs-outputs hierarchy (WI-q)
+//
+// Loop-9 Wheeler/Iris polish — the chip row (skinType + location + SPF)
+// is the input surface that drives the burn-time estimate displayed in
+// the hero region (the output surface). Prior to WI-q the row had no
+// section label and the relationship to the gauge was implicit, leaving
+// repeat users to infer that changing a chip should refresh the hero.
+// WI-q adds a quiet "Inputs" caption header (uppercase + .secondary)
+// above the chips so the visual reading order is:
+//
+//   Hero gauge / verdict      ← OUTPUT
+//   Divider() (WI-t)
+//   UV Index 6.2              ← DATA
+//   Inputs                    ← LABEL
+//     skinType  location  SPF ← INPUTS
+//
+// The header carries `.accessibilityAddTraits(.isHeader)` so VoiceOver
+// users get the same hierarchy cue ("Inputs, heading" → "Skin type" →
+// "Location" → "SPF") and `accessibilityIdentifier("MainInputsRowHeader")`
+// so XCUI can pin the header's existence without depending on the
+// user-facing string.
+//
+// Y1 — mainInputsRow body must render `Text("Inputs")` with
+//      accessibilityIdentifier "MainInputsRowHeader" and the .isHeader
+//      a11y trait.
+
+/// Y1 — mainInputsRow renders the "Inputs" section header with the
+/// MainInputsRowHeader identifier + .isHeader a11y trait.
+@Test func test_Y1_mainInputsRowHasInputsHeader() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let bodyStart = lines.firstIndex(where: { $0.contains("private var mainInputsRow: some View") }) else {
+        Issue.record("mainInputsRow property not found")
+        return
+    }
+    let bodyEnd: Int = lines[(bodyStart + 1)...].firstIndex(where: {
+        $0.contains("private var ") && !$0.contains("mainInputsRow")
+    }) ?? lines.endIndex
+    let stackBody = lines[bodyStart..<bodyEnd].joined(separator: "\n")
+
+    #expect(
+        stackBody.contains(#"Text("Inputs")"#),
+        "mainInputsRow must render a `Text(\"Inputs\")` section header — WI-q surfaces the inputs-vs-outputs hierarchy that the chips drive the hero gauge."
+    )
+    #expect(
+        stackBody.contains(#".accessibilityIdentifier("MainInputsRowHeader")"#),
+        "mainInputsRow header must carry accessibilityIdentifier \"MainInputsRowHeader\" so XCUI can pin the header's existence without depending on the user-facing string."
+    )
+    #expect(
+        stackBody.contains(".accessibilityAddTraits(.isHeader)"),
+        "mainInputsRow header must carry `.accessibilityAddTraits(.isHeader)` so VoiceOver users get the same inputs-section cue as sighted users."
     )
 }
 
