@@ -1246,6 +1246,39 @@ import Testing
     UserPreferenceStorage.clearStoredPreferences(from: defaults)
     #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSkinType == nil)
     #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30)
+    // MT-H1: clearStoredPreferences must also remove the rationale + disclaimer
+    // policy version keys. Regressions that drop those `removeObject` calls would
+    // otherwise ship green.
+    #expect(defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.selectedSPFKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey) == nil)
+}
+
+/// MT-H1 — Direct, dedicated guard for the rationale + disclaimer-version key
+/// removal. Complements the broader `userPreferenceStorageRestoresSkinTypeSPFAndSafeDefaults`
+/// test so the regression is callable out on its own and survives editorial churn
+/// of the broader restore/clear roundtrip test.
+@Test func test_MT_H1_clearStoredPreferences_also_removes_rationale_and_disclaimer_keys() throws {
+    let defaults = try #require(UserDefaults(suiteName: "UVBurnTimerPreferenceStorageMTH1Tests"))
+    defaults.removePersistentDomain(forName: "UVBurnTimerPreferenceStorageMTH1Tests")
+
+    defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+    defaults.set(
+        UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+    )
+    UserPreferenceStorage.persist(skinType: .typeIII, to: defaults)
+    UserPreferenceStorage.persist(spf: .spf50, to: defaults)
+
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+
+    #expect(defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.selectedSPFKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey) == nil)
+
+    defaults.removePersistentDomain(forName: "UVBurnTimerPreferenceStorageMTH1Tests")
 }
 
 /// Ma-Ti L13-5 — `UserPreferenceStorage.restoredSPF` coerces a stored raw
@@ -4131,4 +4164,98 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
     #expect(body.contains("roundedCoordinate = nil"))
     #expect(body.contains("forecastSnapshot = nil"))
     #expect(body.contains("cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue"))
+}
+
+// MARK: - WI-loop14-high
+
+/// K-H1 — existing users (those who don't see the L1 disclaimer cover) must
+/// have their restored session pre-acknowledged so the first "Use my location"
+/// tap doesn't throw `.disclaimerNotAcknowledged` and show "Review the
+/// disclaimer before requesting UV." — there is no disclaimer to review.
+///
+/// Mirrors the init logic in `UVBurnTimerApp.swift`:
+///   `restoredSession(from: defaults, acknowledgedDisclaimer: !initialShowDisclaimer)`
+@Test func test_KH1_existingUserSessionIsPreAcknowledged() throws {
+    let suiteName = "UVBurnTimerKH1Tests"
+    let defaults = try #require(UserDefaults(suiteName: suiteName))
+    defaults.removePersistentDomain(forName: suiteName)
+
+    // Seed an existing user: a valid stored Fitzpatrick skin type, plus the
+    // current disclaimer policy version (i.e. they already migrated through
+    // shouldShowDisclaimerCover on a prior launch).
+    UserPreferenceStorage.persist(skinType: .typeIII, to: defaults)
+    defaults.set(
+        UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+    )
+
+    let showDisclaimer = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+    #expect(!showDisclaimer, "Existing user at current policy version must not see L1 cover")
+
+    let session = UserPreferenceStorage.restoredSession(
+        from: defaults,
+        acknowledgedDisclaimer: !showDisclaimer
+    )
+    #expect(session.acknowledgedDisclaimer,
+            "Existing users (no cover) must have acknowledgedDisclaimer == true so fetchEstimate doesn't throw .disclaimerNotAcknowledged")
+    #expect(session.selectedSkinType == .typeIII)
+
+    defaults.removePersistentDomain(forName: suiteName)
+}
+
+/// K-H2 — `handleAppear()` must kick off `refreshForecastIfNeeded()` so the
+/// cached forecast loads at cold-start. scenePhase is already `.active` at
+/// cold launch, so the onChange-based path in `handleScenePhaseChange` never
+/// fires.
+///
+/// Source-text guard (matches the `_appViewsSourceForGroupR()` pattern used by
+/// existing EJ/EK/Group-R tests).
+@Test func test_KH2_handleAppearTriggersRefreshNotJustScenePhaseChange() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    // Find the handleAppear function body and assert it contains the refresh call.
+    guard let appearRange = source.range(of: "private func handleAppear()") else {
+        Issue.record("handleAppear() not found in AppViews.swift")
+        return
+    }
+
+    // Take a generous window after the declaration — handleAppear is short.
+    let after = source[appearRange.upperBound...]
+    let window = String(after.prefix(800))
+    #expect(window.contains("refreshForecastIfNeeded"),
+            "handleAppear must call refreshForecastIfNeeded so cold-start cached forecasts load (K-H2)")
+}
+
+/// S-H1 — `BurnRiskGaugeCard.supportingText` must always render as visible
+/// caption text, not be gated behind `differentiateWithoutColor`. The giant
+/// numeral inside a depleting ring otherwise reads as a live countdown timer
+/// to sighted users; the "% elapsed" framing is the visible signal that it
+/// is an estimate.
+@Test func test_SH1_burnRiskGaugeSupportingTextAlwaysRendered() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    // Locate the BurnRiskGaugeCard struct body.
+    guard let structRange = source.range(of: "struct BurnRiskGaugeCard: View") else {
+        Issue.record("struct BurnRiskGaugeCard not found in AppViews.swift")
+        return
+    }
+
+    // Scope the search to the next ~2000 chars — well within the struct body.
+    let scoped = String(source[structRange.upperBound...].prefix(2000))
+
+    // supportingText must be referenced (rendered as Text).
+    #expect(scoped.contains("Text(supportingText)"),
+            "BurnRiskGaugeCard must render Text(supportingText)")
+
+    // It must NOT be gated by `if differentiateWithoutColor { ... Text(supportingText) ... }`.
+    // We assert no `if differentiateWithoutColor` appears between the struct
+    // declaration and the first supportingText reference inside the body.
+    if let supportingRange = scoped.range(of: "Text(supportingText)") {
+        let beforeSupporting = scoped[..<supportingRange.lowerBound]
+        #expect(!beforeSupporting.contains("if differentiateWithoutColor"),
+                "Text(supportingText) must not be gated behind `if differentiateWithoutColor` (S-H1)")
+    }
 }

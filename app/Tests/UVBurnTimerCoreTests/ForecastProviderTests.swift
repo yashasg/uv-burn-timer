@@ -264,3 +264,30 @@ private func makeFullSnapshot(
                 "Forbidden SPF key '\(key)' found in ForecastSnapshot JSON")
     }
 }
+
+// MARK: - WI-loop14-high
+
+/// K-H3 — `ForecastRefreshCoordinator.fetchCallCount` must increment exactly
+/// once per user-perceived fetch attempt, even when the provider throws.
+///
+/// Previously, both the `do` block (before the fetch) and the `catch` block
+/// incremented `fetchCallCount`, so a single failed fetch registered as 2.
+@Test func test_KH3_fetchCallCountIncrementedOnceEvenWhenFetchThrows() async throws {
+    let url = isolatedStoreURL()
+    defer { try? FileManager.default.removeItem(at: url) }
+    let store = ForecastStore(fileURL: url)
+    // No snapshot saved → needsRefresh is true on the first call.
+
+    let provider = FailingForecastProvider(error: URLError(.notConnectedToInternet))
+    let coordinator = ForecastRefreshCoordinator(store: store, provider: provider)
+
+    await coordinator.handleSceneActive(
+        currentLatitude: sfCoordProvider.latitude,
+        currentLongitude: sfCoordProvider.longitude,
+        now: Date()
+    )
+
+    let coordinatorFetchCount = await coordinator.fetchCallCount
+    #expect(coordinatorFetchCount == 1,
+            "fetchCallCount must increment exactly once per attempt, even when fetch throws (K-H3)")
+}

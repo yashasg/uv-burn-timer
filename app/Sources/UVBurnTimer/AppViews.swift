@@ -518,6 +518,9 @@ struct RootView: View {
     private func handleAppear() {
         syncPreferenceStorageFromSession()
         restoreSavedRoundedCoordinate()
+        // K-H2: cold-start cached forecast load. scenePhase is already `.active`
+        // at cold launch, so onChange never fires — kick off the refresh here.
+        Task { await refreshForecastIfNeeded() }
         applyUITestStaleEstimateSeedIfNeeded()
         applyUITestCappedEstimateSeedIfNeeded()
         applyUITestLongUncappedEstimateSeedIfNeeded()
@@ -1821,12 +1824,13 @@ struct BurnRiskGaugeCard: View {
         VStack(spacing: 16) {
             gauge
 
-            if differentiateWithoutColor {
-                Text(supportingText)
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .accessibilityHidden(true)
-            }
+            // S-H1: always render supportingText so sighted users see the
+            // "% elapsed" framing — the giant numeral inside a depleting ring
+            // otherwise reads identical to a live countdown timer.
+            Text(supportingText)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity)
     }
