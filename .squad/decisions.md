@@ -3151,7 +3151,7 @@ Both checklists are correctly marked as incomplete. The automated portion of Goa
 | Settings gear `.gearshape` SF Symbol | Symbol name | ✅ |
 | `photosensitizationBannerLabel` copy | Matches `ProductCopy` constant | ✅ |
 | Banner HC opacity variants (0.18/0.35 yellow, 0.55/0.85 orange) | `colorSchemeContrast` gating | ✅ |
-| `burnTimeEstimateTitle` in hero card | Matches `ProductCopy.burnTimeEstimateTitle` | ✅ |
+| ~~`burnTimeEstimateTitle` in hero card~~ *(retired 2026-05-21 in commit `9da54cf` along with the hero card chrome — the `Burn-time estimate` label row above the gauge no longer renders, the `ProductCopy.burnTimeEstimateTitle` constant was deleted, and `MainScreenCleanupContractTests.test_R3_burnTimeEstimateTitleIsRetired` pins the no-reintroduction rule. WI-v archival annotation, ninth loop.)* | ~~Matches `ProductCopy.burnTimeEstimateTitle`~~ — surface and constant both removed | ⚠️ historical |
 | `mainVerdictCaveatLinkLabel` caveat link | Matches `ProductCopy.mainVerdictCaveatLinkLabel` | ✅ |
 | Hero caveat `NavigationLink` → `AboutView(highlightEstimateApplicability: true)` | Route | ✅ |
 | `disclaimerLinkLabel` footer link | Matches `ProductCopy.disclaimerLinkLabel` | ✅ |
