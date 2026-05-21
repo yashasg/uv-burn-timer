@@ -1144,7 +1144,7 @@ private func _appViewsSourceForGroupR() throws -> String {
     let source = try _appViewsSourceForGroupR()
     #expect(
         source.contains("struct HeroTimerCard: View"),
-        "HeroTimerCard View struct must remain a wrapper — inlining it into RootView regresses XCUI testSettingsSheetOpens (toolbar gear button stops opening Settings sheet)."
+        "HeroTimerCard View struct must remain a wrapper — inlining it into RootView regresses XCUI testSettingsSheetOpens (toolbar gear button stops opening Settings sheet). See .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md for the architectural rationale."
     )
 }
 
@@ -1156,7 +1156,7 @@ private func _appViewsSourceForGroupR() throws -> String {
     let source = try _appViewsSourceForGroupR()
     #expect(
         source.contains("HeroTimerCard("),
-        "RootView.heroTimerCardView must instantiate HeroTimerCard(...) — see R1 for the regression this guards."
+        "RootView.heroTimerCardView must instantiate HeroTimerCard(...) — see R1 and .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md for the regression this guards."
     )
 }
 
@@ -1237,5 +1237,111 @@ private func _appViewsSourceForGroupR() throws -> String {
     #expect(
         !ProductCopy.mainVerdictCaveatLinkLabel.isEmpty,
         "ProductCopy.mainVerdictCaveatLinkLabel must remain non-empty — required by AboutView highlight anchor and the toolbar ⓘ Reach-Back (K-2)."
+    )
+}
+
+// MARK: - Group R causal binding (WI-h)
+//
+// R1 and R2 pin the *static* facts: HeroTimerCard exists as a struct and is
+// invoked from RootView. They do not by themselves prove the *causal chain*
+// that the wrapper is what protects the toolbar ⓘ → Settings sheet flow. The
+// XCUI testSettingsSheetOpens is the behavioral check; R7 closes the gap at
+// the source-text layer by pinning the co-location invariants that, if
+// violated, reproduce the 8th-loop regression class even when R1 and R2 stay
+// green:
+//
+//   * R7a — RootView body co-locates `HeroTimerCard(`,
+//     `.sheet(isPresented: $showSettings)`, and the `showSettings = true`
+//     Button action. If a future refactor moves the sheet off RootView (e.g.,
+//     onto HeroTimerCard or onto a separate `SettingsHost` view) the
+//     identity-boundary protection R1/R2 provide becomes irrelevant because
+//     the regression mechanism is no longer the same.
+//   * R7b — `HeroTimerCard`'s own body must NOT host the toolbar Button, the
+//     `.sheet(isPresented: $showSettings)` modifier, or the
+//     `showSettings = true` action. Inlining any of those into the wrapper
+//     would re-create the identity collapse: the sheet would be owned by a
+//     descendant of the same struct whose body contains the gear Button,
+//     scrambling presentation-slot resolution exactly as `9da54cf` did.
+//
+// Together R7a + R7b pin the *binding* between (toolbar Button, sheet
+// modifier, hero card wrapper invocation) and prove they remain three
+// siblings of RootView rather than collapsing into a single nested chain.
+//
+// Reference: .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md
+
+private func _rootViewBodySliceForGroupR() throws -> String {
+    let source = try _appViewsSourceForGroupR()
+    guard let rootStart = source.range(of: "struct RootView: View {") else {
+        Issue.record("Could not locate `struct RootView: View {` in AppViews.swift")
+        return ""
+    }
+    let after = source[rootStart.upperBound...]
+    // Slice from RootView start up to the *next* top-level `struct ...: View {`
+    // declaration. That puts every nested member of RootView (computed `var`s,
+    // helper functions, the body modifier chain) into the slice while excluding
+    // sibling structs such as HeroTimerCard, SettingsSheet, AboutView, etc.
+    if let nextStruct = after.range(of: #"\nstruct [A-Z]\w*: View \{"#, options: .regularExpression) {
+        return String(after[..<nextStruct.lowerBound])
+    }
+    return String(after)
+}
+
+private func _heroTimerCardBodySliceForGroupR() throws -> String {
+    let source = try _appViewsSourceForGroupR()
+    guard let heroStart = source.range(of: "struct HeroTimerCard: View {") else {
+        Issue.record("Could not locate `struct HeroTimerCard: View {` in AppViews.swift")
+        return ""
+    }
+    let after = source[heroStart.upperBound...]
+    if let nextStruct = after.range(of: #"\nstruct [A-Z]\w*: View \{"#, options: .regularExpression) {
+        return String(after[..<nextStruct.lowerBound])
+    }
+    return String(after)
+}
+
+/// R7a — RootView body co-locates the three pieces whose binding the wrapper
+/// architecture protects.
+///
+/// If any of these three predicates fails, the wrapper is no longer doing
+/// the job it was restored to do — either the call-site moved away from the
+/// toolbar/sheet pair, or the sheet/toolbar moved away from the call-site,
+/// either of which invalidates the causal chain that R1 and R2 implicitly
+/// assume. Reference: ADR-0001.
+@Test func test_R7a_rootViewBodyColocatesHeroSheetAndToolbarButton() throws {
+    let body = try _rootViewBodySliceForGroupR()
+    #expect(
+        body.contains("HeroTimerCard("),
+        "RootView body must invoke `HeroTimerCard(` so the wrapper sits as a sibling of the toolbar Button + sheet. If you moved the hero into a different parent view, you also moved it away from the toolbar/sheet that R1/R2 protect — and the wrapper no longer carries the architectural load described in .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md."
+    )
+    #expect(
+        body.contains(".sheet(isPresented: $showSettings)"),
+        "RootView body must host `.sheet(isPresented: $showSettings)`. Moving this sheet onto HeroTimerCard, SettingsHost, or anywhere else re-introduces the regression class the wrapper was restored to prevent (see ADR-0001)."
+    )
+    #expect(
+        body.contains("showSettings = true"),
+        "RootView body must contain the `showSettings = true` toolbar Button action. If the toolbar gear Button is moved onto a child view (e.g., HeroTimerCard) the identity-boundary protection collapses for the same reason the original 9da54cf inlining broke `testSettingsSheetOpens` (see ADR-0001)."
+    )
+}
+
+/// R7b — HeroTimerCard's own body must NOT host the toolbar Button, the
+/// Settings sheet modifier, or the `showSettings` flip.
+///
+/// Inlining any of those into the wrapper would defeat the wrapper: the
+/// presentation slot would be owned by the same struct whose body contains
+/// the gear Button, which is exactly the identity collapse `9da54cf`
+/// produced. Reference: ADR-0001.
+@Test func test_R7b_heroTimerCardBodyDoesNotHostToolbarSheetOrShowSettingsFlip() throws {
+    let body = try _heroTimerCardBodySliceForGroupR()
+    #expect(
+        !body.contains(".sheet(isPresented: $showSettings)"),
+        "HeroTimerCard must NOT host `.sheet(isPresented: $showSettings)` — putting the Settings sheet inside the wrapper re-creates the SwiftUI identity collapse the wrapper was restored to prevent (see ADR-0001). Keep the sheet on RootView."
+    )
+    #expect(
+        !body.contains(".toolbar {"),
+        "HeroTimerCard must NOT host its own `.toolbar { ... }` modifier — the toolbar belongs to RootView. Hosting it inside the wrapper would re-introduce the regression class (see ADR-0001). Keep `.toolbar` on RootView's navigationStackBase."
+    )
+    #expect(
+        !body.contains("showSettings = true"),
+        "HeroTimerCard must NOT contain a `showSettings = true` action — that Button action belongs in RootView so the toolbar sibling tap reaches RootView's `.sheet(isPresented: $showSettings)` without crossing the wrapper's identity boundary (see ADR-0001)."
     )
 }
