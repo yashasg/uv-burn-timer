@@ -211,3 +211,5 @@ Plunder's C1–C10 constraints are satisfied as follows. No new open gates remai
 
 *End of spec v2.*
 *Revised 2026-05-21T04:30:00Z. EstimateInfoSheet eliminated; all Plunder C1–C10 satisfied by toolbar ⓘ → existing AboutView.*
+
+*Reconciled with code 2026-05-21T12:48Z — shipped as the K-1..K-9 + WI-50–WI-53 sequence (PRs #16/#19/#20/#21 — chrome-less hero card `9da54cf`/`8f2f16d`, hero card wrapper restore `f74ce6f`, ADR-0001 `4efacbb`). Toolbar ⓘ (`EstimateInfoButton`) NavigationLink to `AboutView(highlightEstimateApplicability: true)` is the shipped reach-back; line numbers in §1A/1B/1C above are pinned to the pre-cleanup snapshot and may drift — for current line numbers grep `EstimateInfoButton` / `mainVerdictCaveatLinkLabel` / `LocationRationaleCard` in `app/Sources/UVBurnTimer/AppViews.swift`. R6 + R8 source-text contracts in `BurnTimeCalculatorTests.swift` freeze the post-cleanup invariants per ADR-0001.*
