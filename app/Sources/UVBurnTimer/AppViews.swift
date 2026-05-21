@@ -44,7 +44,9 @@ struct RootView: View {
     // Prevents system snap-to-nearest from overriding an explicit user choice.
     @State private var selectedDateIsUserOverridden: Bool = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    // WI-kwame-k2 (Loop-11) — `colorSchemeContrast` env was previously
+    // declared on RootView but never read in its body. Removed; TierBadge
+    // (the only consumer) declares its own copy at the consumer site.
 
     var body: some View {
         mainNavigationStack
@@ -1790,6 +1792,10 @@ struct BurnRiskGaugeCard: View {
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @ScaledMetric(relativeTo: .largeTitle) private var gaugeDiameter = 188
     @ScaledMetric(relativeTo: .title) private var gaugeLineWidth = 18
+    // WI-kwame-k3 (Loop-11) — gauge numeral now Dynamic-Type-aware so
+    // the inner text scales with the outer ring at AX5 instead of staying
+    // pinned at 42 pt while the ring grew.
+    @ScaledMetric(relativeTo: .largeTitle) private var gaugeNumeralSize: CGFloat = 42
 
     var body: some View {
         VStack(spacing: 16) {
@@ -1818,7 +1824,7 @@ struct BurnRiskGaugeCard: View {
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 4) {
                 Text(remainingText)
-                    .font(.system(size: 42, weight: .heavy, design: .rounded))
+                    .font(.system(size: gaugeNumeralSize, weight: .heavy, design: .rounded))
                     .minimumScaleFactor(0.6)
                 Text("est. window")
                     .font(.caption.weight(.semibold))
@@ -1894,6 +1900,8 @@ struct BurnRiskGaugeUnavailableCard: View {
     @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     @ScaledMetric(relativeTo: .largeTitle) private var gaugeDiameter = 188
     @ScaledMetric(relativeTo: .title) private var gaugeLineWidth = 18
+    // WI-kwame-k3 (Loop-11) — companion to BurnRiskGaugeCard's gaugeNumeralSize.
+    @ScaledMetric(relativeTo: .largeTitle) private var gaugePlaceholderNumeralSize: CGFloat = 48
 
     var body: some View {
         VStack(spacing: 16) {
@@ -1921,7 +1929,7 @@ struct BurnRiskGaugeUnavailableCard: View {
                 .stroke(Color.secondary.opacity(0.28), lineWidth: gaugeLineWidth)
             VStack(spacing: 4) {
                 Text("—")
-                    .font(.system(size: 48, weight: .heavy, design: .rounded))
+                    .font(.system(size: gaugePlaceholderNumeralSize, weight: .heavy, design: .rounded))
                 Text("unavailable")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -1945,6 +1953,12 @@ struct PersistentFooter: View {
         } label: {
             Label(ProductCopy.disclaimerLinkLabel, systemImage: "info.circle")
                 .font(.caption.weight(.semibold))
+                // WI-iris-e (Loop-11) — Plunder's always-visible disclaimer
+                // reach-back must not fall below the 44 pt HIG hit-target
+                // floor at default Dynamic Type. The chips at lines 295 /
+                // 315 / 337 already set this; the footer was the only
+                // disclaimer-reach surface without it.
+                .frame(minHeight: 44, alignment: .leading)
         }
         .foregroundStyle(.tint)
         .accessibilityLabel(ProductCopy.disclaimerLinkLabel)

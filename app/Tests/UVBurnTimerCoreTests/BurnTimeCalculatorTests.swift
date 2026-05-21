@@ -3364,6 +3364,7 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
     #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.aboutSunSafetyActions))
 }
 
+
 // MARK: - Group JJ: Loop-12 Bundle J — Iris VoiceOver hygiene (5 MEDIUM + 1 LOW + 1 HIGH)
 //
 // Closes six SF-Symbol auto-label leaks and the AboutView H2 duplication
@@ -3574,4 +3575,108 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
     let titles = ProductCopy.citationLinks.map(\.title)
     #expect(urls.count == Set(urls).count, "citationLinks must not contain duplicate URLs.")
     #expect(titles.count == Set(titles).count, "citationLinks must not contain duplicate titles.")
+}
+
+// MARK: - Group EJ: Loop-11 Bundle D — Kwame iOS code hygiene + Iris-e
+
+/// EJ1 — WI-kwame-k2: `RootView` no longer declares the dead
+/// `@Environment(\.colorSchemeContrast)` env var. The Kwame Loop-11 gap
+/// report confirmed it was declared but never read in RootView's body
+/// (the only consumer is `TierBadge`, which declares its own copy at the
+/// consumer site). Keeping a dead env declaration costs a SwiftUI
+/// dependency edge and a redraw.
+@Test func test_EJ1_rootViewDoesNotDeclareDeadColorSchemeContrastEnv() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let rootViewStart = lines.firstIndex(where: { $0.contains("struct RootView: View") }) else {
+        Issue.record("RootView struct not found")
+        return
+    }
+    // RootView's property block ends at the first `var body: some View`.
+    guard let bodyIdx = lines[rootViewStart...].firstIndex(where: { $0.contains("var body: some View") }) else {
+        Issue.record("RootView var body not found")
+        return
+    }
+    let rootViewProperties = lines[rootViewStart..<bodyIdx].joined(separator: "\n")
+    #expect(
+        !rootViewProperties.contains("@Environment(\\.colorSchemeContrast)"),
+        "RootView must not declare @Environment(\\.colorSchemeContrast) — it was dead code (never read in RootView's body). TierBadge declares its own copy at the consumer site."
+    )
+}
+
+/// EJ2 — WI-kwame-k3: `BurnRiskGaugeCard`'s gauge numeral is sized via
+/// an @ScaledMetric so it scales with Dynamic Type at AX5 alongside the
+/// outer ring (which already used `@ScaledMetric(relativeTo: .largeTitle)`
+/// for `gaugeDiameter`). Previously the numeral stayed pinned at 42 pt
+/// while the ring grew, producing a misshapen ratio at AX5.
+@Test func test_EJ2_burnRiskGaugeCardNumeralIsScaledMetric() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct BurnRiskGaugeCard: View") }) else {
+        Issue.record("BurnRiskGaugeCard struct not found")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let body = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    #expect(
+        body.contains("@ScaledMetric(relativeTo: .largeTitle) private var gaugeNumeralSize"),
+        "BurnRiskGaugeCard must declare `@ScaledMetric(relativeTo: .largeTitle) private var gaugeNumeralSize` so the inner numeral scales with Dynamic Type alongside the outer ring at AX5."
+    )
+    #expect(
+        body.contains("Text(remainingText)\n                    .font(.system(size: gaugeNumeralSize"),
+        "BurnRiskGaugeCard's remainingText Text must use `.font(.system(size: gaugeNumeralSize, …))` — the dead literal `42` is replaced by the ScaledMetric."
+    )
+    #expect(
+        !body.contains(".font(.system(size: 42"),
+        "BurnRiskGaugeCard must not retain the hardcoded `.font(.system(size: 42` literal — replaced by gaugeNumeralSize ScaledMetric."
+    )
+}
+
+/// EJ3 — WI-kwame-k3 sibling: `BurnRiskGaugeUnavailableCard`'s "—"
+/// placeholder also uses an @ScaledMetric.
+@Test func test_EJ3_burnRiskGaugeUnavailableCardNumeralIsScaledMetric() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct BurnRiskGaugeUnavailableCard: View") }) else {
+        Issue.record("BurnRiskGaugeUnavailableCard struct not found")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let body = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    #expect(
+        body.contains("@ScaledMetric(relativeTo: .largeTitle) private var gaugePlaceholderNumeralSize"),
+        "BurnRiskGaugeUnavailableCard must declare `gaugePlaceholderNumeralSize` ScaledMetric."
+    )
+    #expect(
+        !body.contains(".font(.system(size: 48"),
+        "BurnRiskGaugeUnavailableCard must not retain the hardcoded `.font(.system(size: 48` literal — replaced by gaugePlaceholderNumeralSize ScaledMetric."
+    )
+}
+
+/// EJ4 — WI-iris-e: `PersistentFooter`'s NavigationLink Label carries
+/// an explicit `.frame(minHeight: 44…)` so the always-visible Plunder
+/// reach-back link stays above the HIG 44 pt hit-target floor at every
+/// Dynamic Type size.
+@Test func test_EJ4_persistentFooterMeetsHIG44ptHitTarget() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let footerStart = lines.firstIndex(where: { $0.contains("struct PersistentFooter: View") }) else {
+        Issue.record("PersistentFooter struct not found")
+        return
+    }
+    let footerEnd: Int = lines[(footerStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") || $0.hasPrefix("#if DEBUG")
+    }) ?? lines.endIndex
+    let body = lines[footerStart..<footerEnd].joined(separator: "\n")
+
+    #expect(
+        body.contains(".frame(minHeight: 44"),
+        "PersistentFooter must apply `.frame(minHeight: 44…)` to its Label/NavigationLink — Plunder's always-visible disclaimer-reach surface must not fall below the 44 pt HIG hit-target floor at default Dynamic Type. See AppViews.swift chips at lines 295 / 315 / 337 for the existing pattern."
+    )
 }
