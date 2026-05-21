@@ -9,10 +9,16 @@ struct UVBurnTimerApp: App {
 
     init() {
         let defaults = UserDefaults.standard
-        var initialSession = UserPreferenceStorage.restoredSession(from: defaults)
         var initialShowDisclaimer = UserPreferenceStorage.shouldShowDisclaimerCover(
             defaults: defaults,
             currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+        )
+        // K-H1: existing users (who don't see the disclaimer cover) need their
+        // restored session pre-acknowledged so the first "Use my location" tap
+        // doesn't throw .disclaimerNotAcknowledged with no disclaimer to review.
+        var initialSession = UserPreferenceStorage.restoredSession(
+            from: defaults,
+            acknowledgedDisclaimer: !initialShowDisclaimer
         )
 
         #if DEBUG
@@ -21,10 +27,13 @@ struct UVBurnTimerApp: App {
             UserPreferenceStorage.clearStoredPreferences(from: defaults)
             UserDefaults.standard.removeObject(forKey: "lastRoundedCoordinate")
             UserDefaults.standard.removeObject(forKey: "lastUVSnapshot")
-            initialSession = UserPreferenceStorage.restoredSession(from: defaults)
             initialShowDisclaimer = UserPreferenceStorage.shouldShowDisclaimerCover(
                 defaults: defaults,
                 currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+            )
+            initialSession = UserPreferenceStorage.restoredSession(
+                from: defaults,
+                acknowledgedDisclaimer: !initialShowDisclaimer
             )
         }
         if arguments.contains("-uiTestSavedPreferences") {
@@ -34,7 +43,10 @@ struct UVBurnTimerApp: App {
                 #"{"roundedCoordinate":{"latitude":37.77,"longitude":-122.42}}"#,
                 forKey: "lastRoundedCoordinate"
             )
-            initialSession = UserPreferenceStorage.restoredSession(from: defaults)
+            initialSession = UserPreferenceStorage.restoredSession(
+                from: defaults,
+                acknowledgedDisclaimer: !initialShowDisclaimer
+            )
         }
         if arguments.contains("-uiTestCorruptRoundedCoordinate") {
             UserDefaults.standard.set("not-json", forKey: "lastRoundedCoordinate")

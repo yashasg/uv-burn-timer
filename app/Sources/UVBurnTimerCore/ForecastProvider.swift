@@ -36,9 +36,12 @@ public actor ForecastRefreshCoordinator {
     /// Call when `scenePhase` transitions to `.active`.
     /// Re-fetches if the snapshot is nil, stale, or the coord has moved > 50 km.
     public func handleSceneActive(currentLatitude: Double, currentLongitude: Double, now: Date = Date()) async {
+        // K-H3: increment exactly once per actual fetch attempt. Previously,
+        // both the `do` block (before the fetch) and the `catch` block
+        // incremented `fetchCallCount`, so a single failed fetch registered as 2.
+        let needsRefresh: Bool
         do {
             let snapshot = try await store.load()
-            let needsRefresh: Bool
             if let snapshot {
                 let stale = snapshot.isStale(now: now)
                 let outOfRange = await store.isCoordOutOfRange(
@@ -49,19 +52,17 @@ public actor ForecastRefreshCoordinator {
             } else {
                 needsRefresh = true
             }
-            if needsRefresh {
-                fetchCallCount += 1
-                let coord = UVCoordinate(latitude: currentLatitude, longitude: currentLongitude)
-                let fetched = try await provider.fetchForecast(at: coord)
-                try await store.save(fetched)
-            }
         } catch {
             // Schema mismatch or I/O error — treat as absent, attempt re-fetch
-            fetchCallCount += 1
-            let coord = UVCoordinate(latitude: currentLatitude, longitude: currentLongitude)
-            if let fetched = try? await provider.fetchForecast(at: coord) {
-                try? await store.save(fetched)
-            }
+            needsRefresh = true
+        }
+
+        guard needsRefresh else { return }
+
+        fetchCallCount += 1
+        let coord = UVCoordinate(latitude: currentLatitude, longitude: currentLongitude)
+        if let fetched = try? await provider.fetchForecast(at: coord) {
+            try? await store.save(fetched)
         }
     }
 }
