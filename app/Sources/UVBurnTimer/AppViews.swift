@@ -673,6 +673,13 @@ struct RootView: View {
         roundedCoordinate = nil
         forecastSnapshot = nil
         forecastRefreshState = .idle
+        // Kwame-L12 H3 (Group TT): also clear every piece of in-memory state
+        // derived from the coordinate so the hero card does not keep showing a
+        // burn-time estimate after the user taps "Clear saved location".
+        uvIndex = nil
+        fetchedAt = nil
+        weatherFailureMessage = nil
+        locationFailureMessage = nil
         // WI-7: forecast is keyed to location — clear it when location is cleared.
         Task { try? await forecastStore.clear() }
         statusMessage = "Saved location cleared."

@@ -4083,3 +4083,52 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
         UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30,
         "Persisting `.spf30` (the default) must restore the stored SPF to the default — this is the SettingsSheet Clear-SPF action contract."    )
 }
+
+// MARK: - Group TT: Loop-12 Bundle P — clearSavedRoundedCoordinate state coherence (Kwame H3)
+//
+// Closes a state-coherence regression surfaced by the Loop-12 Kwame
+// gap-analysis pass (claude-opus-4.7-xhigh).
+//
+// `clearSavedRoundedCoordinate()` did not reset the in-memory @State
+// `uvIndex` or `fetchedAt`. The hero card's `activeEstimate` computation
+// falls through `activeUVIndex` → `uvIndex` (the live state), so the
+// burn-time number kept rendering after the erasure.
+//
+// Fix: in addition to the existing clears, also reset `uvIndex = nil`,
+// `fetchedAt = nil`, `weatherFailureMessage = nil`, `locationFailureMessage = nil`.
+
+/// TT1 — Render-site source-text guard: `clearSavedRoundedCoordinate()`
+/// resets the in-memory location-derived @State alongside the on-disk
+/// erasure. Required clears: `uvIndex`, `fetchedAt`, `weatherFailureMessage`,
+/// `locationFailureMessage` — all in addition to the existing
+/// `roundedCoordinate`, `forecastSnapshot`, `forecastRefreshState`, and
+/// `cachedRoundedCoordinateStorage` resets.
+@Test func test_TT1_clearSavedRoundedCoordinateResetsAllLocationDerivedLiveState() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let start = lines.firstIndex(where: { $0.contains("private func clearSavedRoundedCoordinate()") }) else {
+        Issue.record("clearSavedRoundedCoordinate function not found")
+        return
+    }
+    // Look 25 lines forward to find the function body.
+    let end = min(start + 25, lines.endIndex)
+    let body = lines[start..<end].joined(separator: "\n")
+
+    let requiredResets: [String] = [
+        "uvIndex = nil",
+        "fetchedAt = nil",
+        "weatherFailureMessage = nil",
+        "locationFailureMessage = nil",
+    ]
+    for line in requiredResets {
+        #expect(
+            body.contains(line),
+            "clearSavedRoundedCoordinate() must contain `\(line)` to honor the L1 storage-disclosure erasure promise — Kwame-L12 H3 / Group TT."
+        )
+    }
+    // Sanity: the existing on-disk + snapshot clears must still be present
+    // (we extended, not replaced, the cleanup contract).
+    #expect(body.contains("roundedCoordinate = nil"))
+    #expect(body.contains("forecastSnapshot = nil"))
+    #expect(body.contains("cachedRoundedCoordinateStorage = CachedRoundedCoordinateStorage.clearedStorageValue"))
+}
