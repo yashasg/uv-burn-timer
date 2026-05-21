@@ -2062,3 +2062,97 @@ private func makeIsolatedDefaults() -> (defaults: UserDefaults, suiteName: Strin
 private func tearDownIsolatedDefaults(_ defaults: UserDefaults, suiteName: String) {
     defaults.removePersistentDomain(forName: suiteName)
 }
+
+// MARK: - Group Z: Suchi persona priming — countdown-vs-estimate misread guard (WI-o)
+//
+// Loop-9 Suchi/Wheeler behavioural-safety follow-up wi-o-suchi-persona-prime-test:
+// the hero region after commit `9da54cf` shows a bold rounded number ("47 min",
+// "~1 hr 20 min", "Up to 2 hr", "4+ hr") that stands alone without the retired
+// "Burn-time estimate" header label (R3). Wheeler flagged the risk that a
+// user — especially Asha (Accutane), Tomás (trail-runner), and Maya (open-water)
+// in Suchi's persona overlay — could glance at the number and misread it as a
+// live countdown timer they can "trust" until it hits zero, rather than as a
+// modeled erythemal-dose estimate that ignores cloud cover, reflectance,
+// photosensitizers, and other input drift.
+//
+// Mitigation already shipped: HeroAccessibilitySummary.text() composes a
+// VoiceOver read-out that ALWAYS leads with "Estimated burn time:" (or the
+// "Sunscreen reapplication window" / "Estimated burn time: 4 or more hours"
+// variants for capped cases) and ALWAYS terminates with "Estimated only, not
+// medical advice." for the verdict phrase.
+//
+// Group Z formalises that mitigation as a hard contract across all four
+// active tier shapes. A future copy refactor that drops "Estimated" or
+// introduces "remaining" / "countdown" / "until" phrasing without explicit
+// Plunder + Wheeler ratification will fail Z1/Z2 and cannot ship.
+
+private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
+    let short = try BurnTimeCalculator.estimate(
+        skinType: .typeI, spf: .unprotectedReference, uvIndex: 10)
+    let moderate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII, spf: .unprotectedReference, uvIndex: 7)
+    let cappedSunscreen = try BurnTimeCalculator.estimate(
+        skinType: .typeIII, spf: .spf30, uvIndex: 8)
+    let cappedDisplay = try BurnTimeCalculator.estimate(
+        skinType: .typeVI, spf: .unprotectedReference, uvIndex: 2)
+
+    return [
+        ("short", HeroAccessibilitySummary.text(estimate: short, uvIndex: 10, verdict: "Short")),
+        ("moderate", HeroAccessibilitySummary.text(estimate: moderate, uvIndex: 7, verdict: "Moderate")),
+        ("sunscreen-capped", HeroAccessibilitySummary.text(estimate: cappedSunscreen, uvIndex: 8, verdict: "Long")),
+        ("display-capped", HeroAccessibilitySummary.text(estimate: cappedDisplay, uvIndex: 2, verdict: "Long")),
+    ]
+}
+
+/// Z1 — every active tier's summary contains estimate-language so VoiceOver
+/// users hear it as a model output, not a live countdown.
+@Test func test_Z1_heroSummaryAlwaysNamesEstimateNotCountdown() throws {
+    for (name, summary) in try _heroSummaryCases() {
+        let mentionsEstimate =
+            summary.contains("Estimated burn time")
+            || summary.contains("Sunscreen reapplication window")
+            || summary.contains("Estimated only, not medical advice")
+        #expect(
+            mentionsEstimate,
+            "Hero accessibility summary for \(name) tier must contain estimate-language so Asha/Tomás/Maya hear this as a modeled estimate, not a live countdown. Actual summary: \(summary)"
+        )
+    }
+}
+
+/// Z2 — no active tier's summary contains countdown-implying tokens.
+@Test func test_Z2_heroSummaryNeverImpliesLiveCountdown() throws {
+    let forbiddenTokens = [
+        "remaining",
+        "countdown",
+        "until zero",
+        "in seconds",
+    ]
+    for (name, summary) in try _heroSummaryCases() {
+        for token in forbiddenTokens {
+            #expect(
+                !summary.lowercased().contains(token.lowercased()),
+                "Hero accessibility summary for \(name) tier must not contain '\(token)' — that wording reads as a live countdown rather than a modeled estimate. Actual summary: \(summary)"
+            )
+        }
+    }
+}
+
+/// Z3 — a forecast-date prefix (WI-s) does not strip the estimate semantics.
+@Test func test_Z3_forecastDatePrefixPreservesEstimateDisclaimer() throws {
+    let moderate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII, spf: .unprotectedReference, uvIndex: 7)
+    let withForecast = HeroAccessibilitySummary.text(
+        estimate: moderate,
+        uvIndex: 7,
+        verdict: "Moderate",
+        forecastDateContext: "Burn time on Wed at 6 PM"
+    )
+    #expect(
+        withForecast.hasPrefix("Burn time on Wed at 6 PM."),
+        "Forecast-date prefix must terminate as its own sentence so VoiceOver users hear it as a separate forecast-time cue ahead of the estimate body. Actual: \(withForecast)"
+    )
+    #expect(
+        withForecast.contains("Estimated only, not medical advice"),
+        "Forecast read-out must still close with the estimate disclaimer so a future-hour read-out does not drop the medical-advice guard. Actual: \(withForecast)"
+    )
+}
