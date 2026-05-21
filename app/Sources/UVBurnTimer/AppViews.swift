@@ -963,7 +963,8 @@ struct HeroTimerCard: View {
         return HeroAccessibilitySummary.text(
             estimate: estimate,
             uvIndex: uvIndex,
-            verdict: verdictText
+            verdict: verdictText,
+            forecastDateContext: forecastDateContext
         )
     }
 }

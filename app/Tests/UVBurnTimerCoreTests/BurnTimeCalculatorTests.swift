@@ -839,6 +839,170 @@ import Testing
     )
 }
 
+// MARK: - WI-s: forecastDateContext folds into HeroAccessibilitySummary
+//
+// Without WI-s, the VoiceOver summary for the hero card always reads as
+// if the gauge is showing "now" — even when the user has tapped a future
+// forecast date in ForecastPickerView and the visual hero card is
+// displaying "Burn time on Wed, 6 PM" above the gauge. Sighted users see
+// the date context as a quiet caption; VoiceOver users hear nothing and
+// believe they are looking at a live "now" estimate. WI-s closes that
+// gap by folding the forecastDateContext String into HeroAccessibilitySummary
+// when it is non-nil, so the VO read-out leads with the forecast date.
+//
+// Contract:
+//   * nil forecastDateContext (the "now" case) — VO summary is byte-for-byte
+//     identical to the pre-WI-s string (backward compatible — no existing
+//     test regression, no surprise read-out for users on "now").
+//   * non-nil forecastDateContext (e.g., "Burn time on Wed, 6 PM") — VO
+//     summary is prefixed with the date context as its own sentence, so
+//     screen reader users know they are inspecting a forecasted moment
+//     rather than the live UV reading.
+
+@Test func heroAccessibilitySummaryOmitsForecastContextWhenNil() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 6
+    )
+
+    let nowSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: nil
+    )
+
+    #expect(
+        nowSummary
+            == "Estimated burn time: 33 minutes. Current UV index: 6.0. Moderate tier. Estimated only, not medical advice."
+    )
+}
+
+@Test func heroAccessibilitySummaryLeadsWithForecastContextWhenProvided() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 6
+    )
+
+    let forecastSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: "Burn time on Wed, 6 PM"
+    )
+
+    #expect(
+        forecastSummary
+            == "Burn time on Wed, 6 PM. Estimated burn time: 33 minutes. Current UV index: 6.0. Moderate tier. Estimated only, not medical advice."
+    )
+}
+
+@Test func heroAccessibilitySummaryDefaultForecastContextIsNilForBackwardCompatibility() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 6
+    )
+
+    // Existing callers that pass only the three legacy parameters must
+    // continue to compile AND return the pre-WI-s string exactly.
+    // The forecastDateContext parameter MUST default to nil.
+    let legacySummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate"
+    )
+    let explicitNilSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: nil
+    )
+
+    #expect(legacySummary == explicitNilSummary)
+}
+
+@Test func heroAccessibilitySummaryTrimsLeadingAndTrailingWhitespaceFromForecastContext() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 6
+    )
+
+    // A defensive trim guards against the upstream ForecastPickerLogic
+    // ever emitting padded strings (newline / leading-space drift). The
+    // VO read-out should never start with whitespace nor include a
+    // trailing space before the next sentence.
+    let trimmedSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: "  Burn time on Wed, 6 PM  "
+    )
+
+    #expect(
+        trimmedSummary
+            == "Burn time on Wed, 6 PM. Estimated burn time: 33 minutes. Current UV index: 6.0. Moderate tier. Estimated only, not medical advice."
+    )
+}
+
+@Test func heroAccessibilitySummaryTreatsBlankForecastContextAsNoContext() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 6
+    )
+
+    // Empty / whitespace-only forecastDateContext must not leak a
+    // standalone period into the read-out (e.g., ". Estimated...").
+    // The function should fall back to the nil-equivalent string.
+    let blankSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: "   "
+    )
+    let nilSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: nil
+    )
+
+    #expect(blankSummary == nilSummary)
+}
+
+@Test func heroAccessibilitySummaryAppendsTerminatingPeriodToForecastContextWhenMissing() throws {
+    let estimate = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 6
+    )
+
+    // If the upstream context already terminates with punctuation, we
+    // must not double it. If it does NOT terminate (the common case for
+    // the current "Burn time on Wed, 6 PM" string), we must add a single
+    // period so VoiceOver pauses between sentences.
+    let unterminatedSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: "Burn time on Wed, 6 PM"
+    )
+    let terminatedSummary = HeroAccessibilitySummary.text(
+        estimate: estimate,
+        uvIndex: 6,
+        verdict: "Moderate",
+        forecastDateContext: "Burn time on Wed, 6 PM."
+    )
+
+    #expect(unterminatedSummary == terminatedSummary)
+    #expect(unterminatedSummary.hasPrefix("Burn time on Wed, 6 PM. "))
+    #expect(!unterminatedSummary.contains("PM.."))
+}
+
 @Test func locationPromptGateAcknowledgesRationaleBeforeAllowingSystemPrompt() {
     var gate = LocationPromptGate()
 
