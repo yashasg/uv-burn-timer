@@ -1517,6 +1517,7 @@ struct AboutView: View {
                         Text("When this estimate may not apply")
                             .font(.title3.weight(.semibold))
                             .accessibilityAddTraits(.isHeader)
+                            .accessibilityIdentifier("AboutEstimateApplicabilityHeader")
 
                         Text(ProductCopy.aboutEstimateApplicability)
                         Text(ProductCopy.photosensitizationAuthorityLine)
