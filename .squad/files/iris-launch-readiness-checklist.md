@@ -68,15 +68,15 @@ rotation angle.
 | Hero `forecastDateContext` caption above the gauge (e.g. `Burn time on Wed, 6 PM`) | Full caption | ☐ | Rendered only when a non-current forecast hour is selected; `.font(.caption)` / secondary foreground per 2026-05-21 commit `9da54cf`. Identifier `HeroForecastDateContext`. Replaces the retired `Burn-time estimate` header label. |
 | TierBadge capsule (Long/Moderate/Short) text on coloured fill | Tier word + numeric ratio | ☐ | Severity HC variants must contribute to legibility, not detract |
 | BurnRiskGauge progress arc relative to ring track | Arc must remain distinct from track at every rotation | ☐ | Test with three tier states |
-| Hero `Meds + conditions can shorten this. Learn more` caveat inline link | Full sentence + link affordance | ☐ | |
+| ~~Hero `Meds + conditions can shorten this. Learn more` caveat inline link~~ | — | n/a (relocated) | **Surface relocated by K-7 / WI-50–WI-53 + commit `9da54cf`.** The inline caveat row was lifted out of the hero card to the toolbar ⓘ button (`EstimateInfoButton`) per the spec LANE 3 callout 5 reconcile. See new "Toolbar ⓘ `EstimateInfoButton`" row in Secondary surfaces below. `ProductCopy.mainVerdictCaveatLinkLabel` constant is rendered inside `AboutView` at the `highlightEstimateApplicability` anchor; that interior render is covered by the Settings sheet / About rows. |
 
 ### Photosens banner + safety surfaces
 
 | Surface | Glyphs that must remain legible | Pass? | Notes |
 |---|---|---|---|
-| Photosens banner copy `Meds or photosensitive conditions? Learn more` | Full label + chevron | ☐ | Yellow fill must remain distinct from background |
+| ~~Photosens banner copy `Meds or photosensitive conditions? Learn more`~~ | — | n/a (retired) | **Surface retired by K-1 cleanup + commit `9da54cf` (Loop-10 WI-cc reconcile).** The standalone yellow `Photosensitization loop banner` (320×40) was removed; L3 photosensitizer reach-back is now carried by the toolbar ⓘ `EstimateInfoButton` (see new row in Secondary surfaces) + the `PersistentFooter` `Informational only. Not medical advice.` Label-link (existing row). Source-text guard `MainScreenCleanupContractTests.test_O1_photosensitizationBannerSymbolAbsentFromAppViews` hard-fails CI if the banner is reintroduced. |
 | SafetyStatusCard `Estimate window elapsed. Recalculate.` copy | Full sentence + `exclamationmark.shield.fill` icon | ☐ | Seed via `-uiTestStaleEstimate` |
-| L1 disclaimer cover `How accurate is this for you?` title | Full title + body + photosensitizer line + `see About` link + `I understand` action | ☐ | Cold launch |
+| L1 disclaimer cover `How accurate is this for you?` title | Full title + body + photosensitizer line + storage-disclosure sentence + `see About` link + `I understand` action | ☐ | Cold launch. Body now includes the L1 storage-disclosure sentence (`Your skin type and SPF are saved on this device only…`, WI-w commit `626e261`, identifier `DisclaimerStorageLine`) — verify it remains legible at every polarization angle. |
 | L1 photosensitizer warning line with orange `.semibold` styling | Full line + icon | ☐ | |
 
 ### Secondary surfaces
@@ -85,9 +85,11 @@ rotation angle.
 |---|---|---|---|
 | UV Index secondary card `UV Index 6.2` + `Source: Apple Weather` | Full digit + attribution lockup | ☐ | Attribution is contractually required to stay visible |
 | Hero ↔ UV `Divider()` (WI-t / Group X) — system separator line between `heroTimerCardView` and `uvIndexCardView` in `navigationStackBase` | Divider remains visible (NOT extinguished) at every polarization angle | ☐ | New surface added by Loop-9 WI-t (commit `5a20287`). The divider uses the system separator color, which has different polarization behaviour from custom severity tokens — this surface MUST be verified under the polarized-OLED rotation procedure so the hero/UV visual boundary survives outdoors. Pair-check with the contrast row in `iris-contrast-qa-checklist.md` line 79. |
+| Toolbar ⓘ `EstimateInfoButton` (top-bar trailing `info.circle` glyph) | Glyph remains visible at every polarization angle | ☐ | New surface added by Loop-10 WI-cc. The L3 photosensitizer reach-back **single-point-of-failure** surface now that the banner is retired. Small monochrome SF Symbol on the nav-bar background; SF Symbols are usually on the True-Tone-managed path, but a polarized-OLED extinction at any angle would silently break the only main-screen tap-to-reach for Asha/Tomás. Identifier `EstimateInfoButton`. Pair-check with the contrast row in `iris-contrast-qa-checklist.md`. |
+| Compact Skin-type chip (Fitzpatrick chip on main, post-K-5/K-6) | Full chip label + glyph + Fitzpatrick descriptor | ☐ | New surface added by Loop-10 WI-cc. `skinTypeChip` ambient repeat-use surface per spec LANE 2 #6. Pair-check with the contrast row in `iris-contrast-qa-checklist.md`. |
 | Compact Location chip (`📍 Approx. 37.77, -122.42 ›` or `Location`) | Full chip label + glyph | ☐ | Chip renders `UVCoordinate.privacyDisplayText` (rounded coordinate), not a city name |
 | Compact SPF chip (`SPF 30`, etc.) | Full chip label + glyph | ☐ | |
-| Persistent footer `Informational only. Not medical advice.` | Full link copy | ☐ | Required to stay legible — disclaimer link |
+| Persistent footer `Informational only. Not medical advice.` | Full link copy | ☐ | Required to stay legible — disclaimer link. Doubles as the secondary L3 photosensitizer reach-back surface (paired with toolbar ⓘ) per Loop-10 WI-cc after the banner retired. |
 | Apple Weather attribution lockup OR `Apple Weather` text fallback | Lockup or fallback text | ☐ | Either form is acceptable per attribution audit |
 | Onboarding skin-type picker rows (Fitzpatrick I–VI) | Numerals, descriptors, selection check | ☐ | Each row's headline + behaviour cue |
 | Settings sheet rows + section headers | All visible labels | ☐ | |
