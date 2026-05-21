@@ -1345,3 +1345,88 @@ private func _heroTimerCardBodySliceForGroupR() throws -> String {
         "HeroTimerCard must NOT contain a `showSettings = true` action — that Button action belongs in RootView so the toolbar sibling tap reaches RootView's `.sheet(isPresented: $showSettings)` without crossing the wrapper's identity boundary (see ADR-0001)."
     )
 }
+
+// MARK: - Group R follow-up audit (WI-m): sibling card delegates remain non-inlining
+//
+// ADR-0001 captured the architectural rule that complex card content owned by
+// RootView's body must delegate to a standalone `View` struct so the parent
+// keeps a stable SwiftUI identity boundary (toolbar `.sheet`/`.toolbar`
+// modifier hit-test). The hero card regression class (commit `9da54cf`) was
+// caught and fixed by R1/R2/R7a/R7b. WI-m audits the two other heavyweight
+// child cards that share the same RootView body — `uvIndexCardView` and
+// `forecastPickerCardView` — to confirm they already delegate to standalone
+// View structs (UVIndexCard / UVIndexPlaceholderCard / ForecastPickerView)
+// and have not silently slipped back into inlined form.
+//
+// R8 freezes that audit result so a future refactor cannot inline either
+// card's body into RootView and re-create the 8th-loop regression on a
+// different surface (e.g., UV-card tap collapses toolbar hit-test, or
+// forecast-picker date selection breaks the gear → Settings sheet flow).
+//
+// Reference: .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md
+
+/// R8a — `UVIndexCard` survives as a standalone `View` struct in AppViews.swift.
+///
+/// Inlining its body into RootView (or merging it into another wrapper)
+/// would re-create the identity-collapse regression class ADR-0001 documents,
+/// just on the UV-index surface instead of the hero surface.
+@Test func test_R8a_uvIndexCardSurvivesAsViewStruct() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("struct UVIndexCard: View"),
+        "UVIndexCard must remain a standalone `View` struct — inlining it into RootView would re-create the SwiftUI identity-collapse regression class ADR-0001 documents (see R1 for the hero-card analogue). Reference: .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md"
+    )
+    #expect(
+        source.contains("struct UVIndexPlaceholderCard: View"),
+        "UVIndexPlaceholderCard must remain a standalone `View` struct (the no-UV-data fallback paired with UVIndexCard). Inlining it shares the same regression-class risk as inlining UVIndexCard. Reference: ADR-0001."
+    )
+}
+
+/// R8b — `ForecastPickerView` survives as a standalone `public View` struct
+/// in its own source file.
+///
+/// The forecast picker is the heaviest child card on the main screen (685
+/// lines of view logic plus a separate target-internal logic module). If it
+/// is ever moved inline into RootView's body — or its struct shell collapsed
+/// — the identity-collapse regression class becomes a candidate on the
+/// forecast surface. Pinning the standalone declaration prevents that drift.
+@Test func test_R8b_forecastPickerViewSurvivesAsViewStruct() throws {
+    let pickerSource = try _forecastPickerSourceForGroupR()
+    #expect(
+        pickerSource.contains("public struct ForecastPickerView: View"),
+        "ForecastPickerView must remain a standalone `public View` struct in ForecastPickerView.swift — inlining its body into RootView (or merging it into another wrapper) would re-create the SwiftUI identity-collapse regression class ADR-0001 documents on the forecast-picker surface. Reference: .squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md"
+    )
+}
+
+/// R8c — RootView delegates to BOTH `UVIndexCard(`/`UVIndexPlaceholderCard(`
+/// AND `ForecastPickerView(` rather than inlining either card's body.
+///
+/// This is the call-site companion to R8a/R8b: even if both child structs
+/// exist (R8a/R8b green) a refactor could still inline a *copy* of their
+/// body content into RootView and stop calling the standalone struct,
+/// silently re-creating the regression class. R8c freezes the delegation
+/// contract at the call-site, mirroring how R2 freezes the `HeroTimerCard(`
+/// call-site.
+@Test func test_R8c_rootViewDelegatesToSiblingCardStructs() throws {
+    let body = try _rootViewBodySliceForGroupR()
+    #expect(
+        body.contains("UVIndexCard(") || body.contains("UVIndexPlaceholderCard("),
+        "RootView must instantiate either UVIndexCard(...) or UVIndexPlaceholderCard(...) rather than inlining the UV-index card body — see R2 for the hero-card analogue and ADR-0001 for the architectural rationale."
+    )
+    #expect(
+        body.contains("ForecastPickerView("),
+        "RootView must instantiate ForecastPickerView(...) rather than inlining the forecast picker body — see R2 for the hero-card analogue and ADR-0001 for the architectural rationale."
+    )
+}
+
+/// Loads ForecastPickerView.swift for R8b text-pattern asserts.
+/// Mirrors `_appViewsSourceForGroupR()` for the picker file.
+private func _forecastPickerSourceForGroupR() throws -> String {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let pickerURL = testFileURL
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
+    return try String(contentsOf: pickerURL, encoding: .utf8)
+}
