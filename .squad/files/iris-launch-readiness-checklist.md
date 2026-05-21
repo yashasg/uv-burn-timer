@@ -65,7 +65,7 @@ rotation angle.
 | Surface | Glyphs that must remain legible | Pass? | Notes |
 |---|---|---|---|
 | Hero number (e.g. `47 min`, `~1 hr 20 min`, `Up to 2 hr`, `4+ hr`) | All digits + unit suffix | ☐ | Test with each tier seeded via `-uiTestStaleEstimate`, `-uiTestCappedEstimate` |
-| Hero `Burn-time estimate` label above the number | Full label | ☐ | |
+| Hero `forecastDateContext` caption above the gauge (e.g. `Burn time on Wed, 6 PM`) | Full caption | ☐ | Rendered only when a non-current forecast hour is selected; `.font(.caption)` / secondary foreground per 2026-05-21 commit `9da54cf`. Identifier `HeroForecastDateContext`. Replaces the retired `Burn-time estimate` header label. |
 | TierBadge capsule (Long/Moderate/Short) text on coloured fill | Tier word + numeric ratio | ☐ | Severity HC variants must contribute to legibility, not detract |
 | BurnRiskGauge progress arc relative to ring track | Arc must remain distinct from track at every rotation | ☐ | Test with three tier states |
 | Hero `Meds + conditions can shorten this. Learn more` caveat inline link | Full sentence + link affordance | ☐ | |

@@ -1057,3 +1057,132 @@ private enum AppSourceLookupError: Error {
     case appRootNotFound
     case sourcesNotFound
 }
+
+// MARK: - Group R: HeroTimerCard Refactor (Wrapper + Chrome Removal) Contract
+//
+// These guards belong logically in MainScreenCleanupContractTests.swift, but
+// that file is not currently wired into app.xcodeproj's UVBurnTimerCoreTests
+// target (see WI for follow-up: wire the dead contract-test files into the
+// xcodeproj or move their content into wired files like this one). Placed
+// here so they actually compile and run.
+
+private func _appViewsSourceForGroupR() throws -> String {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let appViewsURL = testFileURL
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .appendingPathComponent("Sources/UVBurnTimer/AppViews.swift")
+    return try String(contentsOf: appViewsURL, encoding: .utf8)
+}
+
+/// R1 — `HeroTimerCard` View struct still exists as a wrapper around the hero card.
+///
+/// **Why this guard matters:** an earlier refactor attempt (`9da54cf`) inlined the
+/// entire HeroTimerCard body into `RootView.heroTimerCardView`, removing the
+/// `struct HeroTimerCard: View` boundary. That broke `testSettingsSheetOpens` in
+/// XCUI because the toolbar `gearshape` Button's tap stopped opening the
+/// `.sheet(isPresented: $showSettings)`. The fix was to restore the `HeroTimerCard`
+/// View struct (still without card chrome / title row), which re-isolated the hero
+/// card's SwiftUI identity from RootView's toolbar and re-enabled tap dispatch.
+/// This test pins that architectural decision so the next inliner sees a green
+/// guard and knows why the wrapper must stay.
+@Test func test_R1_heroTimerCardWrapperStructStillExists() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("struct HeroTimerCard: View"),
+        "HeroTimerCard View struct must remain a wrapper — inlining it into RootView regresses XCUI testSettingsSheetOpens (toolbar gear button stops opening Settings sheet)."
+    )
+}
+
+/// R2 — RootView delegates to `HeroTimerCard(...)` instead of inlining the body.
+///
+/// Pins the call-site shape: `heroTimerCardView` must return a `HeroTimerCard(...)`
+/// instance rather than a raw `VStack { ... }`. Pairs with R1 to guard the wrapper.
+@Test func test_R2_rootViewDelegatesToHeroTimerCardConstructor() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("HeroTimerCard("),
+        "RootView.heroTimerCardView must instantiate HeroTimerCard(...) — see R1 for the regression this guards."
+    )
+}
+
+/// R3 — `burnTimeEstimateTitle` constant is permanently retired.
+///
+/// The "Burn-time estimate" header row was removed from the hero card per
+/// commit `9da54cf` (the circular gauge stands alone as the main-screen primary).
+/// Re-adding the constant or rendering it as a label would resurrect a UX
+/// regression the team explicitly approved removing.
+@Test func test_R3_burnTimeEstimateTitleIsRetired() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        !source.contains("burnTimeEstimateTitle"),
+        "ProductCopy.burnTimeEstimateTitle was retired with the hero card chrome — do not re-introduce the 'Burn-time estimate' label row above the gauge."
+    )
+}
+
+/// R4 — Card chrome (regularMaterial + cornerRadius 24) is permanently removed.
+///
+/// The previous card body wrapped its content with
+/// `.background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))`
+/// and `.padding(24)`. After the cleanup the gauge stands alone with no card
+/// surface. Re-adding the material chrome to HeroTimerCard would re-introduce
+/// the visual "card-within-card" the redesign explicitly removed.
+@Test func test_R4_heroTimerCardChromeIsRetired() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct HeroTimerCard: View") }) else {
+        Issue.record("HeroTimerCard struct not found — covered by R1, skipping chrome check")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+    #expect(
+        !cardBody.contains(".regularMaterial"),
+        "HeroTimerCard body must not re-add .regularMaterial card chrome — the gauge stands alone."
+    )
+    #expect(
+        !cardBody.contains("cornerRadius: 24"),
+        "HeroTimerCard body must not re-add cornerRadius: 24 chrome — the gauge stands alone."
+    )
+}
+
+/// R5 — `forecastDateContext` is rendered as a `.caption` (not `.headline`).
+///
+/// Per the redesign, when a forecast time is selected the date context is shown
+/// as a quiet caption above the gauge — NOT as a bold headline replacing the
+/// removed "Burn-time estimate" label. Guards against accidental promotion to
+/// `.headline` / `.title` weight during future refactors.
+@Test func test_R5_forecastDateContextIsCaptionStyle() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct HeroTimerCard: View") }) else {
+        Issue.record("HeroTimerCard struct not found — covered by R1, skipping caption check")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: { $0.hasPrefix("struct ") || $0.hasPrefix("private struct ") }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    let hasCaptionDate =
+        cardBody.contains("forecastDateContext")
+        && cardBody.range(of: #"forecastDateContext[\s\S]{0,200}\.font\(\.caption\)"#, options: .regularExpression) != nil
+    #expect(
+        hasCaptionDate,
+        "HeroTimerCard must render forecastDateContext with .font(.caption) — promotion to .headline reverses the gauge-as-primary redesign."
+    )
+}
+
+/// R6 — `mainVerdictCaveatLinkLabel` copy is still wired into RootView surfaces.
+///
+/// Plunder C2 / L3 — the inline caveat link ("Meds + conditions can shorten this.
+/// Learn more") must remain reachable. The cleanup removed the
+/// `mainVerdictCaveatLinkLabel` `NavigationLink` block from inside the hero card
+/// (the toolbar ⓘ button replaces that reach-back per WI-50/WI-51/K-7), but the
+/// underlying ProductCopy constant must still exist for the toolbar info button's
+/// destination view (`AboutView(highlightEstimateApplicability: true)`).
+@Test func test_R6_mainVerdictCaveatLinkLabelConstantStillExists() {
+    #expect(
+        !ProductCopy.mainVerdictCaveatLinkLabel.isEmpty,
+        "ProductCopy.mainVerdictCaveatLinkLabel must remain non-empty — required by AboutView highlight anchor and the toolbar ⓘ Reach-Back (K-2)."
+    )
+}
