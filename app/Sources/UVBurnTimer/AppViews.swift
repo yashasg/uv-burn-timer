@@ -316,6 +316,7 @@ struct RootView: View {
         }
         .menuOrder(.fixed)
         .buttonStyle(.bordered)
+        .accessibilityLabel("SPF \(session.selectedSPF.displayName)")
         .accessibilityHint("Changes the assumed SPF level. SPF 70+ is modeled as SPF 50.")
         .accessibilityIdentifier("SPFChip")
     }
@@ -417,6 +418,7 @@ struct RootView: View {
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .disabled(isFetching)
+        .accessibilityLabel(primaryActionPresentation.title)
         .accessibilityHint(primaryActionPresentation.accessibilityHint)
     }
 
@@ -780,6 +782,7 @@ struct HeroTimerCard: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityLabel(forecastDateContext)
                 .accessibilityIdentifier("HeroForecastDateContext")
             }
 
@@ -1167,6 +1170,7 @@ struct DisclaimerCover: View {
                     Label(ProductCopy.photosensitizerDisclaimerLine, systemImage: "exclamationmark.triangle")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(.orange)
+                        .accessibilityLabel(ProductCopy.photosensitizerDisclaimerLine)
                         .accessibilityElement(children: .combine)
 
                     Text(ProductCopy.disclaimerBody)
@@ -1205,6 +1209,7 @@ struct DisclaimerCover: View {
 
                     Label(ProductCopy.childrenDisclaimerLine, systemImage: "figure.and.child.holdinghands")
                         .font(.callout.weight(.semibold))
+                        .accessibilityLabel(ProductCopy.childrenDisclaimerLine)
                 }
                 .padding(32)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -1511,10 +1516,6 @@ struct AboutView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("About & Citations")
-                        .font(.title.bold())
-                        .accessibilityAddTraits(.isHeader)
-
                     Text(
                         "UV Burn Timer estimates minutes to one minimal erythemal dose using Fitzpatrick skin type, SPF, and the current UV index."
                     )
@@ -1653,7 +1654,7 @@ struct AboutView: View {
                 }
             }
         }
-        .navigationTitle("About")
+        .navigationTitle("About & Citations")
     }
 
     private var versionLine: String {
@@ -1946,6 +1947,7 @@ struct PersistentFooter: View {
                 .font(.caption.weight(.semibold))
         }
         .foregroundStyle(.tint)
+        .accessibilityLabel(ProductCopy.disclaimerLinkLabel)
         .accessibilityHint("Opens About and applicability details.")
         .frame(maxWidth: .infinity, alignment: .leading)
     }
