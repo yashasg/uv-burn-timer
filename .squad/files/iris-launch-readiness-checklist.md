@@ -84,6 +84,7 @@ rotation angle.
 | Surface | Glyphs that must remain legible | Pass? | Notes |
 |---|---|---|---|
 | UV Index secondary card `UV Index 6.2` + `Source: Apple Weather` | Full digit + attribution lockup | ☐ | Attribution is contractually required to stay visible |
+| Hero ↔ UV `Divider()` (WI-t / Group X) — system separator line between `heroTimerCardView` and `uvIndexCardView` in `navigationStackBase` | Divider remains visible (NOT extinguished) at every polarization angle | ☐ | New surface added by Loop-9 WI-t (commit `5a20287`). The divider uses the system separator color, which has different polarization behaviour from custom severity tokens — this surface MUST be verified under the polarized-OLED rotation procedure so the hero/UV visual boundary survives outdoors. Pair-check with the contrast row in `iris-contrast-qa-checklist.md` line 79. |
 | Compact Location chip (`📍 Approx. 37.77, -122.42 ›` or `Location`) | Full chip label + glyph | ☐ | Chip renders `UVCoordinate.privacyDisplayText` (rounded coordinate), not a city name |
 | Compact SPF chip (`SPF 30`, etc.) | Full chip label + glyph | ☐ | |
 | Persistent footer `Informational only. Not medical advice.` | Full link copy | ☐ | Required to stay legible — disclaimer link |
