@@ -839,7 +839,7 @@ struct HeroTimerCard: View {
 
     private var burnRiskGaugeUnavailableMessage: String {
         if let estimate, estimate.tier == .none {
-            return "No active burn time because the UV index is 0."
+            return ProductCopy.noUVAtThisHourLabel
         }
 
         if weatherFailureMessage != nil {
@@ -858,17 +858,23 @@ struct HeroTimerCard: View {
         if let estimate, isEstimateStale {
             staleEstimateContent(estimate)
         } else if let estimate, estimate.tier == .none {
-            // UVI = 0 at selected hour — moon.fill + "No UV at this hour" per Iris §5.
+            // WI-iris-d (Loop-11) — UVI = 0 copy converges on the single
+            // `ProductCopy.noUVAtThisHourLabel` so TierBadge, HeroTimerCard,
+            // and BurnRiskGaugeUnavailableCard all read the same glyph.
+            // moon.fill is decorative (the user-facing semantic is in the
+            // text and the accessibility label) — hide it from VoiceOver per
+            // WI-iris-b.
             Label {
-                Text("No UV at this hour")
+                Text(ProductCopy.noUVAtThisHourLabel)
                     .font(.subheadline)
                     .foregroundStyle(Color(.secondaryLabel))
             } icon: {
                 Image(systemName: "moon.fill")
                     .font(.system(size: 16))
                     .foregroundStyle(Color(.secondaryLabel))
+                    .accessibilityHidden(true)
             }
-            .accessibilityLabel("No UV at this hour. No burn risk.")
+            .accessibilityLabel(ProductCopy.noUVAtThisHourAccessibilityLabel)
         } else if let estimate {
             estimateText(estimate)
         } else if let weatherFailureMessage {
@@ -906,9 +912,14 @@ struct HeroTimerCard: View {
                 #endif
             }
         } else {
+            // WI-iris-b (Loop-11) — sun.max is decorative (the actual semantic
+            // payload is in `statusMessage` below). Hide it from VoiceOver so
+            // screen-reader users do not hear "Sun, max, Image" ahead of the
+            // status copy. Sighted users still see the icon.
             Image(systemName: "sun.max")
                 .font(.system(size: heroIconSize))
                 .foregroundStyle(.tint)
+                .accessibilityHidden(true)
 
             Text(statusMessage)
                 .font(.body)
@@ -963,7 +974,7 @@ struct HeroTimerCard: View {
 
         switch estimate.tier {
         case .none:
-            return "No UV detected"
+            return ProductCopy.noUVAtThisHourLabel
         case .long:
             return "Long"
         case .moderate:
@@ -1081,7 +1092,7 @@ struct TierBadge: View {
 
     private var title: String {
         switch tier {
-        case .none: "No UV detected"
+        case .none: ProductCopy.noUVAtThisHourLabel
         case .long: "Long"
         case .moderate: "Moderate"
         case .short: "Short"
@@ -1137,9 +1148,16 @@ struct DisclaimerCover: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 24) {
+                    // WI-iris-a (Loop-11) — Asha (P4 Accutane) reads
+                    // `disclaimerTitle` first; the warning glyph is
+                    // decorative reinforcement, not the load-bearing
+                    // semantic. Hide it from VoiceOver so screen-reader
+                    // users do not hear "Exclamation mark, triangle, fill,
+                    // Image" ahead of "How accurate is this for you?".
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 48))
                         .foregroundStyle(.orange)
+                        .accessibilityHidden(true)
 
                     Text(ProductCopy.disclaimerTitle)
                         .font(.title.bold())
