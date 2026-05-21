@@ -244,9 +244,29 @@ public enum ProductCopy {
             title: "WHO Global Solar UV Index practical guide",
             url: URL(string: "https://iris.who.int/handle/10665/42459")!
         ),
+        // Wheeler-L12 H1: locked Schalka source is the 2011 An Bras Dermatol
+        // review (SPF-as-MED-multiplier claim) per
+        // `.squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md` §3.3.
+        // The previous 2009 PPP application-thickness paper was the wrong target.
         ProductCitationLink(
-            title: "Schalka, dos Reis & Cucé sunscreen/SPF study",
-            url: URL(string: "https://doi.org/10.1111/j.1600-0781.2009.00408.x")!
+            title: "Schalka & Reis 2011 — SPF as MED multiplier",
+            url: URL(string: "https://doi.org/10.1590/S0365-05962011000300013")!
+        ),
+        // Wheeler-L12 H2: Sayre 1981 anchors the empirical MED measurements
+        // for Fitzpatrick Types I/II/IV — cited by the EE2 per-row audit
+        // comments in `FitzpatrickSkinType.swift` and by the prose in
+        // `fitzpatrickCitations`. Citation-per-claim per health-adjacent-
+        // constant-adoption SKILL §4.
+        ProductCitationLink(
+            title: "Sayre et al. 1981 — MED-per-type empirical anchor",
+            url: URL(string: "https://doi.org/10.1016/S0190-9622(81)70105-1")!
+        ),
+        // Wheeler-L12 H2: Harrison & Young 2002 anchors the modern review
+        // tabulating MED-by-type for Fitzpatrick Types III/V/VI — same
+        // citation-per-claim rule.
+        ProductCitationLink(
+            title: "Harrison & Young 2002 — erythema dose-response review",
+            url: URL(string: "https://doi.org/10.1016/S1046-2023(02)00205-0")!
         ),
         ProductCitationLink(
             title: "Diffey BL 1991",
