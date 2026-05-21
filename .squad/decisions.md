@@ -4555,3 +4555,13 @@ In practice this is not a production bug (the snapshot invariant guarantees all 
 
 `burnCardDatePrefix(for:now:)` is a public pure function — Group M tests (M1–M3) are fully testable. M4 uses `uvResult(from:at:now:)` which is also exposed. No further action needed for Group M.
 
+---
+
+## ADR-0001 pointer — Hero card wrapper preserves toolbar hit-test
+
+**Author:** Gaia (Lead)
+**Date:** 2026-05-21
+**Work item:** WI-l
+
+Formalized as `.squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md`. Captures the inlining-vs-wrapper SwiftUI identity-boundary rule that emerged from the 8th-loop hero-card-wrapper-restore cycle. Pinned in source by R1/R2 guards.
+
