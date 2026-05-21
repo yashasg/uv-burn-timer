@@ -1594,3 +1594,106 @@ private func _forecastPickerSourceForGroupR() throws -> String {
         .appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
     return try String(contentsOf: pickerURL, encoding: .utf8)
 }
+
+// MARK: - Group S: Toolbar ⓘ L3 Reach-Back (WI-i)
+//
+// The toolbar `info.circle` Button (accessibilityIdentifier
+// "EstimateInfoButton") in RootView is the L3 Reach-Back surface for the
+// photosensitization / medication / sunscreen caveat — it navigates the
+// user to `AboutView(highlightEstimateApplicability: true)`, which then
+// scrolls to and highlights the "When this estimate may not apply"
+// section. WI-i added three XCUI smoke tests covering this affordance
+// (`testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor`,
+// `testToolbarRendersBothSettingsAndEstimateInfoButtons`, and
+// `testEstimateInfoNavigationRoundTripReturnsToMainScreen`) and those
+// tests rely on three source-text contracts that S1, S2, and S3 pin
+// here so a future refactor cannot silently strip them and turn the
+// XCUI guards into no-ops.
+//
+// S1 — the toolbar Button must keep accessibilityIdentifier
+//      "EstimateInfoButton" and navigate to AboutView with
+//      highlightEstimateApplicability: true. Without the identifier
+//      XCUI cannot locate the button; without the highlight flag the
+//      About scroll-to-anchor + highlight chrome does not render.
+//
+// S2 — AboutView must render the "When this estimate may not apply"
+//      Text with accessibilityIdentifier "AboutEstimateApplicabilityHeader".
+//      This is the identifier the XCUI test asserts visible after
+//      navigation, and it is the only stable handle on the highlighted
+//      caveat section (the user-facing string is Plunder-vetted and
+//      MUST NOT be the assertion target because copy edits would then
+//      silently break XCUI without any source guard catching it).
+//
+// S3 — the toolbar must keep BOTH the Settings gear (accessibilityLabel
+//      "Settings") AND the EstimateInfoButton (accessibilityIdentifier
+//      "EstimateInfoButton") as siblings of the RootView body, AND the
+//      info button must remain a NavigationLink push (not a modal
+//      sheet). Collapsing either button into a Menu, removing either
+//      entry point, or converting the info push into a sheet would
+//      regress the K-7/WI-50–WI-53 design and the back-chevron
+//      round-trip the user expects on iOS.
+
+/// S1 — RootView's toolbar still routes the L3 caveat info button at
+/// EstimateInfoButton → AboutView(highlightEstimateApplicability: true).
+@Test func test_S1_toolbarInfoButtonRoutesToHighlightedAboutView() throws {
+    let body = try _rootViewBodySliceForGroupR()
+    #expect(
+        body.contains("AboutView(highlightEstimateApplicability: true)"),
+        "RootView toolbar must navigate to AboutView(highlightEstimateApplicability: true) — the L3 Reach-Back relies on the highlight flag to scroll to and visually emphasize the 'When this estimate may not apply' section. See WI-i smoke test testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor."
+    )
+    #expect(
+        body.contains(#".accessibilityIdentifier("EstimateInfoButton")"#),
+        "RootView toolbar info button must keep accessibilityIdentifier \"EstimateInfoButton\" — required by XCUI smoke testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor + the existing acknowledgeDisclaimerAndChooseTypeIII helper. See WI-i."
+    )
+}
+
+/// S2 — AboutView's "When this estimate may not apply" header still
+/// carries accessibilityIdentifier "AboutEstimateApplicabilityHeader"
+/// so XCUI can assert the highlight anchor is visible after the L3
+/// Reach-Back navigation.
+@Test func test_S2_aboutEstimateApplicabilityHeaderHasStableIdentifier() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains(#"Text("When this estimate may not apply")"#),
+        "AboutView must render the canonical 'When this estimate may not apply' Text header — it is the destination of the highlightEstimateApplicability scroll anchor and the visible target the L3 Reach-Back delivers the user to."
+    )
+    #expect(
+        source.contains(#".accessibilityIdentifier("AboutEstimateApplicabilityHeader")"#),
+        "AboutView's 'When this estimate may not apply' Text must keep accessibilityIdentifier \"AboutEstimateApplicabilityHeader\" — the XCUI smoke testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor depends on this stable handle (we deliberately do NOT assert on the Plunder-vetted user-facing string because copy edits would silently break XCUI without a source guard). See WI-i."
+    )
+}
+
+/// S3 — RootView's toolbar must keep *both* the Settings gear and the
+/// EstimateInfoButton as **siblings** (not collapsed into a single menu
+/// or removed in favour of the other). The XCUI smoke
+/// testToolbarRendersBothSettingsAndEstimateInfoButtons pins the
+/// runtime co-existence; this source-text guard pins the static intent
+/// so the XCUI guard cannot silently turn into a no-op by losing one of
+/// the toolbar slots.
+///
+/// We assert against the toolbar Button accessibilityLabel "Settings"
+/// (gear ⚙ entry to SettingsSheet) and the accessibilityIdentifier
+/// "EstimateInfoButton" (info.circle ⓘ entry to AboutView highlight
+/// reach-back). Both must remain in RootView's body slice — collapsing
+/// either behind a Menu, or moving either to a child View, would defeat
+/// the wrapper architecture ratified in ADR-0001 because the two
+/// presentation slots (.sheet + NavigationLink) MUST stay siblings of
+/// the toolbar Buttons on RootView for SwiftUI presentation-slot
+/// resolution to succeed (see R7a/R7b for the identity-boundary
+/// argument). The toolbar-slot S3 guard is the counterpart of R7a's
+/// sheet/button co-location guard.
+@Test func test_S3_toolbarKeepsBothSettingsAndEstimateInfoButtons() throws {
+    let body = try _rootViewBodySliceForGroupR()
+    #expect(
+        body.contains(#".accessibilityLabel("Settings")"#),
+        "RootView toolbar must keep a Button with accessibilityLabel \"Settings\" (the gear ⚙ entry to SettingsSheet) — XCUI smoke testToolbarRendersBothSettingsAndEstimateInfoButtons + testSettingsSheetOpens rely on this label. See WI-i."
+    )
+    #expect(
+        body.contains(#".accessibilityIdentifier("EstimateInfoButton")"#),
+        "RootView toolbar must keep a Button with accessibilityIdentifier \"EstimateInfoButton\" (the info.circle ⓘ entry to AboutView highlight reach-back) — XCUI smoke testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor + testToolbarRendersBothSettingsAndEstimateInfoButtons rely on this identifier. See WI-i."
+    )
+    #expect(
+        body.contains(#"NavigationLink(destination: AboutView(highlightEstimateApplicability: true))"#),
+        "RootView toolbar EstimateInfoButton must remain a NavigationLink push (not a .sheet) so the standard back-chevron returns the user to the main screen — XCUI smoke testEstimateInfoNavigationRoundTripReturnsToMainScreen asserts the round-trip behaviour. See WI-i."
+    )
+}

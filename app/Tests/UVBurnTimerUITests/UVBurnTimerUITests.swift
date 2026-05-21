@@ -112,6 +112,143 @@ final class UVBurnTimerUITests: XCTestCase {
         )
     }
 
+    // MARK: - Smoke 8 (WI-i): Toolbar ⓘ EstimateInfoButton opens About with highlighted applicability anchor
+
+    /// WI-i smoke expansion — the toolbar `info.circle` Button is the L3
+    /// "Reach-Back" for the photosensitization/medication/sunscreen caveat
+    /// (see ADR-0001 + R6 in BurnTimeCalculatorTests). Tapping it must:
+    ///   1. Navigate to the AboutView (`navigationBar["About"]`).
+    ///   2. Surface the highlighted "When this estimate may not apply"
+    ///      anchor (`accessibilityIdentifier == AboutEstimateApplicabilityHeader`),
+    ///      which proves the `highlightEstimateApplicability: true` plumbing
+    ///      from RootView → AboutView still survives.
+    /// This is the only XCUI guard on the toolbar ⓘ caveat path; without it
+    /// a future refactor could silently break the L3 reach-back without any
+    /// XCUI failure.
+    func testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+        XCTAssertTrue(
+            waitForHittable(infoButton, timeout: 10),
+            "Toolbar info button (EstimateInfoButton) must be hittable on the main screen"
+        )
+
+        // NavigationLink inside ToolbarItem can intermittently swallow the
+        // first synthesized tap on iOS 26 simulator — use tapUntilAppears
+        // so the tap is retried until About materialises (or the budget
+        // expires). Matches the pattern used by the hero-card L3 caveat
+        // deep-link test prior to K-1..K-9 cleanup.
+        tapUntilAppears(infoButton, app.navigationBars["About"])
+
+        XCTAssertTrue(
+            app.navigationBars["About"].waitForExistence(timeout: 10),
+            "EstimateInfoButton must navigate to the About screen"
+        )
+
+        let anchor = app.staticTexts["AboutEstimateApplicabilityHeader"]
+        XCTAssertTrue(
+            anchor.waitForExistence(timeout: 10),
+            "About must surface the 'When this estimate may not apply' anchor with identifier AboutEstimateApplicabilityHeader — proves the highlightEstimateApplicability plumbing survives."
+        )
+    }
+
+    // MARK: - Smoke 9 (WI-i): Both Settings ⚙ and EstimateInfo ⓘ toolbar buttons coexist on main screen
+
+    /// WI-i smoke expansion — RootView's toolbar must host *both* the
+    /// Settings gear (`accessibilityLabel == "Settings"`) and the
+    /// EstimateInfo info-circle (`accessibilityIdentifier ==
+    /// "EstimateInfoButton"`). The two buttons live on the trailing
+    /// toolbar slot together (gear = primaryAction, info-circle =
+    /// topBarTrailing). If a future refactor removes either (e.g.,
+    /// "consolidating" the gear into the info menu, or vice versa),
+    /// the user loses an entry point this XCUI guard catches before
+    /// merge. This is a fast structural assertion — no navigation,
+    /// no settings or sheet flows.
+    func testToolbarRendersBothSettingsAndEstimateInfoButtons() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        XCTAssertTrue(
+            app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10),
+            "Main screen nav bar must be visible before asserting toolbar buttons"
+        )
+
+        let settingsGear = app.buttons["Settings"]
+        XCTAssertTrue(
+            settingsGear.waitForExistence(timeout: 10),
+            "Toolbar must contain the Settings gear Button (accessibilityLabel \"Settings\") — entry point to SettingsSheet."
+        )
+
+        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+        XCTAssertTrue(
+            infoButton.waitForExistence(timeout: 10),
+            "Toolbar must contain the EstimateInfoButton (info.circle) — entry point to About highlight reach-back."
+        )
+
+        // Both must be hittable on the same screen (not collapsed behind a menu).
+        XCTAssertTrue(
+            waitForHittable(settingsGear, timeout: 5),
+            "Settings gear must be hittable — toolbar should not collapse it behind a menu."
+        )
+        XCTAssertTrue(
+            waitForHittable(infoButton, timeout: 5),
+            "EstimateInfoButton must be hittable — toolbar should not collapse it behind a menu."
+        )
+    }
+
+    // MARK: - Smoke 10 (WI-i): EstimateInfo ⓘ → About → back round-trip preserves main screen
+
+    /// WI-i smoke expansion — proves the EstimateInfoButton uses a
+    /// `NavigationLink` push (not a modal `.sheet`) so the standard iOS
+    /// back-chevron returns the user to the main screen without losing
+    /// scroll position or session state. A modal regression would still
+    /// pass the navigation-arrival assertion in Smoke 8, so this third
+    /// test pins the *return* path — together they assert push-and-pop.
+    func testEstimateInfoNavigationRoundTripReturnsToMainScreen() {
+        let app = launchApp()
+        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+
+        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+        XCTAssertTrue(
+            waitForHittable(infoButton, timeout: 10),
+            "EstimateInfoButton must be hittable before navigating"
+        )
+
+        // NavigationLink in ToolbarItem can drop the first synthesized tap
+        // on iOS 26 simulator — retry until About appears.
+        tapUntilAppears(infoButton, app.navigationBars["About"])
+
+        let aboutNavBar = app.navigationBars["About"]
+        XCTAssertTrue(
+            aboutNavBar.waitForExistence(timeout: 10),
+            "EstimateInfoButton must navigate to About"
+        )
+
+        // The back button surfaces as the standard NavigationStack back chevron;
+        // XCUI exposes it as a Button on the About navigation bar with the previous
+        // screen's title ("UV Burn Timer") as its label.
+        let backButton = aboutNavBar.buttons["UV Burn Timer"]
+        XCTAssertTrue(
+            backButton.waitForExistence(timeout: 10),
+            "About must expose a back-chevron Button labelled \"UV Burn Timer\" — proves the EstimateInfoButton used a NavigationLink push (not a modal sheet)."
+        )
+
+        // Symmetric retry on the back navigation so a dropped tap on the
+        // chevron does not flake the round-trip assertion.
+        tapUntilAppears(backButton, app.navigationBars["UV Burn Timer"])
+
+        XCTAssertTrue(
+            app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10),
+            "Tapping back from About must restore the main \"UV Burn Timer\" navigation bar"
+        )
+        XCTAssertFalse(
+            app.navigationBars["About"].exists,
+            "About navigation bar must be gone after popping back to the main screen"
+        )
+    }
+
     // MARK: - Helpers
 
     private func launchApp(arguments: [String] = []) -> XCUIApplication {
