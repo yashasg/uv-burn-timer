@@ -1784,3 +1784,44 @@ private func _forecastPickerSourceForGroupR() throws -> String {
         "After the WI-p Label wrap, the forecastDateContext surface must still apply `.font(.caption)` — promoting to `.subheadline` / `.headline` reverses the gauge-as-primary redesign (R5) and the spec's 'rendered as a quiet `.font(.caption)` above the gauge' contract."
     )
 }
+
+
+
+
+// MARK: - Group X: Hero ↔ UVIndex separator (WI-t, AX5 pass)
+//
+// Loop-9 Iris polish — at non-AX dynamic type sizes the previous
+// `.thinMaterial` chrome on the UV-index card visually separated the
+// chrome-free hero from the secondary UV data row. After WI-r inverted
+// that chrome (W1/W2), and at AX dynamic type sizes generally, the two
+// surfaces collapse into a single undifferentiated column with no visual
+// boundary. Iris filed `wi-t-ax5-contrast-separator` (Eighth-loop
+// closure log) so a `Divider()` between the two surfaces re-establishes
+// the boundary in a way that survives AX5 reflow (Divider scales with
+// the surrounding text style and inherits the system separator color
+// across light/dark + Standard/Increased contrast).
+//
+// X1 — `navigationStackBase` body must render `Divider()` between
+//      `heroTimerCardView` and `uvIndexCardView`. The order matters:
+//      hero (primary output) → separator → UV data (secondary).
+
+/// X1 — navigationStackBase renders `Divider()` between heroTimerCardView and uvIndexCardView.
+@Test func test_X1_navigationStackBaseSeparatesHeroFromUVIndexCard() throws {
+    let source = try _appViewsSourceForGroupR()
+    let lines = source.components(separatedBy: "\n")
+    guard let bodyStart = lines.firstIndex(where: { $0.contains("private var navigationStackBase: some View") }) else {
+        Issue.record("navigationStackBase property not found")
+        return
+    }
+    let bodyEnd: Int = lines[(bodyStart + 1)...].firstIndex(where: {
+        $0.contains("private var ") && !$0.contains("navigationStackBase")
+    }) ?? lines.endIndex
+    let stackBody = lines[bodyStart..<bodyEnd].joined(separator: "\n")
+
+    let heroToUVPattern = #"heroTimerCardView[\s\S]{0,200}Divider\(\)[\s\S]{0,200}uvIndexCardView"#
+    #expect(
+        stackBody.range(of: heroToUVPattern, options: .regularExpression) != nil,
+        "navigationStackBase must render `Divider()` between `heroTimerCardView` and `uvIndexCardView` — WI-t (AX5 pass) re-establishes the hero/UV visual boundary that the WI-r chrome inversion (W1/W2) removed. Divider scales with the surrounding text style and inherits the system separator color, so it survives AX5 reflow + Standard/Increased contrast."
+    )
+}
+

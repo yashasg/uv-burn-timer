@@ -92,6 +92,7 @@ struct RootView: View {
                     UITestRefreshableProbeButton(refreshAction: { await refreshUV() })
                     #endif
                     heroTimerCardView
+                    Divider()
                     uvIndexCardView
                     mainInputsRow
                     // WI-7: Forecast day-and-hour picker.
