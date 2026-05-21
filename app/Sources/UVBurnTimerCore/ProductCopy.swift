@@ -11,7 +11,6 @@ public struct ProductCitationLink: Equatable, Sendable {
 }
 
 public enum ProductCopy {
-    public static let burnTimeEstimateTitle = "Burn-time estimate"
     public static let emptyStateAwaitingSkinType = "Pick a skin type to see your estimate."
     public static let emptyStateAwaitingLocation = "Tap Use my location to compute your estimate."
 
@@ -78,12 +77,10 @@ public enum ProductCopy {
     /// these constants without depending on them being rendered.
     public static let disclaimerSeeAboutInlineMarkdown =
         "If you take a photosensitizing medication or have a sun-sensitive condition — [see About](\(disclaimerSeeAboutLinkURL.absoluteString))."
-    public static let locationRationale =
-        "UV Burn Timer needs your location once to fetch the current UV index from Apple Weather."
     public static let locationPrivacyLine =
         "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
     public static let cacheRetentionLine =
-        "The app stores skin type, SPF, the location-rationale acknowledgment, and the last rounded coordinate on this device; it does not save UV values, burn estimates, or disclaimer acknowledgments between launches."
+        "The app stores skin type, SPF, and the last rounded coordinate on this device; it does not save UV values, burn estimates, or disclaimer acknowledgments between launches."
     public static let clearSavedLocationButtonTitle = "Clear saved location"
     public static let locationDeniedEmptyState =
         "Location access is off. You can adjust SPF and skin type now; enable When In Use access in Settings, then tap Use my location again."
@@ -101,6 +98,13 @@ public enum ProductCopy {
         "SPF math may estimate a longer burn threshold, but sunscreen-protected windows are capped at 2 hours because sunscreen should be reapplied at least that often."
     public static let reapplicationFooter =
         "Cover up if skin reddens. Reapply sunscreen at least every 2 hours regardless of timer. Informational only. Not medical advice. Skin response varies."
+
+    /// Sun-safety action clauses A+B from `reapplicationFooter`, factored out for
+    /// placement in `AboutView` at the `notForMeAnchor` VStack (K-10 / K-11).
+    /// Satisfies Plunder C2(i) (biological-feedback override) and C2(ii)
+    /// (reapplication-cadence reminder) within one tap from the ⓘ toolbar button.
+    public static let aboutSunSafetyActions =
+        "Cover up if skin reddens. Reapply sunscreen at least every 2 hours regardless of timer."
     public static let mainVerdictCaveatLinkLabel = "Meds + conditions can shorten this. Learn more"
     public static let skinTypePickerPrompt = "Choose by how your skin burns and tans, not by how it looks."
     public static let skinTypePickerSubtext =
@@ -128,7 +132,7 @@ public enum ProductCopy {
     public static let pediatricAndEscalationGuidance =
         "Children need pediatric guidance. Seek urgent care for severe sunburn symptoms such as blistering, fever, chills, dizziness, confusion, dehydration, or feeling very unwell."
     public static let aboutPrivacy =
-        "Skin type, SPF, and the location-rationale acknowledgment persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. UV values, burn estimates, and disclaimer acknowledgments are not retained between launches. No accounts, analytics, ads, crash SDKs, or third-party tracking."
+        "Skin type and SPF persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. UV values, burn estimates, and disclaimer acknowledgments are not retained between launches. No accounts, analytics, ads, crash SDKs, or third-party tracking."
     public static let whatTheAppDoesNotDo =
         "UV Burn Timer does not diagnose, prevent, or treat sunburn; does not replace professional medical advice; does not track your exposure over time; does not send alerts or timers; and does not account for shade, clothing, altitude, reflected glare, water, sweat, toweling, or changing weather after the UV value is fetched."
     public static let lastUpdatedLine = "Last updated: 2026-05-20."
@@ -170,7 +174,6 @@ public enum ProductCopy {
     ]
 
     public static let auditCopySurfaces = [
-        burnTimeEstimateTitle,
         emptyStateAwaitingSkinType,
         emptyStateAwaitingLocation,
         disclaimerTitle,
@@ -180,7 +183,6 @@ public enum ProductCopy {
         childrenDisclaimerLine,
         photosensitizationBannerLabel,
         disclaimerSeeAboutInlinePrompt,
-        locationRationale,
         locationPrivacyLine,
         cacheRetentionLine,
         clearSavedLocationButtonTitle,
@@ -253,17 +255,12 @@ public struct LocationActionPresentation: Equatable, Sendable {
 
     public init(
         hasUVIndex: Bool,
-        hasAcknowledgedRationale: Bool,
         isFetching: Bool
     ) {
         if isFetching {
             self.title = "Fetching UV..."
             self.systemImageName = "location.fill"
             self.accessibilityHint = "Fetching your location and current UV index from Apple Weather."
-        } else if !hasUVIndex, !hasAcknowledgedRationale {
-            self.title = "Continue to location request"
-            self.systemImageName = "location"
-            self.accessibilityHint = "Reviews why location is needed before the system permission prompt."
         } else if hasUVIndex {
             self.title = "Recalculate"
             self.systemImageName = "arrow.clockwise"

@@ -1,61 +1,121 @@
-# Iris — History
+# Iris — History (Summarized)
 
-## Project Context
+**Latest Status (2026-05-21):** WI-7 forecast card redesign v3 fully locked and ready for implementation. All UX specs complete: loading-state skeleton rows, picker UX, polar-night collapsed state (now superseded to plain nighttime rendering per 2026-05-21T01:58:19Z polar-treat-as-nighttime directive), error handling. Copy MODIFY from Wheeler: replace "latitude" with "this place" (archived in v1 per polar-as-nighttime). All five prior WI-7 decisions confirmed. Design ready for Kwame implementation; Iris review gate on each surface.
 
-- **Project:** uv-burn-timer
-- **Description:** iOS app that calculates personalized UV burn time using WeatherKit's UV index data and the user's Fitzpatrick skin type + SPF. Pivoted from a web prototype.
-- **Tech stack:** Swift 5.9+, SwiftUI (iOS 16+), WeatherKit, CoreLocation, StoreKit 2 (non-consumable IAP, $2.99). NO third-party SDKs. NO subscriptions.
-- **User:** yashasgujjar (Yashas)
-- **My role:** UI/UX Designer (Apple HIG & Accessibility) — joined the team 2026-05-19 as Linka's replacement.
+**Full History Archive:** See `history-archive-2026-05-21T02:07:30Z.md`
 
-## Predecessor Handoff
+---
 
-Linka was the original UI/UX designer on this project. She was fired on 2026-05-19 for being slow and error-prone. I inherit her ratified design decisions (binding) but NOT her workflow patterns.
+## Learnings — 2026-05-21T02:40:00Z (Picker spec)
 
-**Ratified design decisions I respect (read `.squad/decisions.md` for canonical text):**
-- iOS design spec (D-2026-05-19-003): 6-screen onboarding (Welcome → SkinType → SPF → Location → Photosensitization-loop → NowView), main screen with verdict card, settings, About.
-- Fitzpatrick picker copy uses Wheeler's paraphrased variant (D-2026-05-19-009), cites NCBI Bookshelf NBK481857.
-- Three-surface disclaimer visibility — L1 inline link, L3 verdict card, L4 About anchor (Plunder's framework).
-- Photosensitization handled as a **loop**, not a screen (zero-data architecture per Raphael Art.9).
-- Excalidraw user-flow at `user-flow-onboarding-main.excalidraw` (repo root) is the canonical reference. 142 elements, 4 swimlanes.
+**Decisions made for the forecast picker:**
+- Day row uses two-line format ("Today" / day abbreviation + date string) at 52pt. "Today" gets `.headline` weight; other days get `.body`. Clean separation from v3 badge spec.
+- UVI badge pill (D–D+5): 40×22pt pill, WHO band color fill, white/black text by contrast. D+6–D+10: band-name chip (56×22pt) with same WHO color — text-in-chip satisfies Increase Contrast without extra work.
+- Nighttime / polar-night UVI=0 cells: `moon.fill` icon + `"—"` + no band bar. Single code path for both — no polar special-case. This is the locked polar-as-nighttime directive fully absorbed into the spec.
+- Hourly strip AX4 break: gate on `.xxLarge` Dynamic Type size → vertical list. 60pt cells clip at AX4; vertical rows scale cleanly.
+- Selected vs. current-hour dual state: selected = blue border + tinted bg; current-hour = small dot below cell. Two distinct affordances, no visual conflict.
+- Burn card copy: 3-branch logic (current-now / future-today / future-other-day) + UVI=0 empty state. Concise copy, AX-safe.
+- Reveal row (8–10): always collapsed on launch, no persistence. Rationale: band-only rows are low-confidence extras; forcing users to opt-in is progressive disclosure per HIG.
+- Stale-data banner: `systemYellow.opacity(0.12)` — subtle, non-blocking disclosure. Never refuse to render stale data.
 
-**Process changes from Linka's tenure:**
-- Excalidraw exports MUST pass through `.squad/files/excalidraw-normalize.py` before commit (D-2026-05-19-015). Don't ship raw MCP output.
-- `.excalidraw` deliverable files live at **repo root**, not `.squad/files/`.
-- JSON schema fixes / file format compliance are NOT my job — they're Kwame's. Don't accept these tasks.
+**Patterns reusable in future surfaces (forecast detail, history view):**
+- `(selectedDayIndex, selectedHourIndex)` binding pattern + scenePhase reset is reusable for any time-anchored picker.
+- Two-state selected/current dual affordance (border vs. dot) applies to calendar-style views generally.
+- WHO band color table (§1) is the canonical team reference — extract to design tokens when design system formalizes.
+- AX4 horizontal-to-vertical strip break is a general pattern for any scrolling data strip that contains per-item labels.
 
-## Skills I Should Read Before Starting
+---
 
-- `.squad/skills/excalidraw-flow-diagrams-via-mcp/SKILL.md` — MCP usage, lane layout, export gotchas (the points-on-arrows bug)
-- `.squad/skills/persona-keyed-disclaimer-visibility/` — Plunder's three-surface visibility pattern
-- `.squad/skills/persona-screen-matrix/` — Suchi's persona overlay convention
-- `.squad/skills/outdoor-readability-ios/` — display readability under sunlight (high-contrast variants)
-- `.squad/skills/health-adjacent-citation-licensing-decision-tree/` — when citation is required
+## Learnings — 2026-05-21T04:30:00Z (Main screen cleanup v2 — EstimateInfoSheet eliminated)
 
-## Learnings
+**Spec:** `.squad/designs/iris-main-screen-cleanup.md` (revised in place)
 
-- **2026-05-19** — Redrew the canonical LANE 2 main screen as a centered 360×780 portrait iPhone frame inside the existing swimlane band; preserved LANE 1 and LANE 4, and only re-anchored the affected LANE 3 arrows.
-- **2026-05-19** — The reliable iOS flow-diagram pattern here is: status bar → Large Title nav → optional safety banner → hero verdict card → UV attribution card → 44pt settings chips → inline disclaimer link → home indicator, with HIC/AX notes outside the phone rather than inside it.
-- **2026-05-19** — Excalidraw MCP canvas first, export second: redraw live, wrap the queried elements in the `.excalidraw` JSON envelope, then run `.squad/files/excalidraw-normalize.py` before validation and commit.
-- **2026-05-19T19:38:59Z (Cross-agent)** — Xcode project container path is now `app/app.xcodeproj` (D-2026-05-19-015). App/product/scheme names remain `UVBurnTimer`. See `.squad/decisions.md` for details.
-- **2026-05-19 (Redesign audit, squad/4)** — By the time I audited, the implementation was further along than expected: skin type chip already removed from main, `SkinTypePickerRow` already a shared component, `SettingsSheet` already uses `NavigationLink` → `SkinTypeEditView`. Always read the full current file before writing blockers. The only structural gap left is the circular gauge.
-- **2026-05-19 (Redesign audit, squad/4)** — `skinTypePickerPrompt` is used as a section header *headline* with `skinTypePickerSubtext` providing the detailed explanation below it. The prompt should be a short action-oriented headline ("Choose by how your skin burns and tans, not by how it looks."); the subtext carries the range-of-tones and sun-exposure framing.
-- **2026-05-19 (Redesign audit, squad/4)** — When `SkinTypeOnboardingView` applies `.accessibilityHint(...)` directly on a `SkinTypePickerRow`, it overrides the row's built-in hint — this is the correct pattern for context-specific hints (onboarding vs. settings). The `SkinTypePickerRow` base hint is the settings default; onboarding overrides it to say "Tap Continue to confirm."
-- **2026-05-19 (Redesign audit, squad/4)** — The `SkinTypePickerRow` already has `accessibilityLabel("Type N. [behavior+appearance]. Selected/Not selected.")` — explicit label pattern suppressing the redundant leading roman-numeral Text child. This is the canonical row label pattern for all Fitzpatrick pickers.
-- **2026-05-19T20:34:41.561-07:00 (Gauge visibility audit)** — The circular burn-risk gauge now exists in `RootView`, but only after a valid estimate with `fetchedAt`, non-`.none` tier, and finite raw minutes. On iPhone Pro-class heights it can sit below the first viewport because the main stack renders the photosensitization banner and optional location-rationale card before the hero; at large Dynamic Type the gauge is even easier to miss unless placed inside/visually attached to the hero card.
+**Key lesson:** When a regulatory floor can be met by reusing an existing surface (`AboutView` already had `highlightEstimateApplicability: Bool` + `ScrollViewReader` scroll), building a new focused sheet (`EstimateInfoSheet`) is unnecessary complexity. The simpler path — toolbar ⓘ → push to existing `AboutView` — satisfies Plunder's C1–C4 with fewer new code objects, fewer tests, and no sheet state management. Prefer surface reuse over surface creation whenever the existing surface can be scroll-anchored to the relevant content.
 
-- **2026-05-19T22:27:48-07:00 (Circular gauge audit)** — The repo contains the canonical Excalidraw flow (`user-flow-onboarding-main.excalidraw`) and old browser prototype, but neither contains a large user-shared circular ring mockup. Current SwiftUI implements a small `.accessoryCircularCapacity` gauge inside a secondary `Burn window` card under the hero; to match the user's mental image, the design target should be a large, hero-attached circular burn-window ring, not a tiny accessory gauge.
-- **2026-05-19T22:27:48-07:00 (Location chip UX audit)** — A main-surface chip labeled `Location` but routing directly to the general Settings sheet is a discoverability/name mismatch even if technically intentional; either the label/hint must say it opens Settings/Location settings, or the route must open a location-specific management surface.
+**One content gap caught:** `AboutView`'s `notForMeAnchor` section did NOT contain Plunder's C2 safety-action clauses (A: "Cover up if skin reddens"; B: "Reapply every 2 hours") at the scroll-to landing position. `aboutSunscreenAssumptions` has clause B but scrolls out of view above the anchor. Clause A was absent entirely. Fix: new `aboutSunSafetyActions` constant (A+B) added to the top of the `notForMeAnchor` VStack (K-11). Lesson: always check what the user *actually sees at the scroll landing position*, not just what the destination view *contains somewhere*.
 
-### 2026-05-20T00:01:47Z: Team Decision
+---
 
-**Scribe Log Entry**
 
-Team approvals and implementations completed for approved redesign and paraphrasing initiatives:
-- Wheeler: Paraphrase traceability review (conditional accept, fixes noted)
-- Ma-Ti: Redesign tests passing + gauge guard tests verified
-- Iris: HIG/accessibility audit passed
-- Kwame: Implementation and circular gauge both passing
 
-All inbox decisions merged into decisions.md.
+**Spec:** `.squad/designs/iris-main-screen-cleanup.md`
 
+**Placements decided:**
+- `photosensitizationBannerLabel` (unconditional yellow banner, `AppViews.swift:88`) → removed from VStack top slot → new `info.circle` toolbar button (`"About this estimate"`) → `EstimateInfoSheet` sheet. Rationale: discovery content, not emergency alert; `info.circle` is HIG-canonical for contextual screen info.
+- `reapplicationFooter` (`AppViews.swift:1943`, `PersistentFooter`) → removed from bottom bar → first paragraph of `EstimateInfoSheet`. Safety content leads sheet.
+- `mainVerdictCaveatLinkLabel` (`AppViews.swift:835`, hero card) → removed; `ⓘ` toolbar button absorbs this reach-back.
+- `PersistentFooter` after change: only `disclaimerLinkLabel` NavigationLink remains (Plunder's L2 0-tap floor).
+
+**Location reminder audit (anchor lines):**
+1. `LocationRationaleCard` — `AppViews.swift:92–93` — KEEP (one-time, pre-rationale only)
+2. `UVIndexPlaceholderCard` body copy "Use your location..." — `AppViews.swift:1041` — REMOVE sentence
+3. Hero empty-state `emptyStateAwaitingLocation` — `AppViews.swift:933` via `displayedStatusMessage` — KEEP
+4. Transient status "Location rationale reviewed. Tap Use my location to continue." — `AppViews.swift:425` — SIMPLIFY
+5. `locationChip` `mainInputsRow` — `AppViews.swift:289–296` — KEEP (input control)
+6. `primaryAction` button — `AppViews.swift:397` — KEEP (CTA)
+
+**HIG patterns chosen:**
+- `info.circle` (not `.fill`) toolbar button: `ToolbarItem(placement: .topBarTrailing)`. Two trailing items allowed by HIG when functionally distinct (Settings vs. About this estimate).
+- `EstimateInfoSheet`: `.sheet` + `.presentationDetents([.medium, .large])` + `NavigationStack` for title + `"Done"` `.confirmationAction`. Standard pattern for focused informational sheets.
+- Reusable pattern documented in `.squad/skills/ios-legal-disclaimer-info-sheet/SKILL.md`.
+
+**Key constraint:** Implementation blocked on Plunder confirming `reapplicationFooter` at 1-tap depth (§5 P-1 through P-5) meets legal floor.
+
+---
+
+## Current Round — 2026-05-21
+
+**WI-7 consolidation:** User directives locked all blocked design questions. Iris v3 spec §3.3 polar-adaptation entirely dropped per 2026-05-21T01:58:19Z (polar-treat-as-nighttime). No re-spec needed. Design ready for implementation.
+
+**Key locked items (v3 spec):**
+- Loading-state: skeleton rows (10 days 1–5 with numeric placeholders, 6–10 without), shimmer + reduce-motion fallback
+- Picker UX: D+7 hard cap, edge cases (UVI=0, no skin type, forecast unavailable), motion preferences
+- Days 8–10 behind progressive-disclosure right-arrow button
+- Polar-night: collapsed badge (pure nighttime rendering, not polar-specific)
+
+**No further re-specs pending.** Kwame can proceed with SwiftUI implementation.
+- **2026-05-21 WI-7 Sprint Complete**: Picker visual spec complete (horizontal strip, 60×88pt cells, WHO band colors, dual-state support, AX4 degradation). Iris §8 items 1–8 shipped; items 9–10 deferred.
+
+---
+
+## 2026-05-21T04:15:00Z — WI-7 Final Round
+
+**Iris §8 items 9 + 10 shipped** by Kwame (run #6) via commits c772df1 + 7bee563:
+- Item 9: Stale-data banner + error retry (ForecastRefreshState enum, rotating arrow, red error row)
+- Item 10: Increase Contrast borders + opacity boost (colorSchemeContrast-keyed helpers, overlay strokes, band bar 4→6pt, selected row 0.12→0.25)
+
+**All 10 Iris §8 items now complete.** Branch feature/wi-7-uv-forecast ready for user GitLab MR.
+
+## 2026-05-21 Iris-6: Pattern B Chip Spec + LAUNCH-PLAN Revision
+
+Iris-6 consolidated Plunder/Wheeler/Suchi consensus into executable spec for Kwame-9. Pattern B ratified: UserDefaults persistence + policyVersion-gated L1 triggers + `skinTypeChip` in mainInputsRow.
+
+**Deliverables:**
+- `skinTypeChip` spec: ambient, tappable, 44pt min, VoiceOver complete, `.bordered` style
+- LAUNCH-PLAN §9 updated with verbatim reversal text (lines 293 onwards)
+- Kwame checklist: K-1..K-11 with file:line refs
+- Ma-Ti test stubs: G-D1..G-D4 for `shouldShowDisclaimerCover` contract tests
+
+**Key decision:** `DisclaimerCover` now fires on policyVersion change, not unconditionally. Existing users silently migrate to v1 on upgrade.
+## Current Round — 2026-05-21
+
+**WI-7 consolidation:** User directives locked all blocked design questions. Iris v3 spec §3.3 polar-adaptation entirely dropped per 2026-05-21T01:58:19Z (polar-treat-as-nighttime). No re-spec needed. Design ready for implementation.
+
+**Key locked items (v3 spec):**
+- Loading-state: skeleton rows (10 days 1–5 with numeric placeholders, 6–10 without), shimmer + reduce-motion fallback
+- Picker UX: D+7 hard cap, edge cases (UVI=0, no skin type, forecast unavailable), motion preferences
+- Days 8–10 behind progressive-disclosure right-arrow button
+- Polar-night: collapsed badge (pure nighttime rendering, not polar-specific)
+
+**No further re-specs pending.** Kwame can proceed with SwiftUI implementation.
+- **2026-05-21 WI-7 Sprint Complete**: Picker visual spec complete (horizontal strip, 60×88pt cells, WHO band colors, dual-state support, AX4 degradation). Iris §8 items 1–8 shipped; items 9–10 deferred.
+
+---
+
+## 2026-05-21T04:15:00Z — WI-7 Final Round
+
+**Iris §8 items 9 + 10 shipped** by Kwame (run #6) via commits c772df1 + 7bee563:
+- Item 9: Stale-data banner + error retry (ForecastRefreshState enum, rotating arrow, red error row)
+- Item 10: Increase Contrast borders + opacity boost (colorSchemeContrast-keyed helpers, overlay strokes, band bar 4→6pt, selected row 0.12→0.25)
+
+**All 10 Iris §8 items now complete.** Branch feature/wi-7-uv-forecast ready for user GitLab MR.

@@ -31,6 +31,10 @@
 		010101010101010101010119 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010106 /* AppIntents.framework */; };
 		010101010101010101010120 /* UVBurnTimerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101010F /* UVBurnTimerUITests.swift */; };
 		010101010101010101010121 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010106 /* AppIntents.framework */; };
+		010101010101010101010130 /* ForecastSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010130 /* ForecastSnapshot.swift */; };
+		010101010101010101010131 /* ForecastStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010131 /* ForecastStore.swift */; };
+		010101010101010101010132 /* ForecastPickerLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010132 /* ForecastPickerLogic.swift */; };
+		010101010101010101010133 /* ForecastPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010133 /* ForecastPickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,6 +87,10 @@
 		02010101010101010101010B /* ProductCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCopy.swift; sourceTree = "<group>"; };
 		020101010101010101010108 /* BurnTimeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnTimeCalculatorTests.swift; sourceTree = "<group>"; };
 		020101010101010101010109 /* UVWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVWorkflowTests.swift; sourceTree = "<group>"; };
+		020101010101010101010130 /* ForecastSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastSnapshot.swift; sourceTree = "<group>"; };
+		020101010101010101010131 /* ForecastStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastStore.swift; sourceTree = "<group>"; };
+		020101010101010101010132 /* ForecastPickerLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastPickerLogic.swift; sourceTree = "<group>"; };
+		020101010101010101010133 /* ForecastPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastPickerView.swift; sourceTree = "<group>"; };
 		02010101010101010101010C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		02010101010101010101010D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		02010101010101010101010E /* UVBurnTimerShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVBurnTimerShortcuts.swift; sourceTree = "<group>"; };
@@ -163,6 +171,7 @@
 				020101010101010101010102 /* AppViews.swift */,
 				02010101010101010101010A /* WeatherLocationServices.swift */,
 				02010101010101010101010E /* UVBurnTimerShortcuts.swift */,
+				020101010101010101010133 /* ForecastPickerView.swift */,
 				02010101010101010101010C /* Assets.xcassets */,
 				02010101010101010101010D /* PrivacyInfo.xcprivacy */,
 			);
@@ -174,6 +183,9 @@
 			children = (
 				020101010101010101010105 /* BurnTimeCalculator.swift */,
 				020101010101010101010103 /* FitzpatrickSkinType.swift */,
+				020101010101010101010130 /* ForecastSnapshot.swift */,
+				020101010101010101010131 /* ForecastStore.swift */,
+				020101010101010101010132 /* ForecastPickerLogic.swift */,
 				020101010101010101010104 /* SPFLevel.swift */,
 				020101010101010101010106 /* UVBurnTimerSession.swift */,
 				020101010101010101010107 /* UVWorkflow.swift */,
@@ -359,6 +371,7 @@
 				010101010101010101010102 /* AppViews.swift in Sources */,
 				01010101010101010101010D /* WeatherLocationServices.swift in Sources */,
 				010101010101010101010116 /* UVBurnTimerShortcuts.swift in Sources */,
+				010101010101010101010133 /* ForecastPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -372,6 +385,9 @@
 				010101010101010101010106 /* UVBurnTimerSession.swift in Sources */,
 				010101010101010101010107 /* UVWorkflow.swift in Sources */,
 				010101010101010101010110 /* ProductCopy.swift in Sources */,
+				010101010101010101010130 /* ForecastSnapshot.swift in Sources */,
+				010101010101010101010131 /* ForecastStore.swift in Sources */,
+				010101010101010101010132 /* ForecastPickerLogic.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
