@@ -50,6 +50,9 @@ public enum UserPreferenceStorage {
     public static let selectedSkinTypeKey = "selectedSkinType"
     public static let selectedSPFKey = "selectedSPF"
     public static let locationRationaleAcknowledgedKey = "locationRationaleAcknowledged"
+    public static let disclaimerPolicyVersionKey = "disclaimerPolicyVersion"
+    // Increment only with Plunder sign-off when a material policy/methodology change ships.
+    public static let currentDisclaimerPolicyVersion = 1
     public static let unsetSkinTypeRawValue = 0
 
     public static func restoredSession(
@@ -98,6 +101,39 @@ public enum UserPreferenceStorage {
         defaults.removeObject(forKey: selectedSkinTypeKey)
         defaults.removeObject(forKey: selectedSPFKey)
         defaults.removeObject(forKey: locationRationaleAcknowledgedKey)
+        defaults.removeObject(forKey: disclaimerPolicyVersionKey)
+    }
+
+    /// K-2 / G-D1..G-D4 contract: evaluate whether L1 DisclaimerCover should be shown.
+    ///
+    /// - Returns `true` on first install or when `currentVersion` exceeds the stored version.
+    /// - Returns `false` and silently migrates existing users (writes `currentVersion`) when
+    ///   an existing-user signal is present but no policyVersion key has been written yet.
+    ///
+    /// Side effect: writes `currentVersion` to `disclaimerPolicyVersionKey` on the migration path.
+    public static func shouldShowDisclaimerCover(
+        defaults: UserDefaults,
+        currentVersion: Int
+    ) -> Bool {
+        let storedVersion = defaults.integer(forKey: disclaimerPolicyVersionKey)
+        // storedVersion == 0 means the key was never written (integer default is 0).
+
+        let isExistingUser =
+            defaults.object(forKey: selectedSkinTypeKey) != nil
+            || defaults.bool(forKey: locationRationaleAcknowledgedKey)
+
+        if storedVersion == 0 && isExistingUser {
+            // Migration: existing user upgrading from the @State-only era.
+            // They've seen L1 on every prior cold launch — do NOT re-fire.
+            defaults.set(currentVersion, forKey: disclaimerPolicyVersionKey)
+            return false
+        } else if storedVersion < currentVersion {
+            // First install (storedVersion == 0, isExistingUser == false)
+            // OR shipped policy version bumped above stored version.
+            return true
+        } else {
+            return false
+        }
     }
 }
 

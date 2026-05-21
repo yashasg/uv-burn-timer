@@ -1,108 +1,33 @@
-## 2026-05-21T04:40:00Z — Main Screen Cleanup Contract Tests (Groups N–Q)
+# Ma-Ti — History
 
-**8 new tests written** (Groups N–Q) for the main screen cleanup (WI #7 follow-on). Total test count: **122 passing** (5 known issues: I2, L1, O1, P2, Q1).
+## Core Context
 
-### Test groups delivered
-
-- **Group N** (4 tests): `ProductCopy.aboutSunSafetyActions` contract. N1–N3 guard Plunder C2(i)/(ii) clauses at the constant level. N4 guards Plunder C1 via `disclaimerLinkLabel` (correct carrier — `aboutSunSafetyActions` carries C2 only, not C1).
-- **Group O** (1 known issue): Photosensitization banner removal — manual-verification flag for K-1.
-- **Group P** (2 tests): P1 reads AppViews.swift source at test time and asserts `aboutSunSafetyActions` is referenced (K-11 guard — passed because Kwame's K-11 was already on the branch). P2 is a known issue (AboutView in app target, unreachable from UVBurnTimerCoreTests).
-- **Group Q** (1 known issue): Location reminder consolidation — manual-verification flag for K-8/K-9.
-
-### Key patterns confirmed
-
-**`withKnownIssue` still requires string literals** (not concatenated strings). Same lesson as WI-7 H–M — relearned on first compile attempt.
-
-**`#filePath` source-level smoke tests work for cross-target contracts.** When a view lives in the app target (not testable from Core), reading the source file at test time is a viable contract guard. It's fragile against file renames but catches silent removal of K-11 wiring.
-
-**P1 passed immediately** because Kwame's K-11 (`Text(ProductCopy.aboutSunSafetyActions)` in `notForMeAnchor` VStack) was already in the branch — the test correctly reflected live state.
-
----
-
-## 2026-05-21T07:00:00Z — Pre-existing Test Failure Diagnosis and Fix (6 UI tests)
-
-**Task:** Investigate and fix 6 UI test failures reported by Kwame-8 as "pre-existing" (not caused by his `LocationRationaleCard` removal).
-
-### Root-cause diagnosis
-
-All 6 failures were real regressions introduced silently during K-1/K-6/K-7 (commit `9402465`). They were missed because Kwame-7's build report ("all 114 tests pass") referenced the **unit test target only** (`UVBurnTimerCoreTests` — 114 tests), not the UI test target (`UVBurnTimerUITests` — 39 tests). The two targets ran under different schemes / build invocations and the UI test count was not checked. My Ma-Ti-2 session then added Groups N-Q to the **unit** target and reported "122 tests passing" without separately verifying the UI target — compounding the miss.
-
-### Per-test disposition
-
-| Test | Root cause | Disposition |
-|---|---|---|
-| `testScenario1ColdLaunchShows…` | K-6: `reapplicationFooter` removed from `PersistentFooter` | **A** — removed failing assertion |
-| `testScenario8StaleEstimate…` | K-6: same | **A** — removed failing assertion |
-| `testScenario5CappedEstimate…` | K-6: same | **A** — removed failing assertion |
-| `testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero` | K-1: banner permanently removed | **B** — deleted test |
-| `testScenario4PhotosensitizationReachBackOpensAboutApplicability` | K-1: banner tap target gone | **A** — updated to `EstimateInfoButton` |
-| `testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor` | K-7: `HeroVerdictCaveatLink` removed | **A** — updated to `EstimateInfoButton` |
-
-Also fixed: `acknowledgeDisclaimerAndChooseTypeIII` helper's settle signal (was waiting for banner hittability; updated to `EstimateInfoButton`).
-
-**Result:** 38 UI tests, 0 failures. Unit suite unchanged at 122 (5 withKnownIssue). Combined clean.
+- **Project:** A UV exposure and sunburn timer app
+- **Role:** Tester
+- **Joined:** 2026-05-19T06:26:01.547Z
 
 ## Learnings
 
-### Verify your test counts before claiming "all passing" — the xcodebuild target split trap
+<!-- Append learnings below -->
 
-When a project has both unit tests (`UVBurnTimerCoreTests`) and UI tests (`UVBurnTimerUITests`) under separate targets, `xcodebuild` with `-scheme UVBurnTimerCore` only runs the unit target. Running with `-scheme UVBurnTimer` runs **both** targets. Always confirm which scheme covers which targets before reporting "all passing." The 6 pre-existing failures in this session existed for at least two agent handoffs (Kwame-7 + Ma-Ti-2) without detection because both agents checked only the unit count.
+- 2026-05-19T10:56:40Z: Added TDD coverage for behavior-first Fitzpatrick picker copy; implementation should reorder copy to burn/tan behavior before skin-color descriptors.
+- 2026-05-19T16:30:05-07:00 (work item #4): Discovered latent failure in `approvedMainScreenSafetyCopyIsCaptured` — `skinTypePickerPrompt` had been updated to behavior-first Wheeler-aligned copy ("Choose by how your skin burns and tans…") but the test was still asserting the old string. Fixed. Added 9 new core tests covering: all-six-rows invariant, behavior-first/no-color-anchor for prompt, Wheeler §3.1 subtext cues, Plunder §2.3 inline source pointer, no-default footer (D-2026-05-19-012), not-medical-advice on major surfaces, WeatherKit attribution URL, full citation links set (Wheeler §4), and onboarding commit-gate model invariant. Added 2 UI tests: main screen does not expose Fitzpatrick picker post-onboarding; Settings skin-type edit path (uses XCTExpectFailure until Kwame implements). Final count: 56 / 0 failures. Key blocker: Settings skin-type edit row not yet in app. Full plan at `.squad/decisions/inbox/ma-ti-redesign-test-plan.md`.
 
-**Reliable count command:** `xcodebuild -scheme UVBurnTimer … test | grep "Executed"` — verify line count matches `UVBurnTimerCoreTests` + `UVBurnTimerUITests` separately.
+- 2026-05-19T16:47:52-07:00 (circular gauge guard): Kwame landed `BurnRiskGaugeCard` (AppViews.swift ~line 1338) and two initial gauge UI tests while I was scoping. I confirmed the implementation matches the Iris spec (Issue 2, iris-redesign-a11y-review.md): placed between HeroTimerCard and UVIndexCard, `accessibilityIdentifier("BurnRiskGauge")`, `accessibilityLabel("Burn risk gauge. N% of estimated burn window elapsed.")`, `accessibilityValue(percentText)`, suppressed when estimate is nil/tier=.none. Kwame's two tests covered: (1) gauge present on stale estimate + value not 0%; (2) gauge absent when no estimate. Gaps I filled: (3) `testCircularGaugePresentOnFreshEstimate` — guards against conditioning on stale-only; (4) `testHeroTimeEstimateRemainsDominantAlongsideGauge` — guards gauge-as-replacement regression; (5) `testCircularGaugeAccessibilityLabelIsNonColorAndMeaningful` — guards label contains "Burn risk gauge" + "elapsed" text, value ends with "%". All 5 tests should pass (implementation is in place). Cannot run in this environment (iOS simulator required). Decision doc at `.squad/decisions/inbox/ma-ti-circular-gauge-test-guard.md`.
 
-Three groups of tests in this suite (O1, P2, Q1) reduced to `withKnownIssue` wrappers because `AboutView`, `RootView`, and `UVIndexPlaceholderCard` live in the `UVBurnTimer` app target, which is not importable from `UVBurnTimerCoreTests`. The app target is a host-app binary, not a framework — it cannot be `@testable import`-ed without a host-app test bundle (XCTest's `TEST_HOST` pattern) or ViewInspector.
+### 2026-05-20T00:01:47Z: Team Decision
 
-**Practical ceiling of the current test architecture:** Any behavioral contract that lives in a SwiftUI `View` struct body (layout decisions, Text content rendered from a conditional, toolbar button presence) is completely opaque to the SPM unit test target. Contract-level guards are limited to:
-1. ProductCopy constant content (string assertions)
-2. ViewModel/logic types extracted into UVBurnTimerCore
-3. Source-file text matching (P1 pattern — brittle but better than nothing)
+**Scribe Log Entry**
 
-**What would fix this:** Extract display-critical decision points (e.g., "does the toolbar ⓘ button appear?") into a `@Observable` or value-type ViewModel in UVBurnTimerCore, testable as pure logic. This is the same recommendation as for `shouldShowRevealRow` in the WI-7 picker gaps.
+Team approvals and implementations completed for approved redesign and paraphrasing initiatives:
+- Wheeler: Paraphrase traceability review (conditional accept, fixes noted)
+- Ma-Ti: Redesign tests passing + gauge guard tests verified
+- Iris: HIG/accessibility audit passed
+- Kwame: Implementation and circular gauge both passing
 
----
+All inbox decisions merged into decisions.md.
 
-## 2026-05-21T07:50:00Z — UI Test Axe: 38 → 5 Smoke Tests (Yashas directive)
 
-**Directive:** "we have way too many ui tests, this app is a simulator resource hog" — cut to ~5 smoke tests.
-
-**Cut rationale:** 38 UI tests on a single-screen app is over-indexed on the UI layer. The vast majority of the deleted tests duplicated coverage that already existed (or should exist) at the contract layer in `UVBurnTimerCoreTests`:
-- 7 attribution visibility tests → `ProductCopy.weatherAttributionServiceName` is already a constant; no simulator needed
-- Copy-string assertion tests → `ProductCopy` contract tests cover these in milliseconds
-- Edge-case state tests (stale/capped/uncapped estimates) → ViewModel logic tests cover the invariants
-- Per-surface presence tests (Location+SPF row geometry) → Contract tests on the chip-row logic
-
-**The 5 smoke tests kept:**
-1. `testAppLaunchesWithoutCrash` — cold start with seeded estimate, main screen renders ≤10 s
-2. `testSkinTypePickerEndToEnd` — disclaimer → skin type picker → Type III → main screen
-3. `testLocationButtonFiresLocationRequest` — "Use my location" starts location flow, not Settings
-4. `testForecastPickerCardIsRendered` — structural: "UV Forecast" header scrollable on main screen
-5. `testSettingsSheetOpens` — gear tap → Settings nav bar appears
-
-**Result:** 38 tests → 5, 1188 lines → 177 lines, ~5–8 min simulator time → ~60 s. Unit suite unchanged at 122 tests (5 withKnownIssue).
-
-### Test-pyramid lesson: contract tests > UI tests for single-screen apps
-
-The correct pyramid for this app:
-- **Base (fast, many):** Unit tests — pure functions, math, state machines
-- **Middle (medium):** Contract tests (`UVBurnTimerCoreTests`) — ProductCopy constants, ViewModel logic, picker rules
-- **Apex (slow, few):** UI smoke tests — cold launch, core flow, structural presence
-
-The simulator is a finite resource. Every UI test that can be replaced by a contract test should be. On a single-screen app where 90%+ of behavioral contracts live in constants and ViewModels, the UI test suite should be a thin smoke layer, not a comprehensive regression suite.
-
-**Skill extracted:** `.squad/skills/minimal-ui-smoke-test-pattern/SKILL.md`  
-**Decision inbox:** `.squad/decisions/inbox/ma-ti-ui-test-axe.md`
-
-## 2026-05-21 Ma-Ti-3 + Ma-Ti-4: Pre-existing Failures + UI Test Axe
-
-Ma-Ti-3 diagnosed and fixed 6 pre-existing UI test failures (all Disposition A/B from K-1/K-6/K-7 removals). Ma-Ti-4 executed Yashas directive: UI test count reduced 38 → 5.
-
-**Ma-Ti-3 outcome:** 38 tests, 0 failures. Root causes: K-1 removed PhotosensitizationBanner, K-6 removed reapplicationFooter, K-7 removed verdictCaveatLink. All 6 failures were intentional removals, not bugs.
-
-**Ma-Ti-4 outcome:** 5 smoke tests kept (AppLaunches, SkinTypePickerE2E, LocationButtonRequest, ForecastPickerCard, SettingsSheetOpens). 33 tests deleted. Simulator time 5–8 min → 60 sec.
-
-**Discipline note:** Future handoffs must verify BOTH unit target (UVBurnTimerCoreTests) + UI target (UVBurnTimerUITests), not unit-only.
-
-**Test pyramid lesson:** Single-screen apps benefit from contract-test coverage > UI tests for individual surface assertions.
 - 2026-05-19T22:50:27.684-07:00 (duration formatting tests): Aligned duration-format coverage with Kwame’s in-progress hours/minutes implementation. Core tests now cover under-1-hour minutes, exact 1 hour, over-1-hour burn estimates, the sunscreen 2-hour cap, and No UV unavailable display/accessibility. UI expectations now target compact hero strings such as `Up to 2 hr` and `~1 hr 20 min`. SwiftPM core tests pass (62/0); full Xcode build/test was attempted with project-local DerivedData but did not complete before timeout, so simulator UI validation remains blocked.
 
 ### 2026-05-21T00:55:49Z — Incoming test suite updates for UVI forecast feature (WI-7 round 2)
@@ -222,3 +147,4 @@ Kwame's final 2 commits (c772df1, 7bee563) shipped all 10 Iris §8 items with cl
 - **TODO markers removed** — both Iris §8 items 9 + 10 complete
 
 No new test gaps surfaced. All existing WI-7 coverage (Groups A–M) remains valid. Feature branch ready for user GitLab MR.
+

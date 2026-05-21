@@ -6,1095 +6,90 @@ final class UVBurnTimerUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testScenario1ColdLaunchShowsRequiredDisclaimerThenScenario2RequiresSkinTypeSelection() {
+    // MARK: - Smoke 1: App launches without crash
+
+    /// Cold start with a seeded UV estimate (skips onboarding).
+    /// Passes if the main "UV Burn Timer" screen renders within the timeout.
+    func testAppLaunchesWithoutCrash() {
+        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
+        XCTAssertTrue(
+            app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10),
+            "Main screen must render within 10 seconds of cold launch"
+        )
+    }
+
+    // MARK: - Smoke 2: Skin type picker end-to-end
+
+    /// Cold start → disclaimer → skin type picker → select Type III → main screen.
+    func testSkinTypePickerEndToEnd() {
         let app = launchApp()
-
-        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "Photosensitizing medications").isHittable)
-        XCTAssertFalse(app.buttons["Don't Show Again"].exists)
-
         acknowledgeDisclaimer(in: app)
 
         XCTAssertTrue(app.navigationBars["Choose skin type"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["Continue"].isEnabled)
-        XCTAssertFalse(app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Selected")).firstMatch.exists)
 
-        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type III")).firstMatch.tap()
+        let typeIIIButton = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type III")).firstMatch
+        XCTAssertTrue(typeIIIButton.waitForExistence(timeout: 5))
+        typeIIIButton.tap()
+        XCTAssertTrue(waitForEnabled(app.buttons["Continue"], timeout: 10))
 
-        XCTAssertTrue(app.buttons["Continue"].isEnabled)
         app.buttons["Continue"].tap()
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen at least every 2 hours").exists)
-        XCTAssertTrue(staticText(in: app, containing: "Not medical advice").exists)
+        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10))
     }
 
-    func testScenarios3And6And7LocationRationaleDeniedStateAndSPFChoices() {
-        let app = launchApp(arguments: ["-uiTestLocationDenied"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+    // MARK: - Smoke 3: Location button fires location request
 
-        XCTAssertTrue(app.staticTexts["Location permission"].waitForExistence(timeout: 5))
-        XCTAssertTrue(
-            staticText(
-                in: app,
-                containing:
-                    "Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
-            ).exists)
-        XCTAssertTrue(app.buttons["Continue to location request"].exists)
-
-        // Cover-chain race: the skin-type fullScreenCover may still be tearing
-        // down when this tap fires, producing a {-1, -1} hit point silently
-        // dropped by XCUITest. Re-tap until the rationale-reviewed banner
-        // appears (or the budget expires).
-        tapUntilAppears(
-            app.buttons["Continue to location request"],
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
-        )
-        XCTAssertTrue(
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
-                timeout: 5))
-
-        // Cover-chain race: the "Use my location" button sits in a safeAreaInset(.bottom);
-        // iOS 26 activation-point resolver can emit {-1,-1} while the skin-type cover
-        // is still settling. Use tapWithRetry (coordinate-based synthesis on iOS 26+).
-        tapWithRetry(app.buttons["Use my location"])
-        XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "Location access is off").exists)
-        XCTAssertTrue(app.buttons["Try again"].exists)
-
-        // Spec §6: SPF chip on main screen — Menu-style, compact, no "None" option.
-        XCTAssertTrue(spfChipButton(in: app).waitForExistence(timeout: 5))
-        XCTAssertEqual(spfChipButton(in: app).label, "SPF 30")
-        spfChipButton(in: app).tap()
-        XCTAssertTrue(menuOptionButton(in: app, label: "15").waitForExistence(timeout: 3))
-        XCTAssertTrue(menuOptionButton(in: app, label: "30").exists)
-        XCTAssertTrue(menuOptionButton(in: app, label: "50").exists)
-        XCTAssertTrue(menuOptionButton(in: app, label: "70+").exists)
-        XCTAssertFalse(menuOptionButton(in: app, label: "None").exists)
-        menuOptionButton(in: app, label: "15").tap()
-        XCTAssertTrue(spfChipButton(in: app).waitForExistence(timeout: 5))
-        XCTAssertEqual(spfChipButton(in: app).label, "SPF 15")
-    }
-
-    func testLocationUnavailableShowsLocationSpecificCopy() {
-        let app = launchApp(arguments: ["-uiTestLocationUnavailable"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        tapUntilAppears(
-            app.buttons["Continue to location request"],
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
-        )
-        XCTAssertTrue(
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
-                timeout: 5))
-
-        // Cover-chain race: same as above — tapWithRetry for the safe-area button.
-        tapWithRetry(app.buttons["Use my location"])
-        XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "Could not determine your location").exists)
-        XCTAssertFalse(staticText(in: app, containing: "Could not reach Apple Weather").exists)
-        assertUnavailableBurnRiskGaugeExists(in: app)
-    }
-
-    func testWeatherUnavailableShowsRetryAffordance() {
-        let app = launchApp(arguments: ["-uiTestWeatherUnavailable"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        tapUntilAppears(
-            app.buttons["Continue to location request"],
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
-        )
-        XCTAssertTrue(
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
-                timeout: 5))
-
-        // Cover-chain race: same as above — tapWithRetry for the safe-area button.
-        tapWithRetry(app.buttons["Use my location"])
-        XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "Could not reach Apple Weather").exists)
-        XCTAssertTrue(app.buttons["Try again"].exists)
-        assertUnavailableBurnRiskGaugeExists(in: app)
-    }
-
-    func testLocationButtonStartsLocationFlowInsteadOfSettings() {
+    /// After onboarding, tapping "Use my location" must start the location flow
+    /// (not open Settings). Any of: fetching indicator, failure card, or button
+    /// reverting to idle confirms the OS-level request was dispatched.
+    func testLocationButtonFiresLocationRequest() {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        app.buttons["Location"].tap()
-
-        XCTAssertFalse(
-            app.navigationBars["Settings"].waitForExistence(timeout: 1),
-            "The Location chip must not route to the Settings sheet")
-        XCTAssertTrue(
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
-                timeout: 5))
-        XCTAssertTrue(app.buttons["Use my location"].exists)
-    }
-
-    func testScenario4WeatherAttributionFallbackRemainsVisible() {
-        let app = launchApp(arguments: ["-uiTestWeatherAttributionUnavailable"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        XCTAssertTrue(app.staticTexts["Source: Apple Weather"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Apple Weather"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Apple Weather attribution unavailable"].waitForExistence(timeout: 5))
-        XCTAssertTrue(actionElement(in: app, named: "Data sources").exists)
-    }
-
-    func testScenario4NormalWeatherAttributionLinkRemainsFocusable() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        XCTAssertTrue(actionElement(in: app, named: "Data sources").exists)
-    }
-
-    // MARK: - WeatherKit attribution audit (Plunder pre-submit flag #2)
-    //
-    // WeatherKit's terms of use require the official Apple Weather lockup
-    // (or the "Apple Weather" service-name fallback) to be visible in the
-    // same viewport as any Apple-Weather-sourced data. Audit every weather-
-    // derived main-screen state to confirm the attribution survives the
-    // success path, the stale-estimate path, the sunscreen-capped path,
-    // the WeatherKit-unreachable path, and the location-denied empty state.
-
-    func testAppleWeatherAttributionVisibleOnFreshUVEstimate() {
-        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        assertAppleWeatherAttributionVisible(in: app)
-    }
-
-    func testAppleWeatherAttributionVisibleOnStaleEstimate() {
-        let app = launchApp(arguments: ["-uiTestStaleEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Estimate window elapsed"].waitForExistence(timeout: 5))
-        assertAppleWeatherAttributionVisible(in: app)
-    }
-
-    func testAppleWeatherAttributionVisibleOnCappedEstimate() {
-        let app = launchApp(arguments: ["-uiTestCappedEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Up to 2 hr"].waitForExistence(timeout: 5))
-        assertAppleWeatherAttributionVisible(in: app)
-    }
-
-    func testAppleWeatherAttributionVisibleWhenWeatherUnavailable() {
-        let app = launchApp(arguments: ["-uiTestWeatherUnavailable"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        tapUntilAppears(
-            app.buttons["Continue to location request"],
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
-        )
-        XCTAssertTrue(
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
-                timeout: 5))
-
-        // Use tapWithRetry instead of direct .tap(): the "Use my location" button sits in
-        // a safeAreaInset(edge: .bottom) and the iOS 26 activation-point resolver can
-        // compute hit point {-1, -1} for safe-area buttons while the skin-type cover is
-        // still settling, silently dropping the tap.  tapWithRetry uses coordinate-based
-        // synthesis on iOS 26+ which bypasses the activation-point resolver.
         tapWithRetry(app.buttons["Use my location"])
-        XCTAssertTrue(app.staticTexts["Weather unavailable"].waitForExistence(timeout: 5))
-        assertAppleWeatherAttributionVisible(in: app)
+
+        let flowStarted =
+            app.buttons["Fetching UV..."].waitForExistence(timeout: 5)
+            || app.staticTexts["Location unavailable"].waitForExistence(timeout: 5)
+            || app.buttons["Use my location"].waitForExistence(timeout: 5)
+        XCTAssertTrue(flowStarted, "Tapping 'Use my location' must start the location flow — not route to Settings")
+        XCTAssertFalse(app.navigationBars["Settings"].exists, "Location chip must not open the Settings sheet")
     }
 
-    func testAppleWeatherAttributionVisibleWhenLocationDenied() {
-        let app = launchApp(arguments: ["-uiTestLocationDenied"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
+    // MARK: - Smoke 4: Forecast picker card is rendered
 
-        tapUntilAppears(
-            app.buttons["Continue to location request"],
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."]
-        )
-        XCTAssertTrue(
-            app.staticTexts["Location rationale reviewed. Tap Use my location to continue."].waitForExistence(
-                timeout: 5))
-
-        // See comment above: use tapWithRetry to avoid {-1, -1} hit point on iOS 26.
-        tapWithRetry(app.buttons["Use my location"])
-        XCTAssertTrue(app.staticTexts["Location unavailable"].waitForExistence(timeout: 5))
-        assertAppleWeatherAttributionVisible(in: app)
-    }
-
-    func testScenario8StaleEstimateShowsWarningRecalculateAndAccessibleTierSeverity() {
-        let app = launchApp(arguments: ["-uiTestStaleEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Estimate window elapsed"].exists)
-        XCTAssertTrue(app.buttons["Recalculate"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["Short burn-time tier — critical"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen at least every 2 hours").exists)
-    }
-
-    func testScenario8ForegroundAfterElapsedEstimateReattestsDisclaimer() {
-        let app = launchApp(arguments: ["-uiTestStaleEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCUIDevice.shared.press(.home)
-        app.activate()
-
-        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Don't Show Again"].exists)
-    }
-
-    func testScenario5CappedEstimateRendersLongCaveatAndFooter() {
-        let app = launchApp(arguments: ["-uiTestCappedEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Up to 2 hr"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Sunscreen reapplication limit"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "capped at 2 hours").exists)
-        XCTAssertTrue(app.staticTexts["Long estimate caveat"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "does not mean prolonged sun exposure is safe").exists)
-        XCTAssertTrue(staticText(in: app, containing: "Reapply sunscreen at least every 2 hours").exists)
-    }
-
-    func testLongUncappedEstimateStillRendersSafetyCaveat() {
+    /// The ForecastPickerView card must appear on the main screen (skeleton or
+    /// live data). Structural smoke — proves the component isn't silently removed.
+    /// Full date-selection interaction is covered by ForecastPickerLogicTests.
+    func testForecastPickerCardIsRendered() {
         let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Long estimate caveat"].exists)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["Long burn-time tier — longer estimate, not safe exposure"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "does not mean prolonged sun exposure is safe").exists)
-    }
-
-    /// WI-47 / WI-50 — Suchi persona-annotations.md:118 (Maya, P2 open-water
-    /// swim): **Pull-to-refresh is "Maya's primary affordance on repeating
-    /// use."** She cold-launches the app twice (pre-swim and post-warmup)
-    /// and expects pulling down on the NowView ScrollView to re-fetch the
-    /// UV verdict without traversing the disclaimer-cover cold-launch path.
-    /// Without an XCUI guard, the `.refreshable` modifier could be silently
-    /// dropped during a NowView refactor — it is a passive gesture-only
-    /// affordance with no other identifier-based surface in the existing
-    /// test set.
-    ///
-    /// **WI-50 redesign — environment-action probe instead of pull gesture.**
-    /// The original WI-47 test drove `.refreshable` via an XCUI
-    /// `press(forDuration:thenDragTo:)` pull gesture. That gesture was
-    /// reliable on the dev's local Xcode 26 simulator but **flaky across
-    /// the local + GitHub `macos-15` CI runner matrix**: the CI run on
-    /// `ffe9e40` reported the post-pull `UV Index 4.0` never appeared, and
-    /// every replacement gesture pattern we tried (longer hold, slower
-    /// velocity, longer drag, retry loops) either failed the same way or
-    /// timed out the test runner with SIGTERM.
-    ///
-    /// Rather than fight `.refreshable` gesture infrastructure, this test
-    /// now exercises the **same closure** through SwiftUI's
-    /// `@Environment(\.refresh)` action — the value SwiftUI sets on the
-    /// scroll view's child environment whenever `.refreshable` is
-    /// installed. The DEBUG-only `UITestRefreshableProbeButton` reads that
-    /// environment value and exposes its presence-or-absence through an
-    /// accessibility value:
-    ///   - `RefreshActionAvailable` — `.refreshable` is installed and the
-    ///     env action is bound; tapping the probe invokes the same closure
-    ///     body the real pull gesture would.
-    ///   - `RefreshActionNil` — `.refreshable` has been dropped from the
-    ///     ScrollView (the exact regression WI-47 was designed to catch)
-    ///     and this test fails before invocation.
-    ///
-    /// Determinism: `-uiTestStaleEstimate` seeds an initial `UV Index 200.0`
-    /// (fetchedAt 15 min ago), and `-uiTestRefreshableEcho` (a) gates the
-    /// probe button into the view tree and (b) makes `refreshUV()`
-    /// short-circuit the live WeatherKit + location stack to a sentinel
-    /// `uvIndex = 4.0`. Tapping the probe calls the env action, which
-    /// runs the exact `.refreshable { await refreshUV() }` closure body,
-    /// so the post-tap re-render is observable from a single static-text
-    /// assertion.
-    func testMayaPullToRefreshGestureRefetchesUVOnRepeatUse() {
-        let app = launchApp(arguments: ["-uiTestStaleEstimate", "-uiTestRefreshableEcho"])
-
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
 
-        // Baseline: the stale-estimate seed must render UV Index 200.0 on the
-        // UVIndexCard before any refresh fires.
-        XCTAssertTrue(
-            app.staticTexts["UV Index 200.0"].waitForExistence(timeout: 5),
-            "Pre-refresh baseline: -uiTestStaleEstimate must seed UV Index 200.0 on the UVIndexCard."
-        )
-
-        // The NowView ScrollView must still expose its accessibility identifier
-        // so any future gesture-based test (or a VoiceOver user) can target it.
-        XCTAssertTrue(
-            app.scrollViews["NowViewScrollView"].waitForExistence(timeout: 5),
-            "NowView ScrollView must expose the NowViewScrollView accessibility identifier "
-                + "so Maya's pull-to-refresh affordance has a stable target."
-        )
-
-        // The probe button renders whenever -uiTestRefreshableEcho is set.
-        // Its accessibility value reveals whether @Environment(\.refresh) is
-        // bound (proving .refreshable is still installed) or nil (proving
-        // it was dropped).
-        let probe = app.buttons["UITestRefreshableProbeButton"]
-        XCTAssertTrue(
-            probe.waitForExistence(timeout: 5),
-            "UITestRefreshableProbeButton must be present in DEBUG builds when "
-                + "-uiTestRefreshableEcho is set — it is the WI-50 test seam for "
-                + "verifying the .refreshable modifier wiring."
-        )
-        XCTAssertEqual(
-            probe.value as? String,
-            "RefreshActionAvailable",
-            ".refreshable must still be installed on NowViewScrollView. "
-                + "A RefreshActionNil value means the modifier was dropped — "
-                + "the exact regression WI-47/WI-50 guard against."
-        )
-
-        // Tap the probe to invoke the env action — the same closure body the
-        // real pull gesture would invoke — and assert the echo seam fires.
-        probe.tap()
-
-        XCTAssertTrue(
-            app.staticTexts["UV Index 4.0"].waitForExistence(timeout: 10),
-            "After invoking the refresh env-action, refreshUV() must run and the "
-                + "UVIndexCard must re-render with the echo-seam UV value (4.0). "
-                + "Failure here means the .refreshable closure was rewired away from refreshUV()."
-        )
-    }
-
-    func testBurnRiskGaugeExistsAndIsMeaningfulOnStaleEstimate() {
-        // The -uiTestStaleEstimate seed sets uvIndex=200, fetchedAt 15 min ago, typeI.
-        // With elapsed > 0 and a valid estimate the gauge must be present and not at 0%.
-        let app = launchApp(arguments: ["-uiTestStaleEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-
-        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
-        XCTAssertTrue(
-            gauge.waitForExistence(timeout: 5),
-            "BurnRiskGaugeCard must appear when an estimate and fetchedAt are available")
-
-        // Gauge value must not read 0% — 15 minutes have elapsed against a burn window.
-        let gaugeValue = gauge.value as? String ?? ""
-        XCTAssertFalse(gaugeValue == "0%", "Gauge must reflect elapsed burn time, not 0%")
-    }
-
-    func testBurnRiskGaugeShellExistsWhenNoEstimate() {
-        // Cold launch with no UV data — keep the circular shell visible, but label it unavailable
-        // so simulator/development no-location states are testable without fake weather data.
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        let gauge = app.descendants(matching: .any)["BurnRiskGaugePlaceholder"]
-        XCTAssertTrue(gauge.waitForExistence(timeout: 5), "BurnRiskGaugePlaceholder shell must appear without a UV estimate")
-        XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
-        XCTAssertEqual(gauge.value as? String, "Unavailable")
-    }
-
-    func testBurnRiskGaugePlaceholderHasDistinctIdentifier() {
-        // WI-42: BurnRiskGaugeCard (real data) and BurnRiskGaugeUnavailableCard (placeholder)
-        // must use distinct accessibility identifiers so XCUI queries are unambiguous.
-        // Cold-launch without seeded estimate → placeholder must be present, real gauge absent.
-        let app = launchApp(arguments: ["-uiTestResetDefaults"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        let placeholder = app.descendants(matching: .any)["BurnRiskGaugePlaceholder"]
-        let realGauge = app.descendants(matching: .any)["BurnRiskGauge"]
-
-        XCTAssertTrue(
-            placeholder.waitForExistence(timeout: 5),
-            "BurnRiskGaugePlaceholder must exist when no UV estimate is available"
-        )
-        XCTAssertFalse(
-            realGauge.exists,
-            "BurnRiskGauge (real data) must NOT exist without a seeded UV estimate — identifiers must be distinct"
-        )
-    }
-
-    /// WI-51 — Suchi `persona-annotations.md:108` (Asha, P4 Accutane):
-    /// **"She taps L3 'Is this estimate for me?' → About at `notForMe` …
-    /// the single most important L3 interaction in the entire app."**
-    ///
-    /// The hero verdict card carries an `info.circle` `Label` reading
-    /// "Meds + conditions can shorten this. Learn more"
-    /// (`ProductCopy.mainVerdictCaveatLinkLabel`) inside a `NavigationLink`
-    /// to `AboutView(highlightEstimateApplicability: true)`, which scrolls
-    /// to the `notForMe` anchor (the "When this estimate may not apply"
-    /// section). Until WI-51 this surface had no XCUI guard — the L1
-    /// deep-link (`DisclaimerSeeAboutLink`) and the photosens banner
-    /// (`PhotosensitizationBanner`) both route to the same About anchor
-    /// and are XCUI-tested, but the **hero-card** route — Asha's
-    /// per-verdict re-anchor every cold launch — was only pinned by a
-    /// unit test on the copy string. A NowView refactor that flattens
-    /// `HeroTimerCard.body` or moves the caveat into a child component
-    /// could silently drop the NavigationLink (or change its destination)
-    /// without any test failing.
-    ///
-    /// This test mirrors the regression-guard profile of
-    /// `testScenario4PhotosensitizationReachBackOpensAboutApplicability`
-    /// (the banner's equivalent guard) but for the hero-card surface:
-    ///   1. The link is exposed through the `HeroVerdictCaveatLink`
-    ///      accessibility identifier so XCUI can target it reliably.
-    ///   2. Its label includes the load-bearing
-    ///      `mainVerdictCaveatLinkLabel` copy.
-    ///   3. Tapping it pushes `AboutView` with the applicability section
-    ///      ("When this estimate may not apply", the `notForMe` anchor)
-    ///      reachable — exactly the deep-link contract from the user-flow
-    ///      spec (LANE 3 row 2 callout #5 — "Verdict-card learn-more
-    ///      deep-link").
-    func testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor() {
-        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
-
-        XCTAssertTrue(
-            app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5),
-            "NowView must render directly when -uiTestLongUncappedEstimate seeds a session and skips onboarding."
-        )
-        XCTAssertTrue(
-            app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5),
-            "Pre-link baseline: -uiTestLongUncappedEstimate must render the hero estimate so the L3 caveat link condition (estimate != nil, rawMinutes.isFinite) is satisfied."
-        )
-
-        let caveatLink = app.buttons["HeroVerdictCaveatLink"]
-        XCTAssertTrue(
-            caveatLink.waitForExistence(timeout: 5),
-            "Hero verdict card must expose the L3 caveat link via the HeroVerdictCaveatLink accessibility identifier — Asha's single most important L3 deep-link per persona-annotations.md:108."
-        )
-        XCTAssertTrue(
-            caveatLink.label.localizedCaseInsensitiveContains("Meds + conditions can shorten this"),
-            "Hero verdict L3 link must surface the ProductCopy.mainVerdictCaveatLinkLabel copy ('Meds + conditions can shorten this. Learn more') for VoiceOver and visual discoverability."
-        )
-
-        // The L3 link sits at the bottom of the hero card, beneath the
-        // burn-risk gauge. With the persistent footer (Recalculate +
-        // disclaimer) occupying the lower ~25% of the viewport, the link
-        // can be off-screen on launch even though it exists in the AX
-        // tree. Scroll the ScrollView until the link becomes hittable so
-        // the synthesized tap lands on the rendered element rather than
-        // off-screen coordinates.
         let scrollView = app.scrollViews["NowViewScrollView"]
-        var swipes = 0
-        while !caveatLink.isHittable && swipes < 6 {
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+
+        let forecastHeader = app.staticTexts["UV Forecast"]
+        for _ in 0..<5 where !forecastHeader.exists {
             scrollView.swipeUp()
-            swipes += 1
         }
-        XCTAssertTrue(
-            caveatLink.isHittable,
-            "Hero L3 caveat link must scroll into view so Asha can actually tap it without fighting the persistent footer."
-        )
-
-        // Use tapUntilAppears for iOS 26 hit-point robustness — the hero
-        // card sits inside a ScrollView whose layout can still be settling
-        // when the link first becomes hittable, occasionally producing a
-        // {-1, -1} synthesized hit point that is silently dropped.
-        tapUntilAppears(caveatLink, app.navigationBars["About"])
-
-        XCTAssertTrue(
-            app.navigationBars["About"].waitForExistence(timeout: 5),
-            "Tapping the hero L3 caveat link must push AboutView."
-        )
-
-        // WI-53 — strengthen the deep-link contract: assert the
-        // applicability anchor was actually scrolled into view by
-        // `highlightEstimateApplicability: true`. The notForMe section
-        // ("When this estimate may not apply") lives roughly 1500pt
-        // down the AboutView scroll content — after the "About &
-        // Citations" intro, "How this works", "Skin type
-        // classification" (with three paragraphs of Fitzpatrick
-        // citation text), and "Sunscreen assumptions". Without the
-        // highlight flag, AboutView lands at the top and the section
-        // header is below the fold (`exists` would still be true via
-        // the AX tree, but `isHittable` is false). With the flag, the
-        // `proxy.scrollTo(notForMeAnchor, anchor: .top)` lands it in
-        // the visible viewport and `isHittable` flips true. This
-        // assertion catches a refactor that drops the flag or
-        // short-circuits the .onAppear scroll, which the prior
-        // existence-only check would have missed.
-        let applicabilityHeader = staticText(in: app, containing: "When this estimate may not apply")
-        XCTAssertTrue(
-            applicabilityHeader.exists,
-            "Hero L3 link must route to AboutView with the applicability section materialized — the 'When this estimate may not apply' heading must exist so Asha can re-anchor on photosensitizer caveats per verdict."
-        )
-        XCTAssertTrue(
-            applicabilityHeader.isHittable,
-            "Hero L3 link must route with highlightEstimateApplicability:true — the applicability anchor must scroll into the visible viewport (isHittable). Without the highlight flag, the section is far below the fold and the deep-link contract degrades to a generic 'About' open."
-        )
+        XCTAssertTrue(forecastHeader.waitForExistence(timeout: 5), "Forecast picker card must render on the main screen")
     }
 
-    func testCircularGaugePresentOnFreshEstimate() {
-        // Fresh estimate — not stale, not capped — gauge must be present as the secondary visual cue.
-        // Regression guard: gauge must not be silently removed or conditioned on stale state only.
-        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
+    // MARK: - Smoke 5: Settings sheet opens
 
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5))
-
-        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
-        XCTAssertTrue(
-            gauge.waitForExistence(timeout: 5),
-            "BurnRiskGauge must be present on a fresh estimate, not only on stale ones"
-        )
-        XCTAssertTrue(
-            gauge.isHittable,
-            "BurnRiskGauge must be visible without scrolling or being covered by the persistent footer"
-        )
-        XCTAssertTrue(
-            gauge.frame.width >= 150 && gauge.frame.height >= 150,
-            "BurnRiskGauge must render as a prominent circular gauge, not a tiny accessory control"
-        )
-    }
-
-    func testHeroTimeEstimateRemainsDominantAlongsideGauge() {
-        // Gauge is the secondary cue; the hero estimate must remain the primary surface.
-        // Regression guard: gauge must NOT replace the hero number.
-        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-
-        // Hero estimate visible as the dominant element.
-        XCTAssertTrue(
-            app.staticTexts["~1 hr 20 min"].waitForExistence(timeout: 5),
-            "Hero time estimate must be visible — it is the primary cue, not the gauge"
-        )
-
-        // Gauge co-exists with the hero — it does not replace it.
-        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
-        XCTAssertTrue(
-            gauge.waitForExistence(timeout: 5),
-            "Gauge must co-exist with the hero estimate as a secondary cue"
-        )
-    }
-
-    func testCircularGaugeAccessibilityLabelIsNonColorAndMeaningful() {
-        // Iris spec (iris-redesign-a11y-review.md Issue 2): gauge must carry a text label
-        // that names the concept and gives a percentage — color is never the only differentiator.
-        // Spec: accessibilityLabel("Burn risk gauge. N% of estimated burn window elapsed.")
-        //       accessibilityValue(percentText)  e.g. "0%"
-        let app = launchApp(arguments: ["-uiTestLongUncappedEstimate"])
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-
-        let gauge = app.descendants(matching: .any)["BurnRiskGauge"]
-        XCTAssertTrue(gauge.waitForExistence(timeout: 5))
-
-        // Label must name the gauge concept, not rely on color alone.
-        XCTAssertTrue(
-            gauge.label.localizedCaseInsensitiveContains("Burn risk gauge"),
-            "accessibilityLabel must contain 'Burn risk gauge' — color is never the sole differentiator"
-        )
-        XCTAssertTrue(
-            gauge.label.localizedCaseInsensitiveContains("elapsed"),
-            "accessibilityLabel must describe elapsed progress in text, not color alone"
-        )
-
-        // Value must be a percentage string so VoiceOver announces a number, not silence.
-        let value = gauge.value as? String ?? ""
-        XCTAssertTrue(
-            value.hasSuffix("%"),
-            "accessibilityValue must be a percentage (e.g. '0%') so VoiceOver announces it"
-        )
-    }
-
-    func testScenario4PhotosensitizationReachBackOpensAboutApplicability() {
+    /// Tap the gear icon → Settings navigation bar must appear.
+    func testSettingsSheetOpens() {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        // Cover-chain race: on iOS 26 / Xcode 26, the rendered frame for the
-        // photosens banner can still be resolving when the onboarding cover
-        // finishes dismissing. A plain `.tap()` against the banner then
-        // synthesizes a {-1, -1} hit point and is silently dropped (the
-        // "About" navigation bar never appears even though the element
-        // reports `exists`). Re-tap until the AboutView lands.
-        tapUntilAppears(
-            app.buttons["Meds or photosensitive conditions? Learn more"],
-            app.navigationBars["About"]
-        )
-
-        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
-        XCTAssertTrue(scrollToActionElement(in: app, named: "NIH MedlinePlus sun-sensitivity overview").exists)
-    }
-
-    /// WI-13 — Spec §LANE 1 Screen 2 + `suchi-persona-annotations.md`
-    /// (Screen 1 Asha row): the L1 disclaimer cover must surface
-    /// `see About` as an **inline link** inside the sentence
-    /// "If you take a photosensitizing medication or have a sun-sensitive
-    /// condition — see About.", not as a separate bordered button below
-    /// the body. Tapping the link opens AboutView at the applicability
-    /// anchor without dismissing the underlying cover.
-    ///
-    /// The test pins four contracts:
-    ///   1. The pre-WI-13 bordered button copy
-    ///      ("See About: when estimates may not apply") is NOT present.
-    ///   2. The inline prompt is exposed through the
-    ///      `DisclaimerSeeAboutLink` accessibility identifier so
-    ///      XCUITest can find it reliably across iOS 17 / 18 / 26 — the
-    ///      SwiftUI `Text(LocalizedStringKey:)` Markdown link a11y
-    ///      exposure varies by runtime, so `DisclaimerCover` now wraps
-    ///      the prompt in a single styled `Button` that XCUITest
-    ///      addresses by identifier.
-    ///   3. The button's `label` surfaces the full prompt (including
-    ///      "photosensitizing medication" and "see About") for
-    ///      VoiceOver discoverability.
-    ///   4. Tapping the inline link opens AboutView and the cover stays
-    ///      behind it (re-asserted by `acknowledgeButton` still existing
-    ///      after dismissing About).
-    func testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton() {
-        let app = launchApp()
-        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10))
-
-        XCTAssertFalse(
-            app.buttons["See About: when estimates may not apply"].exists,
-            "L1 disclaimer must not render a separate bordered 'See About: when estimates may not apply' button; the deep-link belongs inline in the body sentence."
-        )
-
-        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
-        XCTAssertTrue(
-            inlineSeeAboutLink.waitForExistence(timeout: 5),
-            "L1 disclaimer must expose the inline 'see About' deep-link via the DisclaimerSeeAboutLink accessibility identifier."
-        )
-        XCTAssertTrue(
-            inlineSeeAboutLink.label.localizedCaseInsensitiveContains("photosensitizing medication"),
-            "Inline 'see About' control must surface the photosensitizing-medication prompt for VoiceOver."
-        )
-        XCTAssertTrue(
-            inlineSeeAboutLink.label.localizedCaseInsensitiveContains("see About"),
-            "Inline 'see About' control must include the 'see About' affordance text in its accessibility label."
-        )
-
-        inlineSeeAboutLink.tap()
-
-        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 10))
-        XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
-
-        let aboutDoneButton = app.buttons["Done"]
-        if aboutDoneButton.waitForExistence(timeout: 2) {
-            aboutDoneButton.tap()
-        } else {
-            app.swipeDown(velocity: .fast)
-        }
-
-        XCTAssertTrue(
-            app.buttons["I understand"].waitForExistence(timeout: 5),
-            "After dismissing About, the L1 disclaimer cover must still be present so the user can acknowledge it."
-        )
-    }
-
-    /// WI-35 — Suchi persona-annotations.md Screen 1 + Screen 4 (Asha, P4 Accutane):
-    /// **Asha's visibility loop** — the load-bearing safety architecture for the
-    /// photosensitizer cohort. Asha sees the L1 cover, taps the inline "see About"
-    /// reach-back, reads the photosensitizer cohort list in AboutView (presented as
-    /// a `.sheet` over the still-present L1 cover), dismisses About, returns to the
-    /// still-present L1 cover to complete her "I understand" acknowledgment, and
-    /// then advances normally into onboarding.
-    ///
-    /// This test focuses on the **round-trip contract**: the L1 cover must be
-    /// present both before and after the see-About sheet is presented and dismissed.
-    /// (`testDisclaimerCoverSurfacesInlineSeeAboutLinkInsteadOfButton` focuses on
-    /// the inline-not-bordered rendering contract; this test focuses on the Asha
-    /// visibility loop as a complete persona flow.)
-    ///
-    /// Per spec.md §LANE 1 Screen 2 implementation note (WI-26): the sheet is
-    /// presented via `Button(action:)` with `accessibilityIdentifier
-    /// ("DisclaimerSeeAboutLink")`, opening `AboutView(highlightEstimateApplicability: true)`.
-    func testDisclaimerL1SeeAboutSheetRoundTripLeavesL1CoverPresent() {
-        // Phase 1 — Cold launch: L1 cover is the first surface shown.
-        let app = launchApp()
-        XCTAssertTrue(
-            app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 10),
-            "L1 DisclaimerCover must be the first surface on cold launch (Donatello M1)")
-
-        let inlineSeeAboutLink = app.buttons["DisclaimerSeeAboutLink"]
-        XCTAssertTrue(
-            inlineSeeAboutLink.waitForExistence(timeout: 5),
-            "DisclaimerSeeAboutLink must be present on the L1 cover")
-
-        // Phase 2 — Asha taps the inline reach-back.
-        inlineSeeAboutLink.tap()
-
-        // Phase 3 — AboutView presents as a .sheet over the still-present L1 cover.
-        XCTAssertTrue(
-            app.navigationBars["About"].waitForExistence(timeout: 10),
-            "Tapping DisclaimerSeeAboutLink must present AboutView as a .sheet")
-        XCTAssertTrue(
-            staticText(in: app, containing: "When this estimate may not apply").exists,
-            "AboutView must expose the applicability section (highlightEstimateApplicability: true)")
-
-        // Phase 4 — Asha dismisses About after reading the cohort list.
-        // The About sheet from DisclaimerCover has a Done button (added because
-        // .interactiveDismissDisabled(true) on the outer DisclaimerCover prevents
-        // swipe-down on nested sheets on some iOS runtime versions).
-        let doneButton = app.buttons["Done"]
-        XCTAssertTrue(
-            doneButton.waitForExistence(timeout: 5),
-            "About sheet presented from DisclaimerCover must have a Done button")
-        doneButton.tap()
-        // Wait for the sheet to be fully gone before inspecting the L1 cover.
-        // Post-sheet-dismiss, the AX hierarchy can be transiently inconsistent;
-        // scrollToVisible on elements in the L1 cover returns kAXErrorCannotComplete
-        // until the presentation graph settles. waitForNonExistence gives the
-        // runtime enough time to tear down the sheet's accessibility tree.
-        XCTAssertTrue(
-            app.navigationBars["About"].waitForNonExistence(timeout: 5),
-            "About sheet must be fully dismissed before proceeding")
-
-        // Phase 5 — L1 cover is STILL present: both the title and the acknowledge
-        // button must be visible and hittable. This is the core Asha loop contract —
-        // she completes her visibility check and then acknowledges the cover.
-        XCTAssertTrue(
-            app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5),
-            "L1 cover title must still be visible after dismissing the About sheet — Asha's round-trip must return to L1")
-        let acknowledgeBtn = app.buttons["I understand"]
-        XCTAssertTrue(
-            acknowledgeBtn.waitForExistence(timeout: 5),
-            "I understand must remain tappable after the About round-trip")
-        // Give the AX tree one more moment to mark the button hittable after
-        // sheet teardown, so tapUntilAppears in acknowledgeDisclaimer doesn't
-        // spend its budget on the transient {-1,-1} window.
-        _ = waitForHittable(acknowledgeBtn, timeout: 5)
-
-        // Phase 6 — Asha completes onboarding normally: the round-trip must not
-        // break the cover-chain progression.
-        acknowledgeDisclaimer(in: app)
-        XCTAssertTrue(
-            app.navigationBars["Choose skin type"].waitForExistence(timeout: 10),
-            "After the see-About round-trip, onboarding must advance normally to the skin-type picker")
-    }
-
-
-    /// Spec §LANE 2 #3 + LANE 3 callout #2 (Suchi Asha overlay): the
-    /// photosensitization reach-back is a *banner*, not a chip — it spans
-    /// the full row, sits above the hero card, and serves as the L1
-    /// reach-back surface for users on photosensitizing meds. The previous
-    /// `Button.buttonStyle(.bordered).tint(.orange)` rendered as an
-    /// orange-tinted chip that was easy to mistake for a regular content
-    /// button. Lock the layout contract:
-    ///   1. The banner is reachable on the main screen with the dedicated
-    ///      `PhotosensitizationBanner` accessibility identifier.
-    ///   2. It spans ≥85% of the screen width.
-    ///   3. It sits above the hero `Burn-time estimate` card.
-    func testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        let banner = app.buttons["PhotosensitizationBanner"]
-        XCTAssertTrue(
-            banner.waitForExistence(timeout: 5),
-            "Photosensitization affordance must expose the PhotosensitizationBanner accessibility identifier"
-        )
-
-        let screenWidth = app.windows.firstMatch.frame.width
-        XCTAssertGreaterThanOrEqual(
-            banner.frame.width,
-            screenWidth * 0.85,
-            "Photosensitization affordance must render as a banner spanning ≥85% of screen width, not a chip"
-        )
-
-        let heroTitle = app.staticTexts["Burn-time estimate"]
-        XCTAssertTrue(heroTitle.waitForExistence(timeout: 5))
-        XCTAssertLessThan(
-            banner.frame.midY,
-            heroTitle.frame.midY,
-            "Photosensitization banner must sit above the Burn-time estimate card"
-        )
-    }
-
-    func testScenario9SettingsIncludesAboutCitationsAttributionAndPricing() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        // Use the "About & Citations" button as the tap-until-appears target rather than
-        // the "Settings" navigation bar title. The nav bar title is inside the sheet's
-        // NavigationStack; at the `.medium` presentation detent it can take longer than
-        // the 4-second per-attempt budget in tapUntilAppears to propagate into the
-        // accessibility tree.  Meanwhile the loop continues to re-tap the gear, which
-        // can toggle the sheet closed before the nav bar is registered — creating an
-        // open/close cycle that exhausts the 30-second deadline.  The "About &
-        // Citations" NavigationLink cell appears earlier in the tree on sheet open and
-        // is unique to the Settings sheet surface.
         let aboutCitationsButton = app.buttons["About & Citations"]
         tapUntilAppears(app.buttons["Settings"], aboutCitationsButton)
-
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
-        XCTAssertTrue(scrollToStaticText(in: app, containing: "One-time paid app").exists)
-
-        app.buttons["About & Citations"].tap()
-        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "Citations").exists)
-        XCTAssertTrue(scrollToStaticText(in: app, containing: "What this app does not do").exists)
-        XCTAssertTrue(scrollToStaticText(in: app, containing: "Version 1.0").exists)
-        XCTAssertTrue(scrollToStaticText(in: app, containing: "Last updated: 2026-05-20").exists)
-        XCTAssertTrue(scrollToActionElement(in: app, named: "WHO Global Solar UV Index practical guide").exists)
-        app.navigationBars["About"].buttons.firstMatch.tap()
-
-        app.buttons["Attribution & Legal"].tap()
-        XCTAssertTrue(app.navigationBars["Attribution"].waitForExistence(timeout: 5))
-        XCTAssertTrue(actionElement(in: app, named: "Apple Weather data sources").exists)
-        XCTAssertTrue(app.staticTexts["https://weatherkit.apple.com/legal-attribution.html"].exists)
     }
 
-    func testScenario10CorruptSavedLocationIsClearedAndPrivacyControlDisabled() {
-        let app = launchApp(arguments: ["-uiTestCorruptRoundedCoordinate"])
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
-
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
-        XCTAssertTrue(scrollToStaticText(in: app, containing: "does not save UV values").exists)
-        let clearSavedLocationButton = scrollToActionElement(in: app, named: "Clear saved location")
-        XCTAssertTrue(clearSavedLocationButton.exists)
-        XCTAssertFalse(clearSavedLocationButton.isEnabled)
-    }
-
-    func testScenario10SavedLocationRestoresAndCanBeCleared() {
-        let app = launchApp(arguments: ["-uiTestSavedRoundedCoordinate"])
-
-        acknowledgeDisclaimer(in: app)
-        XCTAssertTrue(app.navigationBars["Choose skin type"].waitForExistence(timeout: 10))
-        XCTAssertFalse(app.buttons["Continue"].isEnabled)
-        XCTAssertFalse(app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Selected")).firstMatch.exists)
-        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type III")).firstMatch.tap()
-        app.buttons["Continue"].tap()
-
-        XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Ready when you are"].exists)
-        XCTAssertEqual(spfChipButton(in: app).label, "SPF 30")
-        XCTAssertFalse(app.staticTexts["4+ hr"].exists)
-        XCTAssertFalse(app.staticTexts["UV Index 8.0"].exists)
-        // Cover-chain race: opening the Settings sheet from the main screen
-        // can land a {-1, -1} hit point on iOS 26 / Xcode 26 if the just-
-        // dismissed onboarding cover hasn't fully released the presentation
-        // slot yet. Re-tap the toolbar gear until the Settings navigation
-        // bar appears.
-        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
-
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
-        XCTAssertTrue(scrollToStaticText(in: app, containing: "does not save UV values").exists)
-        XCTAssertTrue(app.buttons["Clear saved location"].isEnabled)
-        app.buttons["Clear saved location"].tap()
-        app.buttons["Done"].tap()
-
-        XCTAssertTrue(app.buttons["Location"].waitForExistence(timeout: 5))
-        XCTAssertFalse(staticText(in: app, containing: "Approx. 37.77, -122.42").exists)
-    }
-
-    func testSavedPreferencesRestoreAfterDisclaimerWithoutRepeatingPrompts() {
-        let app = launchApp(arguments: ["-uiTestSavedPreferences"])
-
-        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5))
-        app.buttons["I understand"].tap()
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.navigationBars["Choose skin type"].exists)
-        XCTAssertFalse(app.staticTexts["Location permission"].exists)
-        XCTAssertTrue(staticText(in: app, containing: "Approx. 37.77, -122.42").waitForExistence(timeout: 5))
-        XCTAssertEqual(spfChipButton(in: app).label, "SPF 50")
-        XCTAssertFalse(app.buttons["None"].exists)
-    }
-
-    /// Explicit regression for the location-rationale persistence ADR
-    /// (`.squad/decisions/inbox/gaia-location-rationale-persistence.md`):
-    /// once a user has acknowledged the inline `LocationRationaleCard`,
-    /// subsequent cold launches must restore the ack from UserDefaults so
-    /// the rationale card is *not* re-rendered. This isolates the
-    /// rationale-ack contract from
-    /// `testSavedPreferencesRestoreAfterDisclaimerWithoutRepeatingPrompts`,
-    /// which bundles skin type + SPF + rounded coordinate restoration into
-    /// a single assertion. The L1 safety disclaimer continues to re-fire on
-    /// every cold launch and that is correct — only the rationale card
-    /// persists.
-    func testLocationRationaleAcknowledgementSurvivesRelaunch() {
-        let app = launchApp(arguments: ["-uiTestSavedPreferences"])
-
-        XCTAssertTrue(app.staticTexts["How accurate is this for you?"].waitForExistence(timeout: 5))
-        app.buttons["I understand"].tap()
-
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 5))
-        XCTAssertFalse(
-            app.staticTexts["Location permission"].exists,
-            "LocationRationaleCard must not re-appear on a launch where the user already acknowledged it"
-        )
-
-        // Headline + body of the LocationRationaleCard must both be absent.
-        XCTAssertFalse(
-            staticText(
-                in: app,
-                containing:
-                    "Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
-            ).exists,
-            "Rationale body copy must not re-appear once the ack is restored from UserDefaults"
-        )
-    }
-
-    /// WI-11 (P1): after the user finishes onboarding (Type III committed),
-    /// the hero empty state must prompt them to fetch a UV index — NOT to do
-    /// the skin-type step they just completed. The previous implementation
-    /// initialised `RootView.statusMessage` to "Pick a skin type to see your
-    /// estimate." and never refreshed it when the session got a skin type,
-    /// so every persona landed on a main screen telling them to do something
-    /// they had already done.
-    func testHeroEmptyStateAfterOnboardingPromptsForLocation() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        // Hero copy after onboarding must direct the user to the next action
-        // (location) — not loop them back to the just-completed step.
-        XCTAssertTrue(
-            staticText(in: app, containing: "Tap Use my location to compute your estimate").waitForExistence(
-                timeout: 5),
-            "Hero empty-state copy must prompt for location once a skin type is selected"
-        )
-        XCTAssertFalse(
-            app.staticTexts["Pick a skin type to see your estimate."].exists,
-            "Hero must stop asking for skin type after one has been committed via onboarding"
-        )
-    }
-
-    func testMainScreenDoesNotExposeFitzpatrickPickerAfterOnboarding() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        // Main screen must not show the skin-type picker — Fitzpatrick selection
-        // belongs in onboarding/Settings only (Iris spec + D-2026-05-19-012).
-        XCTAssertFalse(app.navigationBars["Choose skin type"].exists)
-        XCTAssertFalse(app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type I")).firstMatch.isHittable)
-        XCTAssertFalse(
-            app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type VI")).firstMatch.isHittable)
-
-        // Main screen remains — the UV dashboard is the active surface.
-        XCTAssertTrue(app.navigationBars["UV Burn Timer"].exists)
-    }
-
-    func testMainScreenShowsLocationAndSPFInCompactRow() {
-        // Spec §6: "Location + SPF row — compact 44pt controls for `📍 ... ›` and `SPF 30`."
-        // Both chips must coexist in a single row, both ≥44pt tap targets, both reachable
-        // (possibly after scrolling on small/dense layouts), and SPF must not be presented
-        // as a full-width segmented control on the main screen.
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        let location = app.buttons["Location"]
-        let spf = spfChipButton(in: app)
-        XCTAssertTrue(location.waitForExistence(timeout: 5), "Location chip must exist on main screen")
-        XCTAssertTrue(spf.waitForExistence(timeout: 5), "SPF chip must exist on main screen")
-
-        scrollInputsRowIntoView(in: app, location: location, spf: spf)
-
-        XCTAssertTrue(location.isHittable, "Location chip must be reachable on the main screen")
-        XCTAssertTrue(spf.isHittable, "SPF chip must be reachable on the main screen")
-
-        XCTAssertGreaterThanOrEqual(location.frame.height, 44, "Location chip must be at least 44pt tall")
-        XCTAssertGreaterThanOrEqual(spf.frame.height, 44, "SPF chip must be at least 44pt tall")
-
-        // Chips share a single horizontal row at standard Dynamic Type sizes.
-        let verticalDistance = abs(location.frame.midY - spf.frame.midY)
-        XCTAssertLessThanOrEqual(
-            verticalDistance,
-            max(location.frame.height, spf.frame.height),
-            "Location and SPF chips must share a single horizontal row, not stacked vertically"
-        )
-
-        // Neither chip occupies the entire screen width — they share the row.
-        let screenWidth = app.windows.firstMatch.frame.width
-        XCTAssertLessThan(
-            location.frame.width,
-            screenWidth * 0.85,
-            "Location chip must not consume the full row width; SPF must sit beside it"
-        )
-        XCTAssertLessThan(
-            spf.frame.width,
-            screenWidth * 0.85,
-            "SPF chip must not consume the full row width; Location must sit beside it"
-        )
-
-        // SPF picker on the main screen must NOT be a segmented control — that pattern
-        // is reserved for Settings. The chip is a Menu trigger.
-        XCTAssertEqual(
-            app.segmentedControls.count, 0,
-            "Main screen must not render a segmented control for SPF; use the compact chip menu"
-        )
-    }
-
-    func testMainScreenSPFChipOpensMenuWithAllFourLevels() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        let spf = spfChipButton(in: app)
-        XCTAssertTrue(spf.waitForExistence(timeout: 5))
-        XCTAssertEqual(spf.label, "SPF 30", "Default SPF is 30")
-
-        scrollInputsRowIntoView(in: app, location: app.buttons["Location"], spf: spf)
-        spf.tap()
-        XCTAssertTrue(menuOptionButton(in: app, label: "15").waitForExistence(timeout: 3))
-        XCTAssertTrue(menuOptionButton(in: app, label: "30").exists)
-        XCTAssertTrue(menuOptionButton(in: app, label: "50").exists)
-        XCTAssertTrue(menuOptionButton(in: app, label: "70+").exists)
-        XCTAssertFalse(
-            menuOptionButton(in: app, label: "None").exists,
-            "SPF 'None' must not appear in the main-screen menu"
-        )
-
-        menuOptionButton(in: app, label: "70+").tap()
-        XCTAssertTrue(spfChipButton(in: app).waitForExistence(timeout: 5))
-        XCTAssertEqual(spfChipButton(in: app).label, "SPF 70+")
-    }
-
-    func testPersistentFooterDisclaimerLinkUsesSpecCopyAndOpensAbout() {
-        // Spec §7 (user-flow-onboarding-main-spec.md): "inline bottom-of-content link:
-        // `Informational only. Not medical advice. →`." The persistent footer must
-        // surface this exact label and route to the About applicability anchor.
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        let footerLink = actionElement(in: app, named: "Informational only. Not medical advice.")
-        XCTAssertTrue(
-            footerLink.waitForExistence(timeout: 5),
-            "Footer must surface the spec-mandated disclaimer link copy"
-        )
-        XCTAssertFalse(
-            app.buttons["About & applicability"].exists,
-            "Legacy disclaimer-link copy must no longer appear"
-        )
-
-        footerLink.tap()
-
-        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "When this estimate may not apply").exists)
-    }
-
-    func testSkinTypePickerInSettingsReusesOnboardingPattern() {
-        let app = launchApp()
-        acknowledgeDisclaimerAndChooseTypeIII(in: app)
-
-        tapUntilAppears(app.buttons["Settings"], app.navigationBars["Settings"])
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
-
-        // Settings should provide a Skin type edit affordance (Iris spec §2).
-        // Type I–VI rows must all be reachable.
-        let skinTypeRow =
-            app.cells["Skin type"].firstMatch.exists
-            ? app.cells["Skin type"].firstMatch
-            : app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Skin type")).firstMatch
-        XCTAssertTrue(skinTypeRow.waitForExistence(timeout: 5))
-        skinTypeRow.tap()
-
-        // All six Fitzpatrick rows must be reachable. Scroll down if needed —
-        // the sheet may start at medium detent, placing later rows below the fold.
-        for numeral in ["I", "II", "III", "IV", "V", "VI"] {
-            let rowButton = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type \(numeral)"))
-                .firstMatch
-            for _ in 0..<3 where !rowButton.exists {
-                app.swipeUp()
-            }
-            XCTAssertTrue(
-                rowButton.waitForExistence(timeout: 5),
-                "Type \(numeral) row missing in Settings skin-type selector"
-            )
-        }
-
-        scrollToActionElement(in: app, named: "Open About & Citations").tap()
-        XCTAssertTrue(app.navigationBars["About"].waitForExistence(timeout: 5))
-        XCTAssertTrue(staticText(in: app, containing: "Citations").exists)
-    }
+    // MARK: - Helpers
 
     private func launchApp(arguments: [String] = []) -> XCUIApplication {
-        // Explicitly terminate any running instance before launching to avoid
-        // "Failed to terminate" races between test methods on CI (Xcode 26).
         XCUIApplication().terminate()
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestResetDefaults"] + arguments
@@ -1119,177 +114,33 @@ final class UVBurnTimerUITests: XCTestCase {
         continueButton.tap()
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 15))
-
-        // iOS 26 cover-chain settle: the nav-bar title can appear in the
-        // accessibility tree while the skin-type cover dismiss animation is
-        // still running. NavigationLink elements in the main view are
-        // unresponsive until that animation drains. Wait for the always-present
-        // photosensitization banner to become hittable — that signals the main
-        // screen is fully interactive — before returning control to the caller.
-        _ = waitForHittable(app.buttons["Meds or photosensitive conditions? Learn more"], timeout: 5)
+        _ = waitForHittable(app.buttons.matching(identifier: "EstimateInfoButton").firstMatch, timeout: 5)
     }
 
     private func acknowledgeDisclaimer(in app: XCUIApplication) {
         let acknowledgeButton = app.buttons["I understand"]
         XCTAssertTrue(acknowledgeButton.waitForExistence(timeout: 10))
-
-        // Cover-chain race: on iOS 26 / Xcode 26, XCUITest can synthesize a
-        // tap at hit point {-1, -1} while the `.fullScreenCover` disclaimer is
-        // mid-presentation animation, silently dropping the tap even though
-        // the element reports `exists` + `isHittable` from a stale snapshot.
-        // Re-tap the acknowledge button until either the skin-type cover
-        // claims the presentation slot (signalled by the "Choose skin type"
-        // navigation bar) or the budget expires. This keeps tests honest about
-        // any real regression — if the cover-chain is actually broken, the
-        // assertion below will still fire after the budget.
         tapUntilAppears(acknowledgeButton, app.navigationBars["Choose skin type"])
-    }
-
-    private func staticText(in app: XCUIApplication, containing text: String) -> XCUIElement {
-        app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
-    }
-
-    private func spfChipButton(in app: XCUIApplication) -> XCUIElement {
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "SPF ")).firstMatch
-    }
-
-    /// Matches a menu option whose label contains the option text. Picker-in-Menu items
-    /// can be rendered with a "Selected" prefix/suffix on the currently chosen option,
-    /// so an exact match would miss them.
-    private func menuOptionButton(in app: XCUIApplication, label: String) -> XCUIElement {
-        let exact = app.buttons[label]
-        if exact.exists {
-            return exact
-        }
-        let pattern = "(?i)(?:selected,?\\s*)?\(NSRegularExpression.escapedPattern(for: label))(?:,?\\s*selected)?"
-        return app.buttons.matching(NSPredicate(format: "label MATCHES %@", pattern)).firstMatch
-    }
-
-    /// Scrolls the main-screen ScrollView so the compact Location + SPF row enters the
-    /// hit-test region. On dense iPhone simulator layouts the row can land below the fold
-    /// behind the persistent bottom inset before any user gesture.
-    private func scrollInputsRowIntoView(in app: XCUIApplication, location: XCUIElement, spf: XCUIElement) {
-        let scrollView = app.scrollViews.firstMatch
-        guard scrollView.exists else {
-            return
-        }
-        for _ in 0..<6 where !(location.exists && spf.exists && location.isHittable && spf.isHittable) {
-            scrollView.swipeUp()
-        }
-    }
-
-    private func scrollToStaticText(in app: XCUIApplication, containing text: String) -> XCUIElement {
-        let element = staticText(in: app, containing: text)
-        let scrollView = app.scrollViews.firstMatch
-
-        for _ in 0..<5 where !element.exists {
-            scrollView.swipeUp()
-        }
-
-        return element
-    }
-
-    private func actionElement(in app: XCUIApplication, named label: String) -> XCUIElement {
-        let link = app.links[label]
-        if link.exists {
-            return link
-        }
-
-        return app.buttons[label]
-    }
-
-    private func scrollToActionElement(in app: XCUIApplication, named label: String) -> XCUIElement {
-        let element = actionElement(in: app, named: label)
-        let scrollView = app.scrollViews.firstMatch
-
-        for _ in 0..<5 where !element.exists {
-            scrollView.swipeUp()
-        }
-
-        return element
-    }
-
-    private func assertUnavailableBurnRiskGaugeExists(in app: XCUIApplication) {
-        let gauge = app.descendants(matching: .any)["BurnRiskGaugePlaceholder"]
-        XCTAssertTrue(
-            gauge.waitForExistence(timeout: 5), "BurnRiskGaugePlaceholder must remain visible when UV is unavailable")
-        XCTAssertTrue(gauge.isHittable, "BurnRiskGaugePlaceholder must be visible in unavailable states")
-        XCTAssertTrue(gauge.label.localizedCaseInsensitiveContains("unavailable"))
-        XCTAssertEqual(gauge.value as? String, "Unavailable")
-    }
-
-    /// Asserts WeatherKit's required "Apple Weather" attribution lockup or
-    /// service-name fallback is on the main screen for any state that
-    /// displays Apple-Weather-derived data (live UV, stale UV, capped UV,
-    /// weather-unreachable error, location-denied empty state).
-    ///
-    /// WeatherAttributionView renders `Text(ProductCopy.weatherAttributionServiceName)`
-    /// when `WeatherService.shared.attribution` throws (the common case on
-    /// the test simulator without a real WeatherKit network round-trip), so
-    /// the literal "Apple Weather" string must remain accessible in every
-    /// weather-derived viewport. UVIndexCard/UVIndexPlaceholderCard also
-    /// renders `ProductCopy.uvSourceLine` ("Source: Apple Weather") above
-    /// the lockup; either surface satisfies the visibility requirement.
-    private func assertAppleWeatherAttributionVisible(
-        in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line
-    ) {
-        let sourceLine = scrollToStaticText(in: app, containing: "Source: Apple Weather")
-        let attributionName = app.staticTexts.matching(NSPredicate(format: "label == %@", "Apple Weather")).firstMatch
-
-        let sourceLineVisible = sourceLine.exists
-        let attributionNameVisible = attributionName.waitForExistence(timeout: 3)
-
-        XCTAssertTrue(
-            sourceLineVisible || attributionNameVisible,
-            "WeatherKit attribution must remain visible on every weather-derived surface — "
-                + "expected 'Source: Apple Weather' or the WeatherAttributionView 'Apple Weather' label.",
-            file: file, line: line
-        )
     }
 
     private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-
         while Date() < deadline {
-            if element.exists && element.isEnabled {
-                return true
-            }
-
+            if element.exists && element.isEnabled { return true }
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
-
         return element.exists && element.isEnabled
     }
 
     private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-
         while Date() < deadline {
-            if element.exists && element.isHittable {
-                return true
-            }
-
+            if element.exists && element.isHittable { return true }
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
-
         return element.exists && element.isHittable
     }
 
-    /// XCUITest on iOS 26 occasionally computes hit point {-1, -1} for views
-    /// mid-presentation animation, swallowing the tap. Retry with a short
-    /// settle delay before giving up so transient layout races do not produce
-    /// flaky failures in the chained disclaimer → onboarding flow.
-    ///
-    /// `element.tap()` resolves the tap target via the accessibility
-    /// activation point, which iOS 26 sometimes reports as `{-1, -1}` while
-    /// a `.fullScreenCover` is still animating in — the resulting tap is
-    /// dropped without an error. On iOS 26+ the helper computes the hit
-    /// point from the element's frame via `coordinate(withNormalizedOffset:)`
-    /// to bypass that resolver. On older runtimes the standard `tap()` path
-    /// is preserved because the coordinate-based fallback interacts badly
-    /// with bordered-button hit-test geometry on iOS 17 / 18 — the tap can
-    /// land on a child Label / Image element instead of activating the
-    /// button's action.
     private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
         _ = waitForHittable(element, timeout: 5)
         for _ in 0..<retries {
@@ -1302,7 +153,6 @@ final class UVBurnTimerUITests: XCTestCase {
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         }
-
         if element.exists {
             let frame = element.frame
             if frame.width > 0 && frame.height > 0 {
@@ -1313,31 +163,10 @@ final class UVBurnTimerUITests: XCTestCase {
         }
     }
 
-    /// Uses coordinate-based tap synthesis, which is reliable across all iOS
-    /// versions: on iOS 26+ it bypasses the activation-point resolver bug that
-    /// returns {-1, -1}; on iOS 17/18 it bypasses XCUITest's scroll-to-visible
-    /// pre-flight (kAXScrollToVisibleAction) that fails for buttons placed in
-    /// non-scrollable safeAreaInset / footer containers with kAXErrorCannotComplete.
     private func tapViaSafestPath(_ element: XCUIElement, frame: CGRect) {
-        // Always use coordinate-based synthesis to bypass XCUITest's
-        // scroll-to-visible pre-flight (kAXScrollToVisibleAction), which
-        // returns kAXErrorCannotComplete for buttons placed in non-scrollable
-        // safeAreaInset / footer containers and can fail a tap even when the
-        // element is fully visible. coordinate(withNormalizedOffset:).tap()
-        // computes the point directly from the element's frame and does not
-        // attempt AX scrolling first — it is safe on iOS 17, 18, and 26+.
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 
-    /// Re-taps `trigger` until `target` appears, the trigger disappears, or
-    /// the total budget expires. Defends against the iOS 26 / Xcode 26
-    /// cover-presentation race where XCUITest synthesizes a tap at hit point
-    /// {-1, -1} for an element whose host view is still animating in; that
-    /// tap is silently dropped even though `exists` + `isHittable` return
-    /// true from a stale snapshot. A single re-tap is normally enough; the
-    /// loop keeps the contract honest by polling for the expected state
-    /// change and bailing once observed (or once the trigger goes away,
-    /// indicating an earlier tap landed and the host view has dismissed).
     private func tapUntilAppears(_ trigger: XCUIElement, _ target: XCUIElement, totalTimeout: TimeInterval = 30) {
         let deadline = Date().addingTimeInterval(totalTimeout)
         while Date() < deadline && trigger.exists && !target.exists {

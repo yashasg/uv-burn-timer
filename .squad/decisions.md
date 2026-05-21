@@ -1,3 +1,45 @@
+# UVBurnTimer Squad Decisions Archive
+
+## 2026-05-21
+
+### 2026-05-21T07:45:00Z: User directive — UI tests are too expensive
+**By:** Yashas (via Copilot)
+**What:** "we have way too many ui tests, this app is a simulator resource hog." Going forward, favor unit/contract tests (Core test target) over UI tests (UI test target). When existing UI tests fail because of intentional UI removals, prefer DELETE over fix-in-place. Maintain only a minimal UI smoke-test set; coverage belongs at the model/logic/contract layer.
+**Why:** User request — captured for team memory. Cost/value trade-off: UI test runs are 5-10min each in simulator and have caused 49+min iteration cycles; contract-level tests are seconds and survive UI refactors.
+
+### 2026-05-21T07:00:00Z: Iris — Skin-type persistence spec (Pattern B, chip + policyVersion)
+**Author:** Iris
+**Type:** Design spec — ready for implementation
+**Full spec:** `.squad/designs/iris-skin-type-persistence-spec.md`
+
+**What was decided:** Yashas ratified Pattern B (UserDefaults persistence + ambient tap-to-change chip). This spec translates that into a Kwame-executable implementation plan.
+
+**Key outcomes:**
+- New `skinTypeChip` in `mainInputsRow` (§2) — ambient, tappable, 44pt min target, AX5-safe
+- `DisclaimerCover` now triggers via `policyVersion` integer, not unconditionally (§4)
+- Existing users silently migrated to v1 on upgrade — no re-fire
+- G27/G28 are **unchanged** — they guard ForecastSnapshot JSON, not UserDefaults
+- 11-item Kwame checklist (K-1 through K-11) with file:line references (§7)
+- 4 new test stubs for Ma-Ti (G-D1 through G-D4) (§6)
+
+**Blockers before Kwame ships:**
+1. **Plunder P-3:** L1 cover must gain a storage-disclosure sentence before K-3/K-4 can ship
+2. **Wheeler W-1:** Chip copy confirm (low risk, quick)
+3. **E13 counsel gate** (Plunder's lane — EU/UK consent basis confirmation)
+
+### 2026-05-21T06:35:00Z: Plunder — Skin-type persistence & re-attestation cadence (Pattern B recommended)
+**Author:** Plunder (Legal & Compliance)
+**Requested by:** Yashas
+**Memo:** `.squad/designs/plunder-skin-type-persistence-floor.md`
+
+**TL;DR:**
+- The "skin type stays `@State`-only / L1 fires every cold launch" posture is **self-imposed defensive overkill, not a regulatory floor.** No regulation requires it.
+- `UserDefaults`-local persistence: ✅ permissible under FDA, EU MDR, UK MHRA, Apple §5.1.1, and GDPR Art.9 (with explicit consent — the act of selection qualifies)
+- Minimum defensible re-attestation cadence: **first install + material policy/methodology change + user request.** Per-cold-launch is permitted but not required.
+- **Recommended pattern: Pattern B** — `UserDefaults` persistence + always-visible result-surface chip ("Fitzpatrick III · tap to change") with one-tap edit. Solves the UX friction Yashas named while strengthening the photosensitizer-cohort safety surface.
+
+**Verdict on the four patterns:**
+| Pattern | Verdict |
 # Squad Decisions
 
 ## Decisions Ledger
@@ -589,55 +631,157 @@ Same `fetchedAt` and `now` already used for `isEstimateStale`. Exactly the same 
 ### Accessibility (Iris spec §2)
 | Property | Value |
 |---|---|
-| `accessibilityLabel` | `"Burn risk gauge. N% of estimated burn window elapsed."` |
-| `accessibilityValue` | `"N%"` |
-| `accessibilityHint` | `"Secondary risk indicator. The hero timer card shows the full estimate."` |
-| `accessibilityIdentifier` | `"BurnRiskGauge"` |
-| Color-only | ❌ — percentage text in `currentValueLabel` is the primary cue |
-| Reduce Motion | Gauge value is static state (no `.animation` or `withAnimation` on appear) |
-| Differentiate Without Color | Extra `Text(percentText)` block rendered (`.accessibilityHidden(true)`) |
-| Dynamic Type | Card layout adjusts via standard SwiftUI; gauge frame is fixed-size within `HStack` |
+| Status quo (`@State`-only, L1 every launch) | ✅ over-floor, defensible — Friction with no regulatory payoff |
+| A — UserDefaults + 30-day re-confirm modal | ✅ defensible — Risks dismissed-prompt anti-pattern |
+| **B — UserDefaults + one-tap confirm chip** | ✅ **RECOMMENDED** — Strongest regulatory-and-UX fit |
+| C — In-memory cache only, lost on termination | ✅ trivially safe — Doesn't actually solve cold-launch friction |
 
-### What it does NOT do
-- Does not duplicate the hero number (hero shows `~17 min`; gauge shows `43%`).
-- Does not expose Fitzpatrick selection on main screen.
-- Does not introduce a new burn formula.
+**Revisions to prior memo (`plunder-disclaimer-relocation-floor.md`, 2026-05-21T04:18:05Z):**
+- **C6 revised:** L1 cover fires on first install + material change + user request. Per-cold-launch firing is permitted but no longer required by my floor.
+- **C7 withdrawn as regulatory floor:** Replaced with a product preference. If the team persists skin type, the §4.1 floor list applies (visible edit affordance, accuracy/erasure paths, privacy disclosure).
+- **C1–C5, C8–C10 unchanged.**
 
----
+**Open attorney items (confirm-before-submit, not blockers):** E13 (Art.9 explicit-consent reading) · E14 (Art.35 DPIA exclusion) · E15 (FTC HBNR amendment scope) · E16 (only if iCloud) · E17 (Apple §1.4 review on dropping per-launch L1) · E10–E12 + E6/E9 carried forward unchanged.
 
-## Tests added (alongside Ma-Ti's existing tests)
+### 2026-05-21T06:35:00Z: Suchi — Skin-type re-prompt friction research (Pattern B ranked #1)
+**Author:** Suchi (User Researcher)
+**Requested by:** Yashas
+**Full memo:** `.squad/designs/suchi-skin-type-friction-research.md`
 
-| Test | Guard |
+**Answer (user-research POV only):** Persist. Specifically: **Pattern B — Persist + tap-confirm chip** ("Fitzpatrick III ✓ — tap to change") is the strongest user-side recommendation.
+
+**Ranking (1=best, 4=worst):**
+1. **Pattern B** — persist + tap-confirm chip on cold launch. Matches user mental model (identity-as-constant, §2), matches market convention (every major competitor persists, §3), zero friction for 6 of 7 personas, *actively safer* for Tomás (reduces auto-pilot under-pick risk).
+2. **Pattern A** — persist + 30-day re-confirm modal. Acceptable; 30-day cadence is arbitrary and doesn't map to a real user behavior.
+3. **Pattern C** — don't persist, in-memory default-to-last. Marginal; addresses backgrounding but not dominant JTBD.
+4. **Status quo** — full picker every cold launch. Below user-acceptability floor. No major competitor does this.
+
+**Load-bearing findings:**
+- User mental model: "I'm a Fitz III" (identity-as-constant), not state-as-variable.
+- Every major competitor persists indefinitely after one-time setup.
+- Zero user-voiced complaints in major UV-app reddit cohorts of re-prompting (because no competitor does it).
+- L1 re-attestation ≠ Fitzpatrick re-prompt; decoupling preserves every safety dividend.
+- Tomás's under-pick risk is *worse* under re-prompting, not better.
+- No persona in inventory benefits from per-launch Fitzpatrick re-attestation.
+
+**Critical decoupling note:** Fitzpatrick picker (captures stable trait) vs. Photosensitization disclosure (captures session-volatile state). These are two different controls with different scientific loads. Decoupling them is scientifically clean.
+
+### 2026-05-21T06:35:00Z: Wheeler — Skin-type re-attestation: science verdict (Pattern B defensible)
+**Owner:** Wheeler (Skin Science Expert)
+**Full memo:** `.squad/designs/wheeler-skin-type-reattestation-science.md`
+
+**TL;DR (science lane only):** Dermatologically, Fitzpatrick should be captured once at first use and never re-prompted on a calendar — only on user-initiated edit. The trait is stable in adults at session/month/year scale; melanocyte attrition is decade-scale (8–20%/decade per Gilchrest & Yaar 1992). All real photoresponsiveness-shifting events (medications, procedures, conditions, pregnancy) are *not* captured by re-asking the Fitzpatrick picker — they live on the photosensitization-disclosure surface. Re-asking the picker more often only injects self-report instrument noise.
+
+**Pattern verdicts (science only):**
+| Pattern | Verdict |
 |---|---|
-| `testBurnRiskGaugeExistsAndIsMeaningfulOnStaleEstimate` | Gauge present + value not 0% on stale estimate seed |
-| `testBurnRiskGaugeAbsentWhenNoEstimate` | Gauge absent on cold launch without UV data |
+| A — persist + 30-day re-prompt | ❌ scientifically unjustified — no biological basis for 30-day cadence |
+| **B — persist + per-launch tap-confirm chip** | ✅ scientifically defensible — closest to clinical-workflow precedent |
+| C — don't persist; default to last value | ⚠️ neutral — similar profile to status quo with slight noise reduction |
+| Status quo — per-launch full picker | ❌ over-cautious; net-negative (injects noise, catches no real safety events) |
 
-Ma-Ti's inbox doc (`ma-ti-circular-gauge-test-guard.md`) already describes three further tests:
-- `testCircularGaugePresentOnFreshEstimate`
-- `testHeroTimeEstimateRemainsDominantAlongsideGauge`
-- `testCircularGaugeAccessibilityLabelIsNonColorAndMeaningful`
+**Critical decoupling note for synthesis:** The current implementation entangles **Fitzpatrick re-attestation** with **photosensitization-disclosure re-presentation** via the shared `@State`-only model. From a dermatological standpoint these are two different controls with different scientific loads. Decoupling them is scientifically clean (though regulatorily, Plunder owns that call).
 
-All five tests are in `UVBurnTimerUITests.swift`. Test build: **PASSED**.
+### 2026-05-21T07:50:00Z: Kwame — Pattern B implementation complete (LAUNCH-PLAN reversal, policyVersion, chips)
+**Author:** Kwame (iOS Developer)
+**Branch:** `feature/main-screen-cleanup`
+**Status:** IMPLEMENTED
+**Commits:** af2205a, c23ed4e, 93e7c3b, c66c93d, 8f31a25
 
----
+**LAUNCH-PLAN reversal — IMPLEMENTED:**
+The `@State`-only rule for skin type + SPF (LAUNCH-PLAN §9, line 293) has been reversed per Yashas ratification 2026-05-21. `LAUNCH-PLAN.md` updated with verbatim Iris §5 text. `UserPreferenceStorage.persist(skinType:)` and `persist(spf:)` now write to `UserDefaults`.
 
-## Build status
+**policyVersion-gated L1 trigger — IMPLEMENTED:**
+`UserPreferenceStorage.disclaimerPolicyVersionKey` and `currentDisclaimerPolicyVersion = 1` added. `shouldShowDisclaimerCover(defaults:currentVersion:) -> Bool` extracted as a testable free function. `UVBurnTimerApp.init` now calls this function instead of hardcoding `true`. `onAcknowledge` closure writes the current version synchronously.
+Migration: existing users (presence of `selectedSkinTypeKey` or `locationRationaleAcknowledgedKey`) silently receive `policyVersion = 1` on first upgrade — no surprise L1 re-fire.
 
-- Debug build: **PASSED** (no errors or warnings introduced)
-- Unit tests (UVBurnTimerCoreTests): **PASSED** (all existing tests)
-- Test build (including UITests): **PASSED**
+**Free function extracted for Ma-Ti contract tests — DONE:**
+`UserPreferenceStorage.shouldShowDisclaimerCover(defaults:currentVersion:)` is on branch. Ma-Ti can pull and write G-D1..G-D4 tests against this function without touching `UVBurnTimerApp`.
 
----
+**Fitzpatrick chip + SPF chip — IMPLEMENTED:**
+`skinTypeChip` added to `mainInputsRow` as first chip (SkinType → Location → SPF). Full VoiceOver spec, 44pt min target, `.bordered` style per Iris §2.5. Tap-to-change via `SkinTypeEditView` sheet (type set) or onboarding (nil). No parallel SPF chip needed — `spfChip` already exists (Iris §2.4 confirmed).
 
-*Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
-# Kwame — Approved redesign and paraphrasing implementation
+**Open items NOT blocking this PR:**
+- P-1 (Plunder): confirm `"Type III"` / `"Set skin type"` copy is legally acceptable
+- P-2 (Plunder): confirm `"Clear stored skin type"` button wording
+- P-3 (Plunder/Yashas): E13 gate — add storage-disclosure sentence to `ProductCopy.disclaimerBody`
+- W-1 (Wheeler): confirm `"Type III"` chip display doesn't induce anchoring noise
 
-- **Date:** 2026-05-19T16:30:05-07:00
-- **Owner:** Kwame (iOS Developer)
-- **Branch:** squad/4-approved-redesign-paraphrasing
-- **Status:** implemented and tests passing
-- **Implements:** work item #4, iris-onboarding-settings-main-ui.md, gaia-onboarding-settings-main-ia.md, wheeler-source-backed-skin-type-questions.md, plunder-about-citation-policy.md, iris-secondary-skin-swatch-cues.md
+### 2026-05-21T07:00:00Z: Kwame-8 — Drop LocationRationaleCard; OS prompt is sole permission UI
+**Author:** Kwame (iOS Developer)
+**Branch:** `feature/main-screen-cleanup`, commit `22e98a5`
 
+**Decision:** Remove `LocationRationaleCard` and all its plumbing. The OS system prompt is the **sole** permission UI for location access in UV Burn Timer.
+
+**Rationale:**
+- Approximate location is low-sensitivity; OS dialog already uses "approximate" and use case (UV index) is immediately understandable.
+- Extra taps create friction without benefit.
+- Privacy substance is covered elsewhere (`locationPrivacyLine`, `aboutPrivacy` in `AboutView`).
+- Reduced-accuracy = self-evident consent.
+
+**What changed:** Removed `LocationRationaleCard` rendering and acknowledgement flow. See `kwame/history.md` for file:line touchpoints.
+
+**What was NOT changed:**
+- `LocationPromptGate` struct is kept (unit test still exercises it).
+- `UserPreferenceStorage.locationRationaleAcknowledgedKey` is kept for migration cleanup.
+- `locationPrivacyLine` constant is kept (no render site; retained per instruction).
+
+**Reversibility:** If a future version requests full precise location or a non-obvious background mode, a custom rationale card may become appropriate again.
+
+### 2026-05-21T07:00:00Z: Ma-Ti-3 — Pre-existing test failure fix (6 UI tests, 4 dispositions)
+**Author:** Ma-Ti (Test Engineer)
+**Branch:** feature/main-screen-cleanup
+**Commit:** fa13021
+
+**Context:** Kwame-8 reported 6 pre-existing failures in `UVBurnTimerUITests` when removing `LocationRationaleCard`. Investigation confirmed all 6 were introduced silently during `9402465` (K-1/K-6/K-7) and missed because previous handoffs only verified the unit test target, not the UI test target.
+
+**Root causes:**
+- K-1 removed `PhotosensitizationBanner` from the main scroll view.
+- K-6 removed the `reapplicationFooter` `Text` from `PersistentFooter`.
+- K-7 removed the `mainVerdictCaveatLinkLabel` `NavigationLink` from `HeroTimerCard`.
+
+**Disposition summary:**
+- **Disposition B (Delete):** `testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero` — permanently gone layout.
+- **Disposition A (Update):** 5 tests updated for new tap targets / removed assertions:
+  - `testScenario4PhotosensitizationReachBackOpensAboutApplicability` — new target: EstimateInfoButton
+  - `acknowledgeDisclaimerAndChooseTypeIII` helper — new settle signal
+  - `testScenario1ColdLaunchShowsRequiredDisclaimerThenScenario2RequiresSkinTypeSelection` — removed "Reapply" assertion
+  - `testScenario8StaleEstimateShowsWarningRecalculateAndAccessibleTierSeverity` — same removal
+  - `testScenario5CappedEstimateRendersLongCaveatAndFooter` — same removal
+  - `testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor` — rewritten for EstimateInfoButton
+
+**No Disposition D (real bugs) found:** All 6 failures were caused by intentional K-1/K-6/K-7 removals.
+
+**Post-fix state:**
+- `UVBurnTimerUITests`: **38 tests, 0 failures** (was 39 tests, 6 failures)
+- `UVBurnTimerCoreTests`: **122 tests, 0 failures** (5 withKnownIssue — unchanged)
+
+**Discipline note:** These failures were missed across two handoffs because both agents reported counts from the unit target only. Correct verification procedure going forward: verify BOTH `UVBurnTimerCoreTests` + `UVBurnTimerUITests`.
+
+### 2026-05-21T07:50:00Z: Ma-Ti-4 — UI Test Axe: 38 → 5 smoke tests (Yashas directive)
+**Author:** Ma-Ti (Test Engineer)
+**Branch:** feature/main-screen-cleanup
+**Directive from:** Yashas
+**Commits:** ba37d2f + 4e474a2
+
+**The 5 Tests Kept:**
+1. `testAppLaunchesWithoutCrash` — Cold start; main screen renders within 10s
+2. `testSkinTypePickerEndToEnd` — Disclaimer → skin type picker → select Type III → main screen
+3. `testLocationButtonFiresLocationRequest` — Tap "Use my location" → location flow starts
+4. `testForecastPickerCardIsRendered` — Scroll to "UV Forecast" header on main screen (structural)
+5. `testSettingsSheetOpens` — Tap gear → "Settings" nav bar appears
+
+**Categories Deleted (33 tests):**
+- **Copy-string assertion tests (6):** covered by ProductCopy contract tests
+- **Attribution visibility tests (7):** covered by ProductCopy constants
+- **Per-surface presence tests (4):** covered by unit/contract tests
+- **Edge-case UI state tests (8):** covered by unit tests
+- **Scenario tests that duplicate contract coverage (8):** complex scenarios replaced by targeted smoke tests
+
+**Result:**
+- **Before:** 38 UI tests, ~1188 lines, ~5–8 min simulator time
+- **After:** 5 UI tests, 177 lines, ~60 s simulator time
+- **Unit suite:** 122 tests unchanged, 0 new failures
 ---
 
 ## Changes implemented
