@@ -294,3 +294,15 @@ private func makeSnapshot(
     #expect(snapshot.hours.allSatisfy { $0.uvIndex == 0.0 },
             "All hourly UVI values for polar night must be 0")
 }
+
+/// Ma-Ti L13-6 — `ForecastStore.isCoordOutOfRange` returns `true` when no
+/// snapshot has been loaded (treat absent snapshot as invalidated, matching
+/// the documented "treat as invalidated" contract).
+@Test func test_isCoordOutOfRange_returns_true_when_no_snapshot_loaded() async {
+    let store = ForecastStore(fileURL: isolatedStoreURL())
+
+    let outOfRange = await store.isCoordOutOfRange(latitude: 37.77, longitude: -122.42)
+
+    #expect(outOfRange == true,
+            "isCoordOutOfRange must return true when inMemorySnapshot is nil — no snapshot ⇒ invalidated")
+}

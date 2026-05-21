@@ -344,3 +344,105 @@ private func makePickerSnapshot(
     #expect(result == .nighttime,
             "UVI=0 hour must return .nighttime — the caller renders 'No UV at this hour'")
 }
+
+// MARK: - Ma-Ti L13: previously-uncovered branches
+
+/// L13-1 — `hours(for:in:)` returns an empty array when no `HourForecast`
+/// timestamp falls inside the target day's UTC window. Exercises the filter's
+/// false branch for every input element.
+@Test func test_hours_for_day_returns_empty_when_all_hours_outside_range() {
+    // Target day = today (May 21 UTC midnight). All hours stamped 10 days later
+    // (May 31) — entirely outside the [May 21 00:00, May 22 00:00) window.
+    let targetDay = DayForecast(
+        date: Date(timeIntervalSince1970: todayMidnightUTC),
+        dailyMinUVI: 0, dailyMaxUVI: 0, sunrise: nil, sunset: nil
+    )
+    let outsideDayStart = todayMidnightUTC + 10 * 86400
+    let outsideHours: [HourForecast] = (0..<24).map { h in
+        HourForecast(
+            timestamp: Date(timeIntervalSince1970: outsideDayStart + Double(h) * 3600),
+            uvIndex: 5.0
+        )
+    }
+
+    let result = ForecastPickerLogic.hours(for: targetDay, in: outsideHours)
+
+    #expect(result.isEmpty,
+            "All HourForecast timestamps are outside the target day's UTC window — result must be empty")
+}
+
+/// L13-2 — `defaultSelectedDate(in:now:)` when `now` lands exactly on a UTC
+/// hour boundary (00 minutes, 00 seconds). The `>= roundedNow` predicate must
+/// include the current-hour slot, so the returned timestamp is `now` itself.
+@Test func test_default_selected_date_when_now_on_exact_hour_boundary() {
+    // now = today 05:00:00 UTC — exact boundary, no minutes/seconds offset.
+    let exactBoundary = Date(timeIntervalSince1970: todayMidnightUTC + 5 * 3600)
+    let snapshot = makePickerSnapshot(startEpoch: todayMidnightUTC, dayCount: 2)
+
+    let result = ForecastPickerLogic.defaultSelectedDate(in: snapshot, now: exactBoundary)
+
+    #expect(result == exactBoundary,
+            "now on an exact hour boundary must be included by `>= roundedNow` — return current hour, not next")
+}
+
+/// L13-3 — `uvResult(from:at:now:)` returns `.unavailable(.snapshotExpired)`
+/// when `snapshot.isStale(now:)` is true (expirationDate ≤ now).
+@Test func test_uv_result_returns_snapshot_expired_when_stale() {
+    let now = Date(timeIntervalSince1970: nowEpoch)
+    // Build a snapshot whose expirationDate is one hour BEFORE now → stale.
+    let baseDate = Date(timeIntervalSince1970: todayMidnightUTC)
+    let days: [DayForecast] = [
+        DayForecast(date: baseDate, dailyMinUVI: 0, dailyMaxUVI: 5, sunrise: nil, sunset: nil)
+    ]
+    let hours: [HourForecast] = (0..<24).map { h in
+        HourForecast(
+            timestamp: baseDate.addingTimeInterval(Double(h) * 3600),
+            uvIndex: 5.0
+        )
+    }
+    let staleSnapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: baseDate,
+        expirationDate: now.addingTimeInterval(-3600),
+        days: days,
+        hours: hours
+    )
+
+    let target = Date(timeIntervalSince1970: todayMidnightUTC + 12 * 3600)
+    let result = ForecastPickerLogic.uvResult(from: staleSnapshot, at: target, now: now)
+
+    #expect(result == .unavailable(reason: .snapshotExpired),
+            "Stale snapshot (expirationDate < now) must short-circuit to .unavailable(.snapshotExpired)")
+}
+
+/// L13-4 — `uvResult(from:at:now:)` returns `.unavailable(.snapshotExpired)`
+/// when `selectedDate` is outside the snapshot's hour window (no matching slot
+/// AND target is not within [firstHour, lastHour]). Snapshot itself is fresh.
+@Test func test_uv_result_returns_unavailable_when_date_outside_window() {
+    let now = Date(timeIntervalSince1970: nowEpoch)
+    // Fresh snapshot covering today + 1 day; expirationDate well in the future.
+    let baseDate = Date(timeIntervalSince1970: todayMidnightUTC)
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: baseDate,
+        expirationDate: Date.distantFuture,
+        days: [DayForecast(date: baseDate, dailyMinUVI: 0, dailyMaxUVI: 5, sunrise: nil, sunset: nil)],
+        hours: (0..<24).map { h in
+            HourForecast(
+                timestamp: baseDate.addingTimeInterval(Double(h) * 3600),
+                uvIndex: 5.0
+            )
+        }
+    )
+    // Target 30 days after snapshot end → outside [firstHour, lastHour].
+    let outOfWindow = Date(timeIntervalSince1970: todayMidnightUTC + 30 * 86400 + 12 * 3600)
+
+    let result = ForecastPickerLogic.uvResult(from: snapshot, at: outOfWindow, now: now)
+
+    #expect(result == .unavailable(reason: .snapshotExpired),
+            "Target outside [firstHour, lastHour] must return .unavailable(.snapshotExpired) — not .nighttime")
+}

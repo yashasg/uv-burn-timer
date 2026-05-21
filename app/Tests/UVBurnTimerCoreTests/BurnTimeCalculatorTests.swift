@@ -1248,6 +1248,28 @@ import Testing
     #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30)
 }
 
+/// Ma-Ti L13-5 — `UserPreferenceStorage.restoredSPF` coerces a stored raw
+/// value of `0` (no matching SPFLevel case → `SPFLevel(rawValue:)` returns nil)
+/// to the safe default `.spf30`, exercising the guard's failure branch where
+/// the key is present but the integer does not decode to a valid SPFLevel.
+@Test func userPreferenceStorageCoercesNonSunscreenSPFToSpf30() throws {
+    let defaults = try #require(UserDefaults(suiteName: "UVBurnTimerPreferenceStorageL13Tests"))
+    defaults.removePersistentDomain(forName: "UVBurnTimerPreferenceStorageL13Tests")
+
+    // Store raw value 0 — key is present (object(forKey:) != nil) but
+    // SPFLevel(rawValue: 0) is nil → must coerce to .spf30.
+    defaults.set(0, forKey: UserPreferenceStorage.selectedSPFKey)
+    #expect(UserPreferenceStorage.restoredSPF(from: defaults) == .spf30,
+            "Stored rawValue 0 (invalid SPFLevel) must coerce to .spf30")
+
+    // Negative raw value is also invalid — same coercion path.
+    defaults.set(-1, forKey: UserPreferenceStorage.selectedSPFKey)
+    #expect(UserPreferenceStorage.restoredSPF(from: defaults) == .spf30,
+            "Stored negative rawValue (invalid SPFLevel) must coerce to .spf30")
+
+    defaults.removePersistentDomain(forName: "UVBurnTimerPreferenceStorageL13Tests")
+}
+
 private func appRootURL() throws -> URL {
     var url = URL(filePath: #filePath)
 
