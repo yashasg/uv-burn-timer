@@ -1091,7 +1091,7 @@ private func _appViewsSourceForGroupR() throws -> String {
     let source = try _appViewsSourceForGroupR()
     #expect(
         source.contains("struct HeroTimerCard: View"),
-        "HeroTimerCard View struct must remain a wrapper — inlining it into RootView regresses XCUI testSettingsSheetOpens (toolbar gear button stops opening Settings sheet)."
+        "HeroTimerCard View struct must remain a wrapper — inlining it into RootView regresses XCUI testSettingsSheetOpens (toolbar gear button stops opening Settings sheet). See .squad/decisions/archive/gaia-hero-card-wrapper-architecture.md for the architectural rationale."
     )
 }
 
@@ -1103,7 +1103,7 @@ private func _appViewsSourceForGroupR() throws -> String {
     let source = try _appViewsSourceForGroupR()
     #expect(
         source.contains("HeroTimerCard("),
-        "RootView.heroTimerCardView must instantiate HeroTimerCard(...) — see R1 for the regression this guards."
+        "RootView.heroTimerCardView must instantiate HeroTimerCard(...) — see R1 and .squad/decisions/archive/gaia-hero-card-wrapper-architecture.md for the regression this guards."
     )
 }
 
