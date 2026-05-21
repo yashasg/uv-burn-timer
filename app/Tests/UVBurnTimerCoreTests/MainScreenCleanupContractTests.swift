@@ -81,19 +81,56 @@ import Testing
 
 // MARK: - Group O: Photosensitization Banner Removal (Symbol-Level)
 
-/// O1 — Manual verification surface: photosensitization banner removal.
+/// O1 — `photosensitizationBanner` view symbol must be absent from AppViews.swift.
 ///
-/// The `photosensitizationBannerLabel` constant may still exist in ProductCopy
-/// (used in DisclaimerCover) but the banner VIEW (K-1: photosensitizationBanner
-/// computed property in AppViews.swift) should no longer render at the top of
-/// RootView's main scroll content after Kwame's K-1 commit.
+/// WI-k (2026-05-21) — promoted from a `withKnownIssue` manual-verification
+/// stub to a real source-text guard. The K-1 commit removed the
+/// `photosensitizationBanner` SwiftUI computed property from RootView so the
+/// banner no longer renders at the top of the main scroll content. The
+/// `photosensitizationBannerLabel` *copy constant* in ProductCopy stays —
+/// `DisclaimerCover` still uses it — but a reintroduction of the banner
+/// view symbol would silently put the L0 surface back on the main screen,
+/// undoing K-1.
 ///
-/// This cannot be asserted at the ProductCopy level. Flagged as a known issue
-/// so it appears in test results as a visible reminder for manual QA.
-@Test func test_O1_photosensitizationBannerRemovedFromRootView_manualVerification() {
-    withKnownIssue("Manual: verify in simulator that no banner renders at top of RootView main scroll. K-1 removes photosensitizationBanner computed property. Not automatable without SwiftUI view introspection.") {
-        #expect(Bool(false), "Manual check required")
+/// This guard reads AppViews.swift source text at test-run time (compile-
+/// independent, mirrors P1/R8/S1-S3) and asserts that no `photosensitizationBanner`
+/// identifier exists in any context that would re-introduce the view —
+/// matched as a Swift identifier rather than a substring so the unrelated
+/// `photosensitizationBannerLabel` copy constant (used only inside the L1
+/// cover, not RootView) is not falsely flagged.
+@Test func test_O1_photosensitizationBannerSymbolAbsentFromAppViews() throws {
+    let appViewsURL = appViewsSwiftURL()
+    let sourceText = try String(contentsOf: appViewsURL, encoding: .utf8)
+
+    // Match `photosensitizationBanner` only when it is NOT followed by an
+    // identifier-continuation character — i.e., a true `photosensitizationBanner`
+    // symbol use, distinct from the unrelated `photosensitizationBannerLabel`
+    // ProductCopy constant which is allowed to remain.
+    let viewSymbol = "photosensitizationBanner"
+    var search = sourceText[...]
+    var leakedReintroduction = false
+    while let range = search.range(of: viewSymbol) {
+        let next = range.upperBound
+        if next == search.endIndex {
+            leakedReintroduction = true
+            break
+        }
+        let nextChar = search[next]
+        // Identifier-continuation = letter / digit / underscore. If the next
+        // char is one of those, this is `photosensitizationBannerLabel` (or a
+        // similar suffix) — allowed. Anything else (`.`, ` `, `(`, `:`, `)`,
+        // newline, etc.) is a view-symbol re-introduction — disallowed.
+        if !(nextChar.isLetter || nextChar.isNumber || nextChar == "_") {
+            leakedReintroduction = true
+            break
+        }
+        search = search[next...]
     }
+
+    #expect(
+        !leakedReintroduction,
+        "AppViews.swift must NOT define or reference a `photosensitizationBanner` view symbol — K-1 removed it from RootView. The `photosensitizationBannerLabel` copy constant (suffix `Label`) is allowed; a bare `photosensitizationBanner` identifier is not."
+    )
 }
 
 // MARK: - Group P: AboutView Sun Safety Actions Rendering
@@ -107,47 +144,119 @@ import Testing
 /// Path is derived from the test file's `#filePath` macro so it survives directory
 /// moves that keep the app/ structure intact.
 @Test func test_P1_aboutViewSource_referencesAboutSunSafetyActions() throws {
-    let testFileURL = URL(fileURLWithPath: #filePath)
-    // Traverse: UVBurnTimerCoreTests/ -> Tests/ -> app/ -> app/Sources/UVBurnTimer/AppViews.swift
-    let appViewsURL = testFileURL
-        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
-        .deletingLastPathComponent()  // Tests/
-        .deletingLastPathComponent()  // app/
-        .appendingPathComponent("Sources/UVBurnTimer/AppViews.swift")
-
-    let sourceText = try String(contentsOf: appViewsURL, encoding: .utf8)
+    let sourceText = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
     #expect(
         sourceText.contains("aboutSunSafetyActions"),
         "AppViews.swift must reference ProductCopy.aboutSunSafetyActions (K-11 notForMeAnchor VStack)"
     )
 }
 
-/// P2 — `AboutView` instantiation smoke test.
+/// P2 — `AboutView` struct + `highlightEstimateApplicability` initializer surface.
 ///
-/// `AboutView` is defined in the `UVBurnTimer` app target, which is not linked
-/// into `UVBurnTimerCoreTests`. SwiftUI view init cannot be tested here without
-/// a host app test bundle or ViewInspector. Flagged as a known issue so the gap
-/// is visible in CI output.
-@Test func test_P2_aboutView_initWithHighlightDoesNotCrash() {
-    withKnownIssue("AboutView is in UVBurnTimer app target, not UVBurnTimerCore. UVBurnTimerCoreTests cannot import UVBurnTimer. Add a host-app test bundle or ViewInspector to run this smoke test.") {
-        // Placeholder: AboutView(highlightEstimateApplicability: true)
-        // would be instantiated here if the target were available.
-        #expect(Bool(false), "Test target lacks access to UVBurnTimer module")
-    }
+/// WI-k (2026-05-21) — promoted from a `withKnownIssue` cross-target stub
+/// to a real source-text guard. `AboutView` is defined in the UVBurnTimer
+/// app target and cannot be `@testable import`ed from UVBurnTimerCoreTests
+/// (no host-app test bundle exists), so the *next-best* compile-independent
+/// guard is to assert the source text in AppViews.swift still defines:
+///
+///   * a `struct AboutView` declaration, AND
+///   * the `highlightEstimateApplicability` initializer parameter, AND
+///   * at least one call site that constructs `AboutView(highlightEstimateApplicability: true)`
+///     — the L3 reach-back contract surfaced by the toolbar info button
+///     (RootView toolbar `EstimateInfoButton` → AboutView push) and the
+///     inline see-About link inside `DisclaimerCover`.
+///
+/// Together these three text-pattern asserts pin the public surface that
+/// the WI-50–WI-53 / WI-i XCUI tests rely on, *without* paying the cost
+/// of a host-app test bundle. A future contributor who accidentally renames
+/// the parameter or removes the call site will fail this test even before
+/// XCUI gets a chance to run.
+@Test func test_P2_aboutViewSource_definesHighlightEstimateApplicabilityInit() throws {
+    let sourceText = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+
+    #expect(
+        sourceText.contains("struct AboutView"),
+        "AppViews.swift must declare `struct AboutView` — public reach-back surface"
+    )
+    #expect(
+        sourceText.contains("highlightEstimateApplicability"),
+        "AppViews.swift must keep the `highlightEstimateApplicability` parameter — XCUI L3 reach-back depends on it"
+    )
+    #expect(
+        sourceText.contains("AboutView(highlightEstimateApplicability: true)"),
+        "AppViews.swift must construct `AboutView(highlightEstimateApplicability: true)` at least once — the toolbar EstimateInfoButton / DisclaimerCover see-About link contract"
+    )
 }
 
-// MARK: - Group Q: Location Reminder Reduction (Smoke Only)
+// MARK: - Group Q: First-Launch Cover Gating (Source-Text Smoke)
 
-/// Q1 — Manual verification surface: first-launch location reminder consolidation.
+/// Q1 — First-launch sequence is gated by `DisclaimerCover` → `SkinTypeOnboardingView`.
 ///
-/// After K-8 and K-9, first-launch should show only:
-///   1. LocationRationaleCard (kept)
-///   2. Hero status nudge (kept, non-redundant)
-///   3. Primary CTA button (kept)
-/// — not the prior 5 simultaneous location messages. Not automatable at the
-/// ProductCopy or view-model level; requires simulator walkthrough.
-@Test func test_Q1_firstLaunchLocationReminderConsolidation_manualVerification() {
-    withKnownIssue("Manual: verify in simulator that first-launch shows only LocationRationaleCard + hero status + CTA, not 5 prior surfaces. K-8 removes 'Use your location' sentence; K-9 simplifies transient statusMessage. Requires UI test host.") {
-        #expect(Bool(false), "Manual check required")
-    }
+/// WI-k (2026-05-21) — re-scoped from the original `LocationRationaleCard +
+/// hero status + CTA` manual-verification stub. That earlier shape no longer
+/// exists in the source after the L1/L2 disclaimer-cover redesign and the
+/// SkinTypeOnboardingView full-screen-cover gate. The *current* first-launch
+/// architecture lives in `UVBurnTimerApp.body` and is the new contract to
+/// pin:
+///
+///   1. RootView is wrapped in `.disclaimerPresentation(isPresented:onDismiss:)`
+///      whose content renders `DisclaimerCover` — the L1 cover the user
+///      must acknowledge before any main-screen surface is reachable.
+///   2. On dismiss, `.skinTypePresentation(isPresented:)` renders
+///      `SkinTypeOnboardingView` until the user picks a Fitzpatrick type.
+///   3. Only after both gates are cleared does RootView actually receive
+///      taps — there is no path that surfaces 5 simultaneous location
+///      reminders the way the K-8 / K-9-era main scroll did.
+///
+/// Reads UVBurnTimerApp.swift source text at test-run time (compile-
+/// independent, mirrors P1/P2 in this same file) and asserts the three
+/// modifier + content-type pairs above are wired. A future contributor
+/// who silently removes either cover gate — accidentally exposing
+/// RootView without an acknowledged disclaimer or without a chosen skin
+/// type — will fail this test before any XCUI run.
+@Test func test_Q1_firstLaunchSequenceIsGatedByDisclaimerThenSkinTypeCover() throws {
+    let appURL = uvBurnTimerAppSwiftURL()
+    let sourceText = try String(contentsOf: appURL, encoding: .utf8)
+
+    #expect(
+        sourceText.contains(".disclaimerPresentation("),
+        "UVBurnTimerApp.body must apply `.disclaimerPresentation(...)` — the L1 gate that blocks RootView on first launch."
+    )
+    #expect(
+        sourceText.contains("DisclaimerCover {") || sourceText.contains("DisclaimerCover("),
+        "UVBurnTimerApp.body must render `DisclaimerCover` inside the `.disclaimerPresentation` content — the actual L1 cover view."
+    )
+    #expect(
+        sourceText.contains(".skinTypePresentation("),
+        "UVBurnTimerApp.body must apply `.skinTypePresentation(...)` — the post-L1 gate that blocks RootView until Fitzpatrick is picked."
+    )
+    #expect(
+        sourceText.contains("SkinTypeOnboardingView("),
+        "UVBurnTimerApp.body must render `SkinTypeOnboardingView` inside the `.skinTypePresentation` content — the actual onboarding view."
+    )
+}
+
+// MARK: - Shared test helpers
+
+/// Resolve `app/Sources/UVBurnTimer/AppViews.swift` from this test file's
+/// `#filePath`. Used by P1, P2, and O1 to read the live source text
+/// without depending on the UVBurnTimer app target being linked into
+/// UVBurnTimerCoreTests.
+private func appViewsSwiftURL(file: StaticString = #filePath) -> URL {
+    URL(fileURLWithPath: "\(file)")
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .appendingPathComponent("Sources/UVBurnTimer/AppViews.swift")
+}
+
+/// Resolve `app/Sources/UVBurnTimer/UVBurnTimerApp.swift` from this test
+/// file's `#filePath`. Used by Q1 to read the live source text of the
+/// app entry point.
+private func uvBurnTimerAppSwiftURL(file: StaticString = #filePath) -> URL {
+    URL(fileURLWithPath: "\(file)")
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .appendingPathComponent("Sources/UVBurnTimer/UVBurnTimerApp.swift")
 }
