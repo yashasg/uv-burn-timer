@@ -3787,6 +3787,8 @@ private func _readmeContents() throws -> String {
         body.contains(".frame(minHeight: 44"),
         "PersistentFooter must apply `.frame(minHeight: 44…)` to its Label/NavigationLink — Plunder's always-visible disclaimer-reach surface must not fall below the 44 pt HIG hit-target floor at default Dynamic Type. See AppViews.swift chips at lines 295 / 315 / 337 for the existing pattern."
     )
+}
+
 // MARK: - Group GG: Loop-12 Bundle G — ForecastPickerView WeatherKit attribution + L3 reach-back
 //
 // Closes two HIGH-severity regulatory-floor breaches surfaced by the
