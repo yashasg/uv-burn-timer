@@ -107,7 +107,13 @@ struct RootView: View {
             .navigationTitle("UV Burn Timer")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                // WI-loop13: Both toolbar items use .topBarTrailing so each
+                // gets its own hittable slot in the iOS 26 Liquid Glass nav bar.
+                // .primaryAction on iOS 26 places the gear in a region that
+                // XCUI reports as not hittable (isHittable == false), breaking
+                // testSettingsSheetOpens + testToolbarRendersBothSettingsAndEstimateInfoButtons.
+                // Declared first → gear is rightmost; info.circle is second from right.
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSettings = true
                     } label: {

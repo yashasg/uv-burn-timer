@@ -1709,6 +1709,25 @@ private func _forecastPickerSourceForGroupR() throws -> String {
     )
 }
 
+/// S4 (WI-loop13) — RootView toolbar gear button must use
+/// `.topBarTrailing` placement (NOT `.primaryAction`).
+///
+/// On iOS 26 (Xcode 26 SDK), `.primaryAction` places the gear in a
+/// Liquid Glass navigation-bar slot that XCUI reports as
+/// `isHittable == false`, breaking `testSettingsSheetOpens` and
+/// `testToolbarRendersBothSettingsAndEstimateInfoButtons`. Both toolbar
+/// buttons must share `.topBarTrailing` so they each occupy a hittable
+/// slot side-by-side in the nav bar. This source-text guard prevents
+/// a future refactor from silently reverting to `.primaryAction` without
+/// a failing XCUI suite.
+@Test func test_S4_toolbarGearButtonUsesTopBarTrailingNotPrimaryAction() throws {
+    let body = try _rootViewBodySliceForGroupR()
+    #expect(
+        !body.contains("ToolbarItem(placement: .primaryAction)"),
+        "RootView toolbar must NOT use ToolbarItem(placement: .primaryAction) — on iOS 26, .primaryAction places the gear in a nav-bar region that XCUI reports as not hittable (isHittable == false). Both toolbar items must use .topBarTrailing. See WI-loop13."
+    )
+}
+
 
 // MARK: - Group V: Forecast-vs-now affordance (WI-p)
 //
