@@ -504,6 +504,59 @@ import Testing
     #expect(ProductCopy.disclaimerSeeAboutInlineLinkLabel == "see About")
 }
 
+// MARK: - WI-w: L1 storage-disclosure sentence (Plunder ratified 2026-05-21)
+//
+// Spec source of truth:
+//   .squad/orchestration-log/2026-05-21T-plunder-wi-w-l1-storage.md
+//
+// The L1 cover must carry an explicit, GDPR Art.9(2)(a)-grade sentence
+// naming what is stored (skin type, SPF), where (device only), why (so the
+// app can remember them between launches), and how to remove it (Settings).
+// Plunder requires this as a SEPARATE constant from `disclaimerBody` so the
+// FDA-pre-approved substring guard (`requiredSafetyDisclaimerCopyIsCaptured`)
+// keeps its audit lane clean.
+
+@Test func disclaimerStorageLineMatchesPlunderRatifiedWordingExactly() {
+    // Plunder §3.1 — case-sensitive identity. ANY edit to this string must
+    // re-open the Plunder gate. The exact phrasing is GDPR-load-bearing
+    // (purpose specificity for special-category-adjacent consent).
+    #expect(
+        ProductCopy.disclaimerStorageLine
+            == "Your skin type and SPF are saved on this device only so the app can remember them between launches; the app never sends them off-device. You can clear them anytime in Settings."
+    )
+}
+
+@Test func disclaimerStorageLineSurfacesAllSevenPlunderRequiredSubstrings() {
+    // Plunder §3.2 — derived substring pins so future copy refactors that
+    // accidentally drop a load-bearing phrase still fail loudly even before
+    // a reviewer notices the exact-match drift.
+    let line = ProductCopy.disclaimerStorageLine
+
+    #expect(line.localizedCaseInsensitiveContains("skin type"))   // persisted data #1
+    #expect(line.localizedCaseInsensitiveContains("spf"))         // persisted data #2
+    #expect(line.localizedCaseInsensitiveContains("this device only"))  // scope (Art.5(1)(f))
+    #expect(line.localizedCaseInsensitiveContains("remember"))    // purpose (Art.9(2)(a))
+    #expect(line.localizedCaseInsensitiveContains("off-device"))  // never-transmitted complement
+    #expect(line.localizedCaseInsensitiveContains("settings"))    // erasure path (Art.17)
+    #expect(line.localizedCaseInsensitiveContains("clear"))       // matches K-8 button verb
+}
+
+@Test func disclaimerStorageLineIsRegisteredInAuditCopySurfaces() {
+    // Plunder §3.3 — the banned-clinical-claim guard, monetization-drift
+    // guard, and any future audit guards (e.g., PII-leak) apply to every
+    // entry in `auditCopySurfaces`. Membership is the contract.
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.disclaimerStorageLine))
+}
+
+@Test func disclaimerStorageLineIsLaneSeparatedFromDisclaimerBody() {
+    // Plunder §3.5 — the FDA-pre-approved `disclaimerBody` MUST NOT absorb
+    // the GDPR storage-disclosure prose; mixing the lanes would break
+    // `requiredSafetyDisclaimerCopyIsCaptured` and muddy the audit boundary
+    // for future targeted edits to either lane.
+    #expect(!ProductCopy.disclaimerBody.contains(ProductCopy.disclaimerStorageLine))
+    #expect(!ProductCopy.disclaimerStorageLine.localizedCaseInsensitiveContains("medical advice"))
+}
+
 @Test func skinTypeCaveatIsConsistentAcrossEntryPoints() {
     for copy in [ProductCopy.skinTypePickerFooter, ProductCopy.skinTypeSettingsFooter] {
         #expect(copy.localizedCaseInsensitiveContains("self-assessment"))

@@ -81,6 +81,27 @@ public enum ProductCopy {
         "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
     public static let cacheRetentionLine =
         "The app stores skin type, SPF, and the last rounded coordinate on this device; it does not save UV values, burn estimates, or disclaimer acknowledgments between launches."
+
+    /// WI-w / Plunder-ratified 2026-05-21 — L1 storage-disclosure sentence.
+    ///
+    /// Rendered on `DisclaimerCover` immediately after `disclaimerBody` and
+    /// BEFORE the inline see-About reach-back. Kept as a SEPARATE constant
+    /// from `disclaimerBody` so the FDA-pre-approved substring guard
+    /// (`requiredSafetyDisclaimerCopyIsCaptured`) keeps its audit lane
+    /// clean and so future targeted edits to either lane stay independent.
+    ///
+    /// Wording is GDPR-load-bearing: it names *what* is persisted
+    /// (skin type + SPF), the *scope* (this device only — Art.5(1)(f)),
+    /// the *purpose* ("so the app can remember them between launches" —
+    /// Art.9(2)(a) specificity per EDPB Guidelines 05/2020 §3.2), the
+    /// *off-device* complement (mirror of `aboutPrivacy`), and the
+    /// *erasure path* (Art.17, via the Settings "Clear stored skin type"
+    /// and "Clear saved location" buttons — verb match with K-8). Any
+    /// edit MUST re-open the Plunder gate.
+    ///
+    /// See `.squad/orchestration-log/2026-05-21T-plunder-wi-w-l1-storage.md`.
+    public static let disclaimerStorageLine =
+        "Your skin type and SPF are saved on this device only so the app can remember them between launches; the app never sends them off-device. You can clear them anytime in Settings."
     public static let clearSavedLocationButtonTitle = "Clear saved location"
     public static let locationDeniedEmptyState =
         "Location access is off. You can adjust SPF and skin type now; enable When In Use access in Settings, then tap Use my location again."
@@ -183,6 +204,7 @@ public enum ProductCopy {
         childrenDisclaimerLine,
         photosensitizationBannerLabel,
         disclaimerSeeAboutInlinePrompt,
+        disclaimerStorageLine,
         locationPrivacyLine,
         cacheRetentionLine,
         clearSavedLocationButtonTitle,

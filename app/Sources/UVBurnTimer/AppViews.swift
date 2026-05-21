@@ -1135,6 +1135,16 @@ struct DisclaimerCover: View {
                     Text(ProductCopy.disclaimerBody)
                         .font(.body)
 
+                    // WI-w / Plunder 2026-05-21 — L1 storage-disclosure
+                    // sentence. Placed immediately after `disclaimerBody`
+                    // and BEFORE the see-About reach-back so the consent-
+                    // relevant prose stays grouped at the visual top of
+                    // the cover. Identifier is the XCUI contract surface
+                    // for the §3.4 smoke test.
+                    Text(ProductCopy.disclaimerStorageLine)
+                        .font(.body)
+                        .accessibilityIdentifier("DisclaimerStorageLine")
+
                     Button {
                         showAbout = true
                     } label: {
