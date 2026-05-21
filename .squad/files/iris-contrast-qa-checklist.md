@@ -74,8 +74,9 @@ build can ship.
 |---|---|---|---|---|---|---|
 | Photosens banner text on yellow fill | __:1 | __:1 | __:1 | __:1 | ☐ | `Color.yellow.opacity(0.18/0.35)` + `Color.orange.opacity(0.55/0.85)` border |
 | Photosens banner chevron + link text | __:1 | __:1 | __:1 | __:1 | ☐ | Inline NavigationLink to AboutView |
-| SafetyStatusCard "Recalculate..." text on orange fill | __:1 | __:1 | __:1 | __:1 | ☐ | `Color.orange.opacity(0.14/0.28)` (AppViews ~line 829) |
-| SafetyStatusCard `exclamationmark.shield.fill` icon vs fill | __:1 | __:1 | __:1 | __:1 | ☐ | |
+| SafetyStatusCard "Recalculate..." text on orange fill | __:1 | __:1 | __:1 | __:1 | ☐ | `Color.orange.opacity(0.14/0.28)` — **WI-n re-measurement required.** Background blend changed twice: (1) commit `9da54cf` retired hero card `.regularMaterial` chrome so SafetyStatusCard now blends against the scroll background directly; (2) commit `WI-r` (chrome inversion, Group W/T1+T2) stripped the secondary UV card's `.thinMaterial` so the orange-tint blend behaviour next to the UV row is also altered. Re-shoot this row before the next TestFlight; if it fails, escalate per `wi-n-recheck-safetystatuscard-contrast`. |
+| SafetyStatusCard `exclamationmark.shield.fill` icon vs fill | __:1 | __:1 | __:1 | __:1 | ☐ | Same WI-n re-measurement note as above. |
+| Hero ↔ UV `Divider()` (WI-t / Group X) vs scroll background | __:1 | __:1 | __:1 | __:1 | ☐ | New surface added by Loop-9 WI-t: SwiftUI `Divider()` rendered between `heroTimerCardView` and `uvIndexCardView` in `navigationStackBase`. Divider uses system separator color; must remain visible (not extinguished) in both Standard + Increased contrast modes. Pair-check with the polarized-OLED gate in `iris-launch-readiness-checklist.md`. |
 
 ### Footer + secondary controls
 
