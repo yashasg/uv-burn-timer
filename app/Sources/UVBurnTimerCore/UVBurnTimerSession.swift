@@ -111,6 +111,15 @@ public enum UserPreferenceStorage {
     ///   an existing-user signal is present but no policyVersion key has been written yet.
     ///
     /// Side effect: writes `currentVersion` to `disclaimerPolicyVersionKey` on the migration path.
+    ///
+    /// **Kwame-L12-H1 fix (Group II1):** the existing-user heuristic must require a *genuine*
+    /// Fitzpatrick raw value, not just the existence of `selectedSkinTypeKey` on disk. RootView's
+    /// `@AppStorage`-backed `persistedSkinTypeRawValue` writes the `unsetSkinTypeRawValue` (0)
+    /// sentinel through to `UserDefaults` the first time `handleAppear()` fires — which happens
+    /// while L1 is still on screen and unacknowledged. If we counted that sentinel as
+    /// existing-user evidence, a force-quit before the user taps "I understand" would silently
+    /// suppress L1 on the next launch and breach the Plunder C6 / Asha "L1 must fire once on
+    /// first launch" contract.
     public static func shouldShowDisclaimerCover(
         defaults: UserDefaults,
         currentVersion: Int
@@ -118,8 +127,17 @@ public enum UserPreferenceStorage {
         let storedVersion = defaults.integer(forKey: disclaimerPolicyVersionKey)
         // storedVersion == 0 means the key was never written (integer default is 0).
 
+        // Genuine pick = the on-disk rawValue maps to a real FitzpatrickSkinType
+        // (excluding the unsetSkinTypeRawValue sentinel and any out-of-range corruption).
+        let hasGenuinelyPickedSkinType: Bool = {
+            guard defaults.object(forKey: selectedSkinTypeKey) != nil else { return false }
+            let rawValue = defaults.integer(forKey: selectedSkinTypeKey)
+            guard rawValue != unsetSkinTypeRawValue else { return false }
+            return FitzpatrickSkinType(rawValue: rawValue) != nil
+        }()
+
         let isExistingUser =
-            defaults.object(forKey: selectedSkinTypeKey) != nil
+            hasGenuinelyPickedSkinType
             || defaults.bool(forKey: locationRationaleAcknowledgedKey)
 
         if storedVersion == 0 && isExistingUser {
