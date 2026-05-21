@@ -236,10 +236,111 @@ import Testing
     )
 }
 
+// MARK: - Group BB: Suchi persona P0 contract guards (WI-ff)
+//
+// Loop-10 Suchi fresh gap analysis (parallel review pass, claude-opus-4.7-xhigh)
+// identified three load-bearing persona invariants that were unguarded after
+// the WI-aa (#37) main-spec reconciliation:
+//
+//   BB1 — Asha (P4 Accutane): tapping the new Fitzpatrick chip on the main
+//         screen must NOT re-fire the L1 disclaimer cover. Suchi
+//         skin-type-friction-research §4.1 + §6.4 explicitly decoupled L1
+//         re-attestation cadence from Fitzpatrick picker access. A future
+//         refactor coupling chip-tap to disclaimer reattestation would
+//         re-introduce the friction that Pattern B was ratified to remove
+//         (.squad/decisions.md 2026-05-21T07:00Z).
+//
+//   BB2 — Tomás (P5 trail-runner): the window-elapsed SafetyStatusCard
+//         (estimateElapsedWarning + exclamationmark.shield.fill) — explicitly
+//         flagged by spec LANE 4 row 5 as "the whole app's existence is
+//         justified by this state firing" — must remain wired in
+//         HeroTimerCard's body. The copy alone (BurnTimeCalculatorTests:376
+//         approvedMainScreenSafetyCopyIsCaptured) is not enough; a refactor
+//         could drop the if-isEstimateStale branch and the copy guard would
+//         still pass.
+
+/// BB1 — `skinTypeChip` Button body must NOT call any disclaimer-
+/// reattestation reset. Asha's L1 cadence is gated only by
+/// policyVersion + foreground-with-elapsed-window per Pattern B.
+@Test func test_BB1_skinTypeChipActionDoesNotTriggerDisclaimerReattestation() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let lines = source.components(separatedBy: "\n")
+    guard let chipStart = lines.firstIndex(where: { $0.contains("private var skinTypeChip:") }) else {
+        Issue.record("skinTypeChip property not found in AppViews.swift — Suchi BB1 cannot verify")
+        return
+    }
+    let chipEnd: Int = lines[(chipStart + 1)...].firstIndex(where: {
+        $0.contains("private var ") && !$0.contains("skinTypeChip")
+    }) ?? lines.endIndex
+    let chipBody = lines[chipStart..<chipEnd].joined(separator: "\n")
+
+    let forbiddenTokens = [
+        "requireDisclaimerReattestation",
+        "acknowledgedDisclaimer = false",
+        "showDisclaimer = true",
+        "disclaimerPolicyVersion",
+    ]
+    for token in forbiddenTokens {
+        #expect(
+            !chipBody.contains(token),
+            "skinTypeChip body must NOT contain '\(token)' — coupling Fitzpatrick chip tap to L1 re-fire would re-introduce the Pattern-A friction that Suchi skin-type-friction-research §4.1/§6.4 + Plunder Pattern-B (2026-05-21T07:00Z) explicitly decoupled. Asha's L1 cadence is policyVersion-only. (WI-ff BB1)"
+        )
+    }
+
+    let expectedTokens = [
+        "showSkinTypeEdit = true",
+        "showSkinTypeOnboarding = true",
+    ]
+    for token in expectedTokens {
+        #expect(
+            chipBody.contains(token),
+            "skinTypeChip body must contain '\(token)' — the chip's only two action paths are sheet-edit (selectedSkinType != nil) and onboarding (selectedSkinType == nil) per the Pattern-B persistence floor. (WI-ff BB1)"
+        )
+    }
+}
+
+/// BB2 — `HeroTimerCard` body must render `SafetyStatusCard` for the
+/// `isEstimateStale` branch with Tomás's load-bearing copy + glyph.
+/// Spec LANE 4 row 5 explicitly names this as the single state whose
+/// firing justifies the app's existence.
+@Test func test_BB2_heroTimerCardRendersWindowElapsedSafetyStatusCardWhenEstimateIsStale() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let lines = source.components(separatedBy: "\n")
+    guard let cardStart = lines.firstIndex(where: { $0.contains("struct HeroTimerCard: View") }) else {
+        Issue.record("HeroTimerCard struct not found in AppViews.swift — Suchi BB2 cannot verify")
+        return
+    }
+    let cardEnd: Int = lines[(cardStart + 1)...].firstIndex(where: {
+        $0.hasPrefix("struct ") || $0.hasPrefix("private struct ")
+    }) ?? lines.endIndex
+    let cardBody = lines[cardStart..<cardEnd].joined(separator: "\n")
+
+    #expect(
+        cardBody.contains("if isEstimateStale"),
+        "HeroTimerCard body must contain `if isEstimateStale` branch — Tomás's window-elapsed safety moment must remain conditionally rendered per spec LANE 4 row 5. (WI-ff BB2)"
+    )
+    #expect(
+        cardBody.contains("SafetyStatusCard("),
+        "HeroTimerCard body must call `SafetyStatusCard(...)` constructor — Tomás's safety surface must remain wired. (WI-ff BB2)"
+    )
+    #expect(
+        cardBody.contains(#"title: "Estimate window elapsed""#),
+        "HeroTimerCard SafetyStatusCard must keep the title `\"Estimate window elapsed\"` — this is the Plunder-vetted hedge copy for the stale-window safety moment. (WI-ff BB2)"
+    )
+    #expect(
+        cardBody.contains("ProductCopy.estimateElapsedWarning"),
+        "HeroTimerCard SafetyStatusCard must use ProductCopy.estimateElapsedWarning as message — the constant is the Plunder-audited safety copy carrier. (WI-ff BB2)"
+    )
+    #expect(
+        cardBody.contains(#"systemImage: "exclamationmark.shield.fill""#),
+        "HeroTimerCard SafetyStatusCard must use the `exclamationmark.shield.fill` glyph — Iris launch-readiness checklist row 78 pins this glyph as part of Tomás's recognizable safety surface. (WI-ff BB2)"
+    )
+}
+
 // MARK: - Shared test helpers
 
 /// Resolve `app/Sources/UVBurnTimer/AppViews.swift` from this test file's
-/// `#filePath`. Used by P1, P2, and O1 to read the live source text
+/// `#filePath`. Used by P1, P2, O1, BB1, BB2 to read the live source text
 /// without depending on the UVBurnTimer app target being linked into
 /// UVBurnTimerCoreTests.
 private func appViewsSwiftURL(file: StaticString = #filePath) -> URL {
