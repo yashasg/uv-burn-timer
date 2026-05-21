@@ -1947,3 +1947,118 @@ private func _forecastPickerSourceForGroupR() throws -> String {
     )
 }
 
+
+// MARK: - Group GD: UserPreferenceStorage.shouldShowDisclaimerCover (WI-ff)
+//
+// Loop-10 Suchi gap analysis P0: the Pattern-B L1 cover gating implemented at
+// UserPreferenceStorage.shouldShowDisclaimerCover(defaults:currentVersion:) is
+// the single function that determines Asha's (P4 Accutane) re-attestation
+// cadence AND Greta's (P1 gram-counter) "stop asking me every cold launch"
+// friction relief. Per decisions.md (2026-05-21T07:00Z Iris persistence spec)
+// the function ratified the four contracts G-D1..G-D4 below; this group
+// finally pins them as tests so a future refactor cannot silently break
+// either persona's experience.
+
+/// G-D1 — Fresh install (no stored skin type, no rationale ack, no
+/// stored policy version) shows the L1 disclaimer cover.
+@Test func test_GD1_freshInstallShowsDisclaimerCover() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    let shouldShow = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+
+    #expect(
+        shouldShow,
+        "Fresh install (no stored data) must trigger L1 disclaimer cover — Asha and every new user must see L1 once on first launch. (WI-ff G-D1)"
+    )
+}
+
+/// G-D2 — Returning user at the current policy version (already acked,
+/// stored version == currentVersion) does NOT see L1 again.
+@Test func test_GD2_returningUserAtCurrentPolicyVersionSkipsDisclaimerCover() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    defaults.set(
+        UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+    )
+    defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+
+    let shouldShow = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+
+    #expect(
+        !shouldShow,
+        "Returning user at currentDisclaimerPolicyVersion must NOT see L1 — this is the Greta-friction relief that Pattern B was ratified to provide. (WI-ff G-D2)"
+    )
+}
+
+/// G-D3 — A bump in `currentDisclaimerPolicyVersion` re-fires L1 for
+/// a returning user whose stored version is now stale.
+@Test func test_GD3_policyVersionBumpRefiresDisclaimerCoverForReturningUser() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    let storedOldVersion = 1
+    let bumpedNewVersion = storedOldVersion + 1
+    defaults.set(storedOldVersion, forKey: UserPreferenceStorage.disclaimerPolicyVersionKey)
+    defaults.set(FitzpatrickSkinType.typeIV.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+
+    let shouldShow = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: bumpedNewVersion
+    )
+
+    #expect(
+        shouldShow,
+        "A bumped currentDisclaimerPolicyVersion must re-fire L1 for returning users — this is Asha's regulatory re-attestation surface when Plunder ships a material policy change. (WI-ff G-D3)"
+    )
+}
+
+/// G-D4 — Existing user upgrading from @State-only era (stored skin type
+/// or location-rationale ack present, but no policyVersion key) is
+/// silently migrated to currentVersion and does NOT re-fire L1.
+@Test func test_GD4_legacyAckMigratedToCurrentPolicyVersionWithoutRefire() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    defaults.set(FitzpatrickSkinType.typeII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+
+    let initialShouldShow = UserPreferenceStorage.shouldShowDisclaimerCover(
+        defaults: defaults,
+        currentVersion: UserPreferenceStorage.currentDisclaimerPolicyVersion
+    )
+
+    #expect(
+        !initialShouldShow,
+        "Existing user upgrading from @State-only era must NOT see L1 re-fire — Pattern B migration path silently writes currentVersion so the prior cold-launch L1 firings are honored. (WI-ff G-D4 migration)"
+    )
+
+    let migratedVersion = defaults.integer(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey)
+    #expect(
+        migratedVersion == UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        "Migration must persist currentDisclaimerPolicyVersion to disclaimerPolicyVersionKey on the existing-user path so subsequent launches read the right version. Migrated value: \(migratedVersion). (WI-ff G-D4 persistence)"
+    )
+}
+
+// MARK: - Shared helpers for Group GD
+
+private func makeIsolatedDefaults() -> (defaults: UserDefaults, suiteName: String) {
+    let suiteName = "UVBurnTimerTests.GD.\(UUID().uuidString)"
+    guard let defaults = UserDefaults(suiteName: suiteName) else {
+        Issue.record("Failed to construct isolated UserDefaults (suite=\(suiteName))")
+        return (.standard, suiteName)
+    }
+    defaults.removePersistentDomain(forName: suiteName)
+    return (defaults, suiteName)
+}
+
+private func tearDownIsolatedDefaults(_ defaults: UserDefaults, suiteName: String) {
+    defaults.removePersistentDomain(forName: suiteName)
+}
