@@ -2831,3 +2831,89 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
         #expect(s < a, "disclaimerStorageLine must precede DisclaimerSeeAboutLink (WI-w §2.2)")
     }
 }
+
+// MARK: - Group HH: Loop-12 Bundle H — README truthfulness (Gaia H1+H2+H3)
+//
+// Three README↔code truth gaps closed by Bundle H. The README is the
+// public-surface source of truth for App Store reviewers, external
+// auditors, and EU counsel; the Plunder regulatory floor + the
+// `D-2026-05-19-honest-privacy-copy` decision both turn on the README
+// being literally true about what is stored and how the disclaimer fires.
+//
+// HH1 — Scenario 1 must describe Pattern-B (policyVersion-gated) cadence,
+//       not the retired "every app session" cold-launch model. Pattern B
+//       was ratified in Loop-9 (`.squad/decisions.md:10–43`) and is now
+//       pinned by `UserPreferenceStorage.shouldShowDisclaimerCover` +
+//       Group GD contract family (BurnTimeCalculatorTests.swift line ~1964).
+// HH2 — Privacy line must not claim `location-rationale acknowledgment`
+//       persists. The `locationRationaleAcknowledgedKey` is declared in
+//       `UVBurnTimerSession.swift` but no production code writes it after
+//       Kwame-8 dropped the LocationRationaleCard. Cross-pinned to source.
+// HH3 — README user-scenarios must list the WI-7 10-day forecast picker —
+//       the largest post-launch feature; omission breaks the
+//       README ↔ loop.md Goal 3 ("User scenarios captured") contract.
+
+private func _readmeContents() throws -> String {
+    let repoRoot = try appRootURL().deletingLastPathComponent()
+    let url = repoRoot.appendingPathComponent("README.md")
+    return try String(contentsOf: url, encoding: .utf8)
+}
+
+/// HH1 — README Scenario 1 must describe Pattern-B (policyVersion-gated)
+/// cadence, not the retired "every app session" cold-launch model.
+@Test func test_HH1_readmeScenario1DescribesPolicyVersionedL1() throws {
+    let readme = try _readmeContents()
+    #expect(
+        !readme.contains("required disclaimer every app session"),
+        "README Scenario 1 must not claim L1 fires every app session — Pattern B (policyVersion-gated) shipped Loop-9; see GD1–GD4."
+    )
+    #expect(
+        readme.localizedCaseInsensitiveContains("policyversion")
+            || readme.localizedCaseInsensitiveContains("policy version"),
+        "README Scenario 1 must reference the policyVersion mechanism that actually gates L1."
+    )
+}
+
+/// HH2 — README must not claim `location-rationale acknowledgment`
+/// persists in UserDefaults: no production code writes that key after
+/// Kwame-8 dropped the LocationRationaleCard.
+@Test func test_HH2_readmePrivacyDoesNotClaimDeadStoragePersistence() throws {
+    let readme = try _readmeContents()
+    #expect(
+        !readme.contains("location-rationale acknowledgment"),
+        "README Privacy line must not claim location-rationale acknowledgment persists — the LocationRationaleCard was retired (Kwame-8) and no production code writes `locationRationaleAcknowledged`."
+    )
+    let repoRoot = try appRootURL().deletingLastPathComponent()
+    let appSwift = try String(
+        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimer/AppViews.swift"),
+        encoding: .utf8
+    )
+    let coreSwift = try String(
+        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimerCore/UVBurnTimerSession.swift"),
+        encoding: .utf8
+    )
+    let writePatterns = [
+        ".set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey",
+        "defaults.set(true, forKey: locationRationaleAcknowledgedKey",
+        "@AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey)",
+    ]
+    for pattern in writePatterns {
+        #expect(
+            !appSwift.contains(pattern) && !coreSwift.contains(pattern),
+            "Production code now writes `locationRationaleAcknowledgedKey` — either restore the README claim or this guard is wrong."
+        )
+    }
+}
+
+/// HH3 — README must list the WI-7 forecast picker as a shipped user
+/// scenario. The picker is the largest post-launch feature and its
+/// absence from public surface is a documented-behavior gap.
+@Test func test_HH3_readmeListsForecastPickerScenario() throws {
+    let readme = try _readmeContents()
+    let tokens = ["forecast", "10-day", "hourly", "WHO"]
+    let presentCount = tokens.filter { readme.localizedCaseInsensitiveContains($0) }.count
+    #expect(
+        presentCount >= 2,
+        "README must describe the shipped forecast picker (≥ 2 of: forecast, 10-day, hourly, WHO). Current matches: \(presentCount)."
+    )
+}
