@@ -103,8 +103,17 @@ public enum ProductCopy {
     /// false GDPR-load-bearing prose. WI-iris-c rewrites the line to name
     /// the acknowledgment-version persistence explicitly while keeping
     /// Plunder's "what is NOT saved" lane intact.
+    /// WI-bundleQ / Plunder L04 (Loop-13) — the previous wording promised
+    /// "does not save UV values or burn estimates between launches" but
+    /// the WI-7 ForecastSnapshot pipeline DOES cache a 10-day UV forecast
+    /// on-device (Caches directory). The hosted privacy policy §2 already
+    /// discloses this; the in-app line must match or it breaches GDPR
+    /// Art.5(1)(a) (accuracy/transparency). The replacement names the
+    /// forecast cache explicitly, ratifies the eviction path (expiration
+    /// or Clear saved location), and keeps the "live UV values + burn
+    /// estimates are never persisted" lane intact.
     public static let cacheRetentionLine =
-        "The app stores skin type, SPF, the last rounded coordinate, and the version of the informational disclaimer you acknowledged on this device; it does not save UV values or burn estimates between launches."
+        "The app stores skin type, SPF, the last rounded coordinate, and the version of the informational disclaimer you acknowledged on this device. A 10-day UV forecast snapshot is cached on-device (app Caches directory) for performance, and is cleared when the forecast expires or you tap Clear saved location. Live UV values and burn estimates are never persisted between launches."
 
     /// WI-w / Plunder-ratified 2026-05-21 — L1 storage-disclosure sentence.
     ///
@@ -200,7 +209,16 @@ public enum ProductCopy {
     /// tail because the hero `Label`'s VoiceOver read-out previously
     /// spelled it that way.
     public static let noUVAtThisHourLabel = "No UV at this hour"
-    public static let noUVAtThisHourAccessibilityLabel = "No UV at this hour. No burn risk."
+    /// WI-bundleQ / Wheeler L13-H1 + Suchi L04 (Loop-13) — UVI=0 is a
+    /// *reported* rounded integer (WHO 2002 §2.1), so true erythemal
+    /// irradiance can still be present at sunrise/sunset, on snow, water,
+    /// or sand. The previous "No burn risk." tail was a categorical safety
+    /// claim that misread for Tomás (P5 dawn-runner) and overreached the
+    /// underlying photobiology. The replacement keeps the calm "No UV at
+    /// this hour" lede but swaps the categorical tail for a time-bounded
+    /// hedge that names the next-hour return path. Pinned by `test_Q1_*`.
+    public static let noUVAtThisHourAccessibilityLabel =
+        "No UV at this hour. Burn risk returns when the sun is up — check the next forecast hour."
 
     public static let skinTypePickerPrompt = "Choose by how your skin burns and tans, not by how it looks."
     public static let skinTypePickerSubtext =
@@ -236,7 +254,11 @@ public enum ProductCopy {
         "Skin type and SPF persist in app preferences on this device only and are never transmitted off-device. The app asks iOS for approximate location where available; rounded coordinates are sent to Apple Weather to fetch UV index data, and only the last rounded coordinate may be saved on this device. A 10-day UV forecast snapshot is cached on-device (app Caches directory) between launches for performance; it is never transmitted off-device and is cleared when the forecast expires or you use Clear saved location. UV burn-time estimates are not retained between launches. The version of the informational disclaimer you acknowledged is stored on this device so the app does not re-prompt unless the disclaimer materially changes. No accounts, analytics, ads, crash SDKs, or third-party tracking."
     public static let whatTheAppDoesNotDo =
         "UV Burn Timer does not diagnose, prevent, or treat sunburn; does not replace professional medical advice; does not track your exposure over time; does not send alerts or timers; and does not account for shade, clothing, altitude, reflected glare, water, sweat, toweling, or changing weather after the UV value is fetched."
-    public static let lastUpdatedLine = "Last updated: 2026-05-20."
+    /// WI-bundleQ / Plunder L06 (Loop-13) — kept in lock-step with the
+    /// hosted `privacy-policy.md` `Last updated:` header (`.squad/files/`).
+    /// Both surfaces must move together; a substring pin in test_Q3_*
+    /// enforces equality so GDPR Art.12 (clear/transparent) is upheld.
+    public static let lastUpdatedLine = "Last updated: 2026-05-21."
     public static let outdoorReadabilityTip =
         "Bright sunlight? Try Settings → Accessibility → Display & Text Size → Increase Contrast."
     public static let weatherAttributionServiceName = "Apple Weather"

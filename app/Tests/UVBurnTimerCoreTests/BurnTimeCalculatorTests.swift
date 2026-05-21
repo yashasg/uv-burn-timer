@@ -83,7 +83,8 @@ import Testing
     #expect(estimate.tier == .none)
     #expect(estimate.displayText == "No UV")
     #expect(estimate.roundedDisplayMinutes == nil)
-    #expect(estimate.accessibilitySummary.contains("No erythemal irradiance"))
+    #expect(estimate.accessibilitySummary.contains("UV index is 0 at this hour"))
+    #expect(estimate.accessibilitySummary.contains("when the sun is up"))
 }
 
 @Test func moderateBurnWindowHasExpectedDisplayAndAccessibilitySummary() throws {
@@ -360,7 +361,12 @@ import Testing
     #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("approximate location"))
     #expect(ProductCopy.locationPrivacyLine.localizedCaseInsensitiveContains("last rounded coordinate"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("last rounded coordinate"))
-    #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("does not save UV values"))
+    // WI-bundleQ / Plunder L04 — `cacheRetentionLine` now discloses the
+    // 10-day forecast cache. The legacy substring "does not save UV values
+    // or burn estimates" is replaced by "Live UV values and burn estimates
+    // are never persisted" so the same lane (UV values + burn estimates
+    // are not persisted) is preserved without the false "no UV cache" claim.
+    #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("Live UV values and burn estimates are never persisted"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("skin type"))
     #expect(ProductCopy.cacheRetentionLine.localizedCaseInsensitiveContains("SPF"))
     // WI-iris-c (Loop-11) — Pattern-B truth fix: the line must NOT claim
@@ -625,7 +631,9 @@ import Testing
     #expect(ProductCopy.whatTheAppDoesNotDo.localizedCaseInsensitiveContains("does not diagnose"))
     #expect(ProductCopy.whatTheAppDoesNotDo.localizedCaseInsensitiveContains("does not track"))
     #expect(ProductCopy.whatTheAppDoesNotDo.localizedCaseInsensitiveContains("does not send alerts"))
-    #expect(ProductCopy.lastUpdatedLine == "Last updated: 2026-05-20.")
+    // WI-bundleQ / Plunder L06 — keep lock-step with privacy-policy.md
+    // `**Last updated:**` header. Bumped 2026-05-20 → 2026-05-21.
+    #expect(ProductCopy.lastUpdatedLine == "Last updated: 2026-05-21.")
     #expect(ProductCopy.outdoorReadabilityTip.localizedCaseInsensitiveContains("Increase Contrast"))
 }
 
@@ -3462,7 +3470,13 @@ private func _readmeContents() throws -> String {
 /// can pin the rendered string.
 @Test func test_CC9_noUVAtThisHourLabelIsSingleSourceOfTruth() {
     #expect(ProductCopy.noUVAtThisHourLabel == "No UV at this hour")
-    #expect(ProductCopy.noUVAtThisHourAccessibilityLabel == "No UV at this hour. No burn risk.")
+    // WI-bundleQ / Wheeler L13-H1 + Suchi L04 — accessibility variant now
+    // carries the time-bounded hedge instead of the categorical
+    // "No burn risk." tail.
+    #expect(
+        ProductCopy.noUVAtThisHourAccessibilityLabel ==
+            "No UV at this hour. Burn risk returns when the sun is up — check the next forecast hour."
+    )
 }
 
 /// CC10 — WI-iris-d: `AppViews.swift` references the new constant from all
@@ -4258,4 +4272,201 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
         #expect(!beforeSupporting.contains("if differentiateWithoutColor"),
                 "Text(supportingText) must not be gated behind `if differentiateWithoutColor` (S-H1)")
     }
+}
+
+// MARK: - Group Q: Loop-13 Bundle Q — convergent HIGH closure
+//
+// Closes seven HIGH-severity findings surfaced by the Loop-13 parallel
+// gap-analysis pass (claude-opus-4.7-xhigh):
+//
+//   Q1 — Wheeler L13-H1 + Suchi L04 (Tomás P5 + photobiology):
+//        `noUVAtThisHourAccessibilityLabel` previously claimed "No burn
+//        risk." — a categorical safety claim that overreached the WHO
+//        2002 §2.1 rounded-integer UVI definition (true erythemal
+//        irradiance may be present at sunrise/sunset, on snow, water,
+//        sand). The string now ends with a time-bounded hedge naming
+//        the next forecast hour. `BurnTimeCalculator.accessibilitySummary`
+//        UVI=0 branch updated in parallel.
+//
+//   Q2 — Plunder L04 (GDPR Art.5(1)(a) accuracy):
+//        `cacheRetentionLine` previously said the app "does not save
+//        UV values or burn estimates between launches" but the WI-7
+//        forecast pipeline DOES cache a 10-day UV forecast on-device.
+//        The hosted privacy policy §2 has always disclosed this; the
+//        in-app line now matches.
+//
+//   Q3 — Plunder L06 (GDPR Art.12 transparency):
+//        `lastUpdatedLine` lagged the hosted policy `Last updated:`
+//        header by one day. The pin keeps them locked together.
+//
+//   Q4 — Iris L03 (HIG 44pt tap-target floor):
+//        `ForecastPickerAttribution` Link wrapped a `minHeight: 32`
+//        hit region — below the 44×44pt floor — while the sibling
+//        `ForecastPickerEstimateInfoButton` correctly carried 44.
+//        Now raised to 44 with `.contentShape(Rectangle())`.
+//
+//   Q5 — Plunder L03 (GDPR Art.17 symmetry):
+//        Hosted privacy policy §6 enumerated only "Clear stored skin
+//        type" and "Clear saved location" as erasure affordances.
+//        Group SS (#54) shipped a third destructive button "Clear
+//        stored SPF"; the policy now names all three symmetrically.
+//
+//   Q6 — Gaia L13d (build.sh hygiene):
+//        The local-dev branch of `build.sh` ignored the documented
+//        `RUN_TESTS=false` env var (only the CI branch honored it).
+//        Now wrapped in `if [[ "$run_tests" == "true" ]]; then ... fi`.
+//
+// Build script changes are validated by a source-text guard rather
+// than a shell harness — keeps the test surface inside Swift Testing.
+
+/// Q1 — UVI=0 visible + accessibility copy must drop categorical
+/// "No burn risk." claims and carry a time-bounded hedge naming the
+/// return of burn risk. Source-text guards cover both `ProductCopy`
+/// and `BurnTimeCalculator.accessibilitySummary`.
+@Test func test_Q1_uviZeroCopyDropsCategoricalSafetyClaim() throws {
+    // ProductCopy visible label is unchanged ("No UV at this hour")
+    #expect(ProductCopy.noUVAtThisHourLabel == "No UV at this hour")
+
+    // Accessibility variant must NOT contain the categorical claim and
+    // MUST contain the temporal hedge.
+    #expect(
+        !ProductCopy.noUVAtThisHourAccessibilityLabel.contains("No burn risk."),
+        "noUVAtThisHourAccessibilityLabel must not claim categorical \"No burn risk.\" — overreaches WHO 2002 §2.1 rounded-UVI definition."
+    )
+    #expect(
+        ProductCopy.noUVAtThisHourAccessibilityLabel.contains("when the sun is up"),
+        "noUVAtThisHourAccessibilityLabel must hedge with \"when the sun is up\" to name the return of burn risk (Tomás P5 safety)."
+    )
+
+    // BurnTimeCalculator.accessibilitySummary UVI=0 branch carries the
+    // same hedge and drops the "No erythemal irradiance detected." claim.
+    let zeroUVCalculator = try BurnTimeCalculator.estimate(
+        skinType: .typeIII,
+        spf: .unprotectedReference,
+        uvIndex: 0
+    )
+    #expect(
+        !zeroUVCalculator.accessibilitySummary.contains("No erythemal irradiance detected"),
+        "BurnTimeCalculator UVI=0 accessibilitySummary must not claim \"No erythemal irradiance detected.\" — the underlying UVI is rounded, not measured."
+    )
+    #expect(
+        zeroUVCalculator.accessibilitySummary.contains("when the sun is up"),
+        "BurnTimeCalculator UVI=0 accessibilitySummary must hedge with \"when the sun is up\"."
+    )
+}
+
+/// Q2 — `cacheRetentionLine` must disclose the forecast cache so it
+/// matches the hosted privacy policy §2 (GDPR Art.5(1)(a) accuracy).
+@Test func test_Q2_cacheRetentionLineDisclosesForecastCache() throws {
+    #expect(
+        ProductCopy.cacheRetentionLine.contains("forecast"),
+        "cacheRetentionLine must name the forecast cache (GDPR Art.5(1)(a) accuracy — must match hosted policy §2)."
+    )
+    #expect(
+        ProductCopy.cacheRetentionLine.contains("Caches directory"),
+        "cacheRetentionLine must name the iOS Caches directory so the eviction model is transparent."
+    )
+    #expect(
+        ProductCopy.cacheRetentionLine.contains("Live UV values and burn estimates are never persisted"),
+        "cacheRetentionLine must preserve the \"live UV values + burn estimates are never persisted\" lane intact."
+    )
+    #expect(
+        !ProductCopy.cacheRetentionLine.contains("does not save UV values or burn estimates"),
+        "cacheRetentionLine must not retain the old phrasing that contradicted the WI-7 forecast cache."
+    )
+}
+
+/// Q3 — `lastUpdatedLine` in-app About must match the hosted privacy
+/// policy `Last updated:` header (GDPR Art.12 transparency).
+@Test func test_Q3_lastUpdatedLineMatchesHostedPolicy() throws {
+    let appRoot = try appRootURL()
+    let repoRoot = appRoot.deletingLastPathComponent()
+    let policyURL = repoRoot.appendingPathComponent(".squad/files/privacy-policy.md")
+    let policy = try String(contentsOf: policyURL, encoding: .utf8)
+
+    // Extract the "Last updated:" date from the policy file.
+    let pattern = #/\*\*Last updated:\*\*\s+(\d{4}-\d{2}-\d{2})/#
+    guard let match = policy.firstMatch(of: pattern) else {
+        Issue.record("privacy-policy.md must contain a `**Last updated:** YYYY-MM-DD` header")
+        return
+    }
+    let policyDate = String(match.output.1)
+
+    #expect(
+        ProductCopy.lastUpdatedLine.contains(policyDate),
+        "ProductCopy.lastUpdatedLine must contain the same date (\(policyDate)) as privacy-policy.md `**Last updated:**` (GDPR Art.12 transparency, Loop-13 Plunder L06)."
+    )
+}
+
+/// Q4 — `ForecastPickerAttribution` tappable Link must carry the 44pt
+/// HIG hit-target floor, parity with the sibling
+/// `ForecastPickerEstimateInfoButton`.
+@Test func test_Q4_forecastPickerAttributionMeets44ptTapTarget() throws {
+    let appRoot = try appRootURL()
+    let url = appRoot.appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
+    let source = try String(contentsOf: url, encoding: .utf8)
+
+    // Find the ForecastPickerAttribution identifier line.
+    guard let identifierRange = source.range(of: ".accessibilityIdentifier(\"ForecastPickerAttribution\")") else {
+        Issue.record("ForecastPickerAttribution accessibilityIdentifier not found")
+        return
+    }
+    // Take the ~500 chars after the identifier to capture the modifier chain.
+    let after = source[identifierRange.upperBound...]
+    let window = String(after.prefix(500))
+
+    #expect(
+        window.contains("minHeight: 44"),
+        "ForecastPickerAttribution Link must carry `.frame(...minHeight: 44...)` — HIG 44pt tap target (Iris L03)."
+    )
+    #expect(
+        !window.contains("minHeight: 32"),
+        "ForecastPickerAttribution Link must not still carry `minHeight: 32`."
+    )
+}
+
+/// Q5 — Hosted privacy policy §6 must enumerate all three erasure
+/// affordances (skin type, SPF, location) symmetrically.
+@Test func test_Q5_privacyPolicyNamesAllThreeErasureAffordances() throws {
+    let appRoot = try appRootURL()
+    let repoRoot = appRoot.deletingLastPathComponent()
+    let policyURL = repoRoot.appendingPathComponent(".squad/files/privacy-policy.md")
+    let policy = try String(contentsOf: policyURL, encoding: .utf8)
+
+    for affordance in [
+        ProductCopy.clearStoredSkinTypeButtonTitle,
+        ProductCopy.clearStoredSPFButtonTitle,
+        ProductCopy.clearSavedLocationButtonTitle,
+    ] {
+        #expect(
+            policy.contains(affordance),
+            "privacy-policy.md must name \"\(affordance)\" as an Art.17 erasure path (Plunder L03 symmetry)."
+        )
+    }
+}
+
+/// Q6 — `build.sh` local-dev branch must honor `RUN_TESTS=false`. The
+/// CI branch already does (line 158); this pins the local-dev branch
+/// parity (Gaia L13d).
+@Test func test_Q6_buildSctiptHonorsRunTestsInLocalDevBranch() throws {
+    let appRoot = try appRootURL()
+    let repoRoot = appRoot.deletingLastPathComponent()
+    let buildScriptURL = repoRoot.appendingPathComponent("build.sh")
+    let source = try String(contentsOf: buildScriptURL, encoding: .utf8)
+
+    // Local-dev branch lives in the `else` block that runs Debug build +
+    // tests + Release build. The tests stanza must now be gated on
+    // `$run_tests`.
+    guard let elseRange = source.range(of: "else\n  # Local dev mode") else {
+        Issue.record("build.sh must contain the `else` block with `# Local dev mode` comment")
+        return
+    }
+    // Look at the body of the else block — up to the closing `fi`.
+    let after = source[elseRange.upperBound...]
+    let localDevWindow = String(after.prefix(2000))
+
+    #expect(
+        localDevWindow.contains("if [[ \"$run_tests\" == \"true\" ]]; then"),
+        "build.sh local-dev branch must gate the test xcodebuild invocation on `$run_tests` — parity with the CI branch (Gaia L13d)."
+    )
 }
