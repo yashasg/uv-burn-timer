@@ -329,7 +329,8 @@ struct RootView: View {
             }
         } label: {
             Label(
-                session.selectedSkinType.map { "Type \($0.romanNumeral)" } ?? "Set skin type",
+                session.selectedSkinType.map { ProductCopy.skinTypeChipSetLabel(for: $0) }
+                    ?? ProductCopy.skinTypeChipUnsetLabel,
                 systemImage: "figure.person.crop.square"
             )
             .font(.caption.weight(.medium))
@@ -338,7 +339,9 @@ struct RootView: View {
         }
         .buttonStyle(.bordered)
         .accessibilityLabel(
-            session.selectedSkinType.map { "Skin type, Type \($0.romanNumeral)" } ?? "Skin type, not set"
+            session.selectedSkinType
+                .map { "Skin type, \(ProductCopy.skinTypeChipSetLabel(for: $0))" }
+                ?? "Skin type, not set"
         )
         .accessibilityHint(
             session.selectedSkinType != nil
@@ -1321,7 +1324,7 @@ struct SettingsSheet: View {
                         UserPreferenceStorage.persist(skinType: nil, to: .standard)
                         session.selectedSkinType = nil
                     } label: {
-                        Text("Clear stored skin type")
+                        Text(ProductCopy.clearStoredSkinTypeButtonTitle)
                     }
                     .disabled(session.selectedSkinType == nil)
                     .accessibilityHint("Removes your stored Fitzpatrick skin type. You will be asked to set it again on next use.")

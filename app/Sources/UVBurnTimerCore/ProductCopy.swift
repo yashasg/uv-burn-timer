@@ -115,6 +115,32 @@ public enum ProductCopy {
     public static let disclaimerStorageLine =
         "Your skin type and SPF are saved on this device only so the app can remember them between launches; the app never sends them off-device. You can clear them anytime in Settings."
     public static let clearSavedLocationButtonTitle = "Clear saved location"
+
+    /// WI-bundleF / Plunder P-2 (Loop-11) — GDPR Art.17 erasure-path button.
+    ///
+    /// Routed through `ProductCopy` so the `auditCopySurfaces`-driven
+    /// monetization-drift + banned-clinical-claim sieves apply, and so the
+    /// L1 `disclaimerStorageLine` promise *"You can clear them anytime in
+    /// Settings"* keeps verb-continuity with the button title (the consent
+    /// specificity ↔ erasure-affordance loop only holds while the button
+    /// keeps the verb "clear"). Pinned by `test_FF1_*`.
+    public static let clearStoredSkinTypeButtonTitle = "Clear stored skin type"
+
+    /// WI-bundleF / Plunder P-1 (Loop-11) — Pattern-B `skinTypeChip` labels.
+    ///
+    /// The chip is the per-session re-attestation surface for the Asha (P4
+    /// Accutane) cohort. Drift to measurement-like phrasing ("Burn risk
+    /// III", "Phototype III", "Skin score III") re-classifies the chip
+    /// from a self-declared *input* echo (general-wellness territory) to
+    /// an inferred *output* (potentially MDSW/Class IIa under MDR Annex
+    /// VIII Rule 11 + MDCG 2019-11 §3.3). The 🚫/✅ list lives at
+    /// `.squad/designs/plunder-skin-type-persistence-floor.md` §4.4. Both
+    /// the unset label and the parameterised set-label are pinned by
+    /// `test_FF2_*` and audit-enrolled via `auditCopySurfaces`.
+    public static let skinTypeChipUnsetLabel = "Set skin type"
+    public static func skinTypeChipSetLabel(for type: FitzpatrickSkinType) -> String {
+        "Type \(type.romanNumeral)"
+    }
     public static let locationDeniedEmptyState =
         "Location access is off. You can adjust SPF and skin type now; enable When In Use access in Settings, then tap Use my location again."
     public static let locationUnavailableMessage =
@@ -220,6 +246,9 @@ public enum ProductCopy {
         locationPrivacyLine,
         cacheRetentionLine,
         clearSavedLocationButtonTitle,
+        clearStoredSkinTypeButtonTitle,
+        skinTypeChipUnsetLabel,
+        skinTypeChipSetLabel(for: .typeIII),
         locationDeniedEmptyState,
         locationUnavailableMessage,
         locationRequestInProgressMessage,
