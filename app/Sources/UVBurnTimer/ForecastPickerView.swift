@@ -87,6 +87,7 @@ public struct ForecastPickerView: View {
                 Divider()
                     .padding(.horizontal, 16)
                 hourlyStripSection
+                pickerFooter
             }
         }
         .padding(.vertical, 12)
@@ -95,6 +96,51 @@ public struct ForecastPickerView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         // Banner appears/disappears with .easeInOut(0.2); instant under Reduce Motion (Iris §8 item 9).
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: forecastRefreshState)
+    }
+
+    // MARK: - Footer (WI-bundleG Group GG)
+    //
+    // GG1 — Apple Weather attribution (WeatherKit §5.1.1). The forecast picker
+    //       is a WeatherKit-derived data surface and the attribution must be
+    //       visible whenever the surface is rendered. The legal URL is the
+    //       canonical WeatherKit attribution target per ProductCopy.
+    //
+    // GG2 — L3 photosensitizer reach-back (Plunder C3 floor). The picker is
+    //       its own result surface (selecting a future hour drives the
+    //       burn-time gauge) and needs its own reach-back path to
+    //       AboutView(highlightEstimateApplicability: true), parity with
+    //       the main-screen toolbar ⓘ EstimateInfoButton.
+
+    private var pickerFooter: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Divider()
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+            NavigationLink {
+                AboutView(highlightEstimateApplicability: true)
+            } label: {
+                Label("Is this estimate for me?", systemImage: "info.circle")
+                    .font(.footnote.weight(.medium))
+            }
+            .foregroundStyle(.tint)
+            .accessibilityLabel("Is this estimate for me?")
+            .accessibilityHint("Opens photosensitization, medication, and sunscreen assumption caveats.")
+            .accessibilityIdentifier("ForecastPickerEstimateInfoButton")
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 16)
+
+            Link(destination: ProductCopy.weatherAttributionLegalURL) {
+                Text("Source: \(ProductCopy.weatherAttributionServiceName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityLabel("Source: \(ProductCopy.weatherAttributionServiceName)")
+            .accessibilityHint("Opens the Apple Weather legal attribution page.")
+            .accessibilityIdentifier("ForecastPickerAttribution")
+            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 4)
+        }
     }
 
     // MARK: - Header
