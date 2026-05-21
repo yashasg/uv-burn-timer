@@ -87,6 +87,31 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10))
     }
 
+    // MARK: - Smoke 6 (WI-w): DisclaimerCover surfaces storage-disclosure line
+
+    /// WI-w / Plunder ratification §3.4 — the L1 cover must render the
+    /// `disclaimerStorageLine` constant with `accessibilityIdentifier`
+    /// `DisclaimerStorageLine` so the storage-disclosure sentence is
+    /// observably present at the moment the user taps "I understand".
+    /// Cold-launches into onboarding (no skip flag) and asserts the
+    /// identifier is visible before acknowledgment.
+    /// See `.squad/orchestration-log/2026-05-21T-plunder-wi-w-l1-storage.md`.
+    func testDisclaimerCoverSurfacesStorageDisclosureLine() {
+        let app = launchApp()
+
+        // The acknowledge button anchors that we're actually on the cover.
+        XCTAssertTrue(
+            app.buttons["I understand"].waitForExistence(timeout: 10),
+            "DisclaimerCover must render with the I understand button"
+        )
+
+        let storageLine = app.staticTexts["DisclaimerStorageLine"]
+        XCTAssertTrue(
+            storageLine.waitForExistence(timeout: 10),
+            "DisclaimerCover must render the disclaimerStorageLine Text with identifier DisclaimerStorageLine"
+        )
+    }
+
     // MARK: - Helpers
 
     private func launchApp(arguments: [String] = []) -> XCUIApplication {
