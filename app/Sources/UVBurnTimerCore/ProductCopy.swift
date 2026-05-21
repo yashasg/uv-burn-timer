@@ -11,7 +11,6 @@ public struct ProductCitationLink: Equatable, Sendable {
 }
 
 public enum ProductCopy {
-    public static let burnTimeEstimateTitle = "Burn-time estimate"
     public static let emptyStateAwaitingSkinType = "Pick a skin type to see your estimate."
     public static let emptyStateAwaitingLocation = "Tap Use my location to compute your estimate."
 
@@ -175,7 +174,6 @@ public enum ProductCopy {
     ]
 
     public static let auditCopySurfaces = [
-        burnTimeEstimateTitle,
         emptyStateAwaitingSkinType,
         emptyStateAwaitingLocation,
         disclaimerTitle,

@@ -350,7 +350,6 @@ import Testing
 }
 
 @Test func approvedMainScreenSafetyCopyIsCaptured() {
-    #expect(ProductCopy.burnTimeEstimateTitle == "Burn-time estimate")
     #expect(ProductCopy.photosensitizerDisclaimerLine.contains("Photosensitizing"))
     #expect(ProductCopy.photosensitizationAuthorityLine.localizedCaseInsensitiveContains("informational"))
     #expect(ProductCopy.photosensitizationAuthorityLine.localizedCaseInsensitiveContains("NIH MedlinePlus"))

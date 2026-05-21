@@ -45,6 +45,9 @@ struct RootView: View {
     @State private var selectedDateIsUserOverridden: Bool = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
+    @ScaledMetric(relativeTo: .largeTitle) private var heroNumberSize: CGFloat = 80
+    @ScaledMetric(relativeTo: .largeTitle) private var heroIconSize: CGFloat = 80
 
     var body: some View {
         mainNavigationStack
@@ -209,20 +212,194 @@ struct RootView: View {
     // MARK: - Extracted card views (split from body for Swift type-checker performance)
 
     private var heroTimerCardView: some View {
-        HeroTimerCard(
-            estimate: activeEstimate,
-            uvIndex: activeUVIndex ?? uvIndex,
-            fetchedAt: fetchedAt,
-            now: now,
-            contextLine: activeEstimateContextLine,
-            statusMessage: displayedStatusMessage,
-            locationFailureMessage: locationFailureMessage,
-            weatherFailureMessage: weatherFailureMessage,
-            isEstimateStale: isEstimateStale,
-            forecastDateContext: forecastDateContext,
-            onRecalculate: {
-                Task { await refreshUV() }
+        VStack(alignment: .leading, spacing: 16) {
+            if let dateCaption = forecastDateContext {
+                Text(dateCaption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
+            heroContent
+            if let estimate = activeEstimate {
+                if estimate.tier != .none {
+                    TierBadge(tier: estimate.tier)
+                }
+                if let contextLine = activeEstimateContextLine {
+                    Text(contextLine)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Estimate inputs: \(contextLine)")
+                }
+                heroBurnRiskGauge
+                if isEstimateStale {
+                    SafetyStatusCard(
+                        title: "Estimate window elapsed",
+                        message: ProductCopy.estimateElapsedWarning,
+                        systemImage: "exclamationmark.shield.fill"
+                    )
+                }
+                if estimate.tier == .long {
+                    SafetyStatusCard(
+                        title: "Long estimate caveat",
+                        message: ProductCopy.longEstimateHedge,
+                        systemImage: "shield.lefthalf.filled"
+                    )
+                }
+                if estimate.isCappedForSunscreenReapplication {
+                    SafetyStatusCard(
+                        title: "Sunscreen reapplication limit",
+                        message: ProductCopy.sunscreenCapHedge,
+                        systemImage: "clock.badge.exclamationmark"
+                    )
+                }
+            } else {
+                Text(heroVerdictText)
+                    .font(.title3.weight(.semibold))
+                heroBurnRiskGauge
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(heroAccessibilityLabel)
+    }
+
+    @ViewBuilder
+    private var heroBurnRiskGauge: some View {
+        if let estimate = activeEstimate, let fetchedAt, estimate.tier != .none, estimate.rawMinutes.isFinite {
+            BurnRiskGaugeCard(estimate: estimate, fetchedAt: fetchedAt, now: now)
+        } else {
+            BurnRiskGaugeUnavailableCard(message: heroBurnRiskGaugeUnavailableMessage)
+        }
+    }
+
+    private var heroBurnRiskGaugeUnavailableMessage: String {
+        if let estimate = activeEstimate, estimate.tier == .none {
+            return "No active burn time because the UV index is 0."
+        }
+        if weatherFailureMessage != nil {
+            return "Unavailable until Apple Weather returns a UV estimate."
+        }
+        if locationFailureMessage != nil {
+            return "Unavailable until location is available for a UV estimate."
+        }
+        return "Waiting for location and Apple Weather UV."
+    }
+
+    @ViewBuilder
+    private var heroContent: some View {
+        if let estimate = activeEstimate, isEstimateStale {
+            heroStaleEstimateContent(estimate)
+        } else if let estimate = activeEstimate, estimate.tier == .none {
+            Label {
+                Text("No UV at this hour")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
+            } icon: {
+                Image(systemName: "moon.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            .accessibilityLabel("No UV at this hour. No burn risk.")
+        } else if let estimate = activeEstimate {
+            heroEstimateText(estimate)
+        } else if let weatherFailureMessage {
+            VStack(alignment: .leading, spacing: 12) {
+                Label(ProductCopy.weatherUnavailableTitle, systemImage: "cloud.sun")
+                    .font(.title3.weight(.semibold))
+                Text(weatherFailureMessage)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Button("Try again") { Task { await refreshUV() } }
+                    .buttonStyle(.borderedProminent)
+            }
+        } else if let locationFailureMessage {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Location unavailable", systemImage: "location.slash")
+                    .font(.title3.weight(.semibold))
+                Text(locationFailureMessage)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                #if canImport(UIKit)
+                HStack {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Try again") { Task { await refreshUV() } }
+                        .buttonStyle(.borderedProminent)
+                }
+                #else
+                Button("Try again") { Task { await refreshUV() } }
+                    .buttonStyle(.borderedProminent)
+                #endif
+            }
+        } else {
+            Image(systemName: "sun.max")
+                .font(.system(size: heroIconSize))
+                .foregroundStyle(.tint)
+            Text(displayedStatusMessage)
+                .font(.body)
+        }
+    }
+
+    @ViewBuilder
+    private func heroStaleEstimateContent(_ estimate: BurnTimeEstimate) -> some View {
+        let content = VStack(alignment: .leading, spacing: 12) {
+            heroEstimateText(estimate)
+                .opacity(0.6)
+            Button(action: { Task { await refreshUV() } }) {
+                Label("Recalculate", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityHint("Fetches a fresh UV index before relying on this estimate.")
+        }
+        if accessibilityReduceMotion {
+            content
+        } else {
+            content.contentTransition(.numericText())
+        }
+    }
+
+    @ViewBuilder
+    private func heroEstimateText(_ estimate: BurnTimeEstimate) -> some View {
+        let text = Text(estimate.displayText)
+            .font(
+                .system(
+                    size: dynamicTypeSize.isAccessibilitySize ? 48 : heroNumberSize,
+                    weight: .heavy,
+                    design: .rounded
+                )
+            )
+            .minimumScaleFactor(0.5)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+        if accessibilityReduceMotion {
+            text
+                .accessibilityLabel(estimate.accessibilitySummary)
+                .accessibilityIdentifier(estimate.displayText)
+        } else {
+            text.contentTransition(.numericText())
+                .accessibilityLabel(estimate.accessibilitySummary)
+                .accessibilityIdentifier(estimate.displayText)
+        }
+    }
+
+    private var heroVerdictText: String {
+        guard let estimate = activeEstimate else { return "Ready when you are" }
+        switch estimate.tier {
+        case .none: return "No UV detected"
+        case .long: return "Long"
+        case .moderate: return "Moderate"
+        case .short: return "Short"
+        }
+    }
+
+    private var heroAccessibilityLabel: String {
+        guard let estimate = activeEstimate else { return displayedStatusMessage }
+        return HeroAccessibilitySummary.text(
+            estimate: estimate,
+            uvIndex: activeUVIndex ?? uvIndex,
+            verdict: heroVerdictText
         )
     }
 
@@ -727,240 +904,6 @@ struct RootView: View {
         #else
         _ = message
         #endif
-    }
-}
-
-struct HeroTimerCard: View {
-    let estimate: BurnTimeEstimate?
-    let uvIndex: Double?
-    let fetchedAt: Date?
-    let now: Date
-    let contextLine: String?
-    let statusMessage: String
-    let locationFailureMessage: String?
-    let weatherFailureMessage: String?
-    let isEstimateStale: Bool
-    /// WI-7: Optional date context for forecast-selected times.
-    /// When non-nil (e.g., "Burn time on Wed, 6 PM"), shown in place of the default header.
-    /// Nil means "now" — no date prefix needed.
-    /// IRIS-HOOK: typography + layout of this label.
-    let forecastDateContext: String?
-    let onRecalculate: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .largeTitle) private var heroNumberSize = 80
-    @ScaledMetric(relativeTo: .largeTitle) private var heroIconSize = 80
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // When a future date is selected, show its date label as the card header.
-            // IRIS-HOOK: visual differentiation between "now" and forecast states.
-            Text(forecastDateContext ?? ProductCopy.burnTimeEstimateTitle)
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            heroContent
-
-            if let estimate {
-                if estimate.tier != .none {
-                    TierBadge(tier: estimate.tier)
-                }
-                if let contextLine {
-                    Text(contextLine)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Estimate inputs: \(contextLine)")
-                }
-                burnRiskGauge
-                if isEstimateStale {
-                    SafetyStatusCard(
-                        title: "Estimate window elapsed",
-                        message: ProductCopy.estimateElapsedWarning,
-                        systemImage: "exclamationmark.shield.fill"
-                    )
-                }
-                if estimate.tier == .long {
-                    SafetyStatusCard(
-                        title: "Long estimate caveat",
-                        message: ProductCopy.longEstimateHedge,
-                        systemImage: "shield.lefthalf.filled"
-                    )
-                }
-                if estimate.isCappedForSunscreenReapplication {
-                    SafetyStatusCard(
-                        title: "Sunscreen reapplication limit",
-                        message: ProductCopy.sunscreenCapHedge,
-                        systemImage: "clock.badge.exclamationmark"
-                    )
-                }
-            } else {
-                Text(verdictText)
-                    .font(.title3.weight(.semibold))
-                burnRiskGauge
-            }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    @ViewBuilder
-    private var burnRiskGauge: some View {
-        if let estimate, let fetchedAt, estimate.tier != .none, estimate.rawMinutes.isFinite {
-            BurnRiskGaugeCard(estimate: estimate, fetchedAt: fetchedAt, now: now)
-        } else {
-            BurnRiskGaugeUnavailableCard(message: burnRiskGaugeUnavailableMessage)
-        }
-    }
-
-    private var burnRiskGaugeUnavailableMessage: String {
-        if let estimate, estimate.tier == .none {
-            return "No active burn time because the UV index is 0."
-        }
-
-        if weatherFailureMessage != nil {
-            return "Unavailable until Apple Weather returns a UV estimate."
-        }
-
-        if locationFailureMessage != nil {
-            return "Unavailable until location is available for a UV estimate."
-        }
-
-        return "Waiting for location and Apple Weather UV."
-    }
-
-    @ViewBuilder
-    private var heroContent: some View {
-        if let estimate, isEstimateStale {
-            staleEstimateContent(estimate)
-        } else if let estimate, estimate.tier == .none {
-            // UVI = 0 at selected hour — moon.fill + "No UV at this hour" per Iris §5.
-            Label {
-                Text("No UV at this hour")
-                    .font(.subheadline)
-                    .foregroundStyle(Color(.secondaryLabel))
-            } icon: {
-                Image(systemName: "moon.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color(.secondaryLabel))
-            }
-            .accessibilityLabel("No UV at this hour. No burn risk.")
-        } else if let estimate {
-            estimateText(estimate)
-        } else if let weatherFailureMessage {
-            VStack(alignment: .leading, spacing: 12) {
-                Label(ProductCopy.weatherUnavailableTitle, systemImage: "cloud.sun")
-                    .font(.title3.weight(.semibold))
-                Text(weatherFailureMessage)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                Button("Try again", action: onRecalculate)
-                    .buttonStyle(.borderedProminent)
-            }
-        } else if let locationFailureMessage {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Location unavailable", systemImage: "location.slash")
-                    .font(.title3.weight(.semibold))
-                Text(locationFailureMessage)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                #if canImport(UIKit)
-                HStack {
-                    Button("Open Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Try again", action: onRecalculate)
-                        .buttonStyle(.borderedProminent)
-                }
-                #else
-                Button("Try again", action: onRecalculate)
-                    .buttonStyle(.borderedProminent)
-                #endif
-            }
-        } else {
-            Image(systemName: "sun.max")
-                .font(.system(size: heroIconSize))
-                .foregroundStyle(.tint)
-
-            Text(statusMessage)
-                .font(.body)
-        }
-    }
-
-    @ViewBuilder
-    private func staleEstimateContent(_ estimate: BurnTimeEstimate) -> some View {
-        let content = VStack(alignment: .leading, spacing: 12) {
-            estimateText(estimate)
-                .opacity(0.6)
-
-            Button(action: onRecalculate) {
-                Label("Recalculate", systemImage: "arrow.clockwise")
-            }
-            .buttonStyle(.borderedProminent)
-            .accessibilityHint("Fetches a fresh UV index before relying on this estimate.")
-        }
-
-        if accessibilityReduceMotion {
-            content
-        } else {
-            content.contentTransition(.numericText())
-        }
-    }
-
-    @ViewBuilder
-    private func estimateText(_ estimate: BurnTimeEstimate) -> some View {
-        let text = Text(estimate.displayText)
-            .font(
-                .system(
-                    size: dynamicTypeSize.isAccessibilitySize ? 48 : heroNumberSize, weight: .heavy, design: .rounded)
-            )
-            .minimumScaleFactor(0.5)
-            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
-
-        if accessibilityReduceMotion {
-            text
-                .accessibilityLabel(estimate.accessibilitySummary)
-                .accessibilityIdentifier(estimate.displayText)
-        } else {
-            text.contentTransition(.numericText())
-                .accessibilityLabel(estimate.accessibilitySummary)
-                .accessibilityIdentifier(estimate.displayText)
-        }
-    }
-
-    private var verdictText: String {
-        guard let estimate else {
-            return "Ready when you are"
-        }
-
-        switch estimate.tier {
-        case .none:
-            return "No UV detected"
-        case .long:
-            return "Long"
-        case .moderate:
-            return "Moderate"
-        case .short:
-            return "Short"
-        }
-    }
-
-    private var accessibilityLabel: String {
-        guard let estimate else {
-            return statusMessage
-        }
-
-        return HeroAccessibilitySummary.text(
-            estimate: estimate,
-            uvIndex: uvIndex,
-            verdict: verdictText
-        )
     }
 }
 
