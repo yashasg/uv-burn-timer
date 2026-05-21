@@ -138,6 +138,16 @@ public enum ProductCopy {
     /// keeps the verb "clear"). Pinned by `test_FF1_*`.
     public static let clearStoredSkinTypeButtonTitle = "Clear stored skin type"
 
+    /// WI-bundleM / Kwame-L12 H2 (Loop-12) — GDPR Art.17 erasure-path button
+    /// for the SPF preference. The L1 `disclaimerStorageLine` promises
+    /// *"Your skin type **and SPF** are saved on this device only … You can
+    /// clear them anytime in Settings."* The Loop-11 erasure surface shipped
+    /// only a skin-type clear button; SPF persisted with no documented
+    /// erasure affordance. This constant closes the L1 ↔ Settings
+    /// verb-continuity symmetry so the promise is fulfilled for both
+    /// disclosed preferences. Pinned by `test_SS1_*` (Plunder P-2 floor).
+    public static let clearStoredSPFButtonTitle = "Clear stored SPF"
+
     /// WI-bundleF / Plunder P-1 (Loop-11) — Pattern-B `skinTypeChip` labels.
     ///
     /// The chip is the per-session re-attestation surface for the Asha (P4
@@ -294,6 +304,7 @@ public enum ProductCopy {
         cacheRetentionLine,
         clearSavedLocationButtonTitle,
         clearStoredSkinTypeButtonTitle,
+        clearStoredSPFButtonTitle,
         skinTypeChipUnsetLabel,
         skinTypeChipSetLabel(for: .typeIII),
         locationDeniedEmptyState,

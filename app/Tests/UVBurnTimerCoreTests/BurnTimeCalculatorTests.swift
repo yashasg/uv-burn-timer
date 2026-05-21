@@ -3978,3 +3978,108 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
         "Out-of-range stored skin-type rawValue must not satisfy the existing-user heuristic — fall back to first-install behaviour and present L1."
     )
 }
+
+// MARK: - Group SS: Loop-12 Bundle M — GDPR Art.17 SPF erasure (Kwame H2)
+//
+// Closes the L1↔Settings erasure-symmetry gap surfaced by the Loop-12
+// Kwame gap-analysis pass (claude-opus-4.7-xhigh).
+//
+// Plunder-ratified L1 storage-disclosure copy promises:
+//
+//   "Your skin type and SPF are saved on this device only … You can
+//    clear them anytime in Settings."
+//
+// The Loop-11 erasure-path implementation (PR #47 BundleF / WI-plunder-aa)
+// shipped only a "Clear stored skin type" button. SPF persisted with no
+// documented erasure affordance, leaving the L1 promise unfulfilled — a
+// GDPR Art.17 inconsistency between disclosed and actual erasure paths.
+// Severity HIGH because the L1 copy is presented as a regulatory commitment.
+//
+// Fix: a parallel "Clear stored SPF" button in the Settings Privacy section,
+// routed through the same `auditCopySurfaces`-enrolled `ProductCopy`
+// constant, with verb continuity ("clear") so the consent ↔ erasure loop
+// holds.
+
+/// SS1 — Verb-continuity / coverage contract: every preference the L1
+/// `disclaimerStorageLine` names as on-device must have a corresponding
+/// `ProductCopy` "Clear …" button title naming that preference. This is
+/// the cross-substring guard Kwame proposed in the L12 gap-analysis;
+/// pinning it here means a future drift in either direction (the L1
+/// copy adds a third preference but no button, or a button title loses
+/// the noun) hard-fails CI.
+@Test func test_SS1_disclaimerStorageLinePromisesAreFulfilledBySettingsErasureButtons() {
+    let copy = ProductCopy.disclaimerStorageLine
+    let l1NamedNouns: [String] = ["skin type", "SPF"]
+    for noun in l1NamedNouns {
+        #expect(
+            copy.localizedCaseInsensitiveContains(noun),
+            "L1 disclaimerStorageLine must enumerate '\(noun)' to satisfy GDPR Art.13 storage disclosure."
+        )
+        let hasButton = ProductCopy.auditCopySurfaces.contains { surface in
+            surface.localizedCaseInsensitiveContains("Clear")
+                && surface.localizedCaseInsensitiveContains(noun)
+        }
+        #expect(
+            hasButton,
+            "L1 disclaimerStorageLine promises '\(noun)' can be cleared in Settings — there MUST be a ProductCopy 'Clear …' constant naming '\(noun)' so the L1↔Settings verb-continuity loop holds. (WI-bundleM / SS1 — Kwame-L12 H2)"
+        )
+    }
+}
+
+/// SS2 — `clearStoredSPFButtonTitle` exists, carries the "Clear" verb +
+/// "SPF" noun, and is audit-enrolled so the monetization-drift sieve
+/// applies.
+@Test func test_SS2_clearStoredSPFButtonTitleIsRoutedThroughProductCopyAndAuditEnrolled() {
+    #expect(ProductCopy.clearStoredSPFButtonTitle == "Clear stored SPF")
+    #expect(ProductCopy.clearStoredSPFButtonTitle.localizedCaseInsensitiveContains("clear"))
+    #expect(ProductCopy.clearStoredSPFButtonTitle.localizedCaseInsensitiveContains("SPF"))
+    #expect(ProductCopy.auditCopySurfaces.contains(ProductCopy.clearStoredSPFButtonTitle))
+}
+
+/// SS3 — Render-site source-text guard: `SettingsSheet` references the
+/// `ProductCopy.clearStoredSPFButtonTitle` constant (not a literal) and
+/// carries the `ClearStoredSPFButton` accessibility identifier so XCUI
+/// and the contrast checklist can find it.
+@Test func test_SS3_settingsSheetRendersClearStoredSPFButtonViaProductCopy() throws {
+    let source = try _appViewsSourceForGroupR()
+    #expect(
+        source.contains("ProductCopy.clearStoredSPFButtonTitle"),
+        "SettingsSheet must reference `ProductCopy.clearStoredSPFButtonTitle` so the GDPR Art.17 audit sieves apply."
+    )
+    #expect(
+        !source.contains("Text(\"Clear stored SPF\")"),
+        "SettingsSheet must NOT carry the inline `Text(\"Clear stored SPF\")` literal — must route through ProductCopy."
+    )
+    #expect(
+        source.contains(".accessibilityIdentifier(\"ClearStoredSPFButton\")"),
+        "SettingsSheet's Clear-SPF button must carry `accessibilityIdentifier(\"ClearStoredSPFButton\")` so the contrast / launch-readiness checklists can target it."
+    )
+    // Parity guard: the skin-type clear button continues to be present with its
+    // own identifier (we extended the pair, did not replace the existing one).
+    #expect(
+        source.contains(".accessibilityIdentifier(\"ClearStoredSkinTypeButton\")"),
+        "SettingsSheet's Clear-skin-type button must keep its `ClearStoredSkinTypeButton` identifier for L1↔Settings parity."
+    )
+}
+
+/// SS4 — Erasure action contract: `UserPreferenceStorage.persist(spf:)`
+/// with `.spf30` (the default) sets the SPF key on disk. The render-site
+/// already calls this; the model-level test pins the API surface so a
+/// future refactor of the storage layer cannot silently change the
+/// erasure semantics (e.g., dropping the write to leave the previous
+/// SPF on disk).
+@Test func test_SS4_persistSPFDefaultRestoresStoredValueToDefault() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    // Pre-condition: user previously stored SPF 50.
+    UserPreferenceStorage.persist(spf: .spf50, to: defaults)
+    #expect(UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf50)
+
+    // Erasure action: write the default sentinel.
+    UserPreferenceStorage.persist(spf: .spf30, to: defaults)
+
+    #expect(
+        UserPreferenceStorage.restoredSession(from: defaults).selectedSPF == .spf30,
+        "Persisting `.spf30` (the default) must restore the stored SPF to the default — this is the SettingsSheet Clear-SPF action contract."    )
+}
