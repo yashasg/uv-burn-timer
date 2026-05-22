@@ -2,6 +2,53 @@
 
 **Summarized on 2026-05-22T15:05:00Z** — archived entries before 2026-05-22 Loop-28 closure to history-archive.md.
 
+## 2026-05-22T17:35:00Z: Loop-29 WI-4 closed via PR #108 (parallel-cohort convergence — 2nd of session)
+
+WI-loop29-4 (`toolbar_image_needs_scaled_frame` custom SwiftLint
+rule, Iris GAP-4) shipped to main at `ec5a3f2` via PR #108 opened
+by a peer cohort agent at 2026-05-22T18:06:01Z, while this Kwame
+session was independently working the same branch
+(`squad/wi-loop29-4-toolbar-image-scaled-frame-rule`, baseline
+`bf7a1e8`). Identical green solution converged on; no duplicate PR
+opened. Decision drop:
+`.squad/decisions/inbox/kwame-wi-loop29-4-close.md` (authored by
+the merging cohort agent — content reviewed and accepted).
+
+Rule shape: `\.toolbar\s*\{[\s\S]{0,2000}?\bImage\s*\(` with a
+`(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)`
+negative lookahead at `severity: error`. LY1 test window widened
+from 1500 → 2500 chars so the rule's verbose justification
+comments (modeled on `missing_min_touch_target`) fit inside the
+search radius. No AppViews.swift / ForecastPickerView.swift
+source edits required — PR #99 already floored the only toolbar
+Image sites (gear + info.circle at line 120).
+
+### Learnings
+
+- **Cohort convergence is the new normal for Loop-29 WIs.** Two
+  events in one session window (WI-29-7 / PR #106 at T+17:05,
+  WI-29-4 / PR #108 at T+17:35). Protocol: `git fetch github` +
+  `git log github/main` + `gh pr view {N}` before pushing any
+  branch. If the WI is already merged, drop a decision note
+  documenting the convergence and exit cleanly without re-pushing
+  or rebasing the stale baseline branch.
+- **Toolbar-context narrowing IS expressible as a SwiftLint
+  custom-rule regex** — 2000-char outer window from `.toolbar {`
+  plus the same 200-char `\.frame(...min(Width|Height): <id>)`
+  negative-lookahead pattern that `missing_min_touch_target` uses.
+  Cannot match arbitrary brace nesting but covers realistic
+  toolbar bodies. Asymmetric trade-off accepted:
+  false-positives suppressible at call site, false-negatives are
+  the failure mode the rule exists to prevent.
+- **When the rule body grows, the test's search window must grow
+  with it.** LY1's original `[\s\S]{0,1500}` failed because the
+  verbose comment block between `toolbar_image_needs_scaled_frame:`
+  and `regex:` exceeded 1500 chars. Widening to 2500 preserves
+  contract intent without making the test brittle to further
+  comment expansion. Generalises to any "rule X mentions literal
+  Y within window Z" test: size Z generously since team-policy
+  rule bodies are comment-heavy.
+
 ### 2026-05-22T13:30Z: Loop-28 WI-0 shipped via PR #99 (521bc82)
 
 **Outcome:** AV-19/AV-20 + Group LT (LT1/LT2/LT3) all green on main. ADR-0001 line citations refreshed. RootView toolbar @ScaledMetric touch-target floor now load-bearing for iOS 26.4 Liquid Glass hittability (ADR-0002 extension).
