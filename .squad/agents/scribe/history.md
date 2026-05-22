@@ -30,3 +30,5 @@
 **Files staged & committed:** decisions.md, decisions-archive.md (if any), orchestration-log 2 files, log 1 file, 5 agent history files, 4 charter files (wheeler, suchi, plunder, argos), config.json.
 
 <!-- Append learnings below -->
+
+**2026-05-22 Orphan Recovery Lesson:** Two Scribe commits (7d84b0f, 3a57df3) on Loop-25 branch were left local-only and orphaned when PR #94 merge deleted the branch. Recovered via reflog cherry-pick onto squad/recover-orphaned-squad-commits. Root cause: Scribe's git workflow committed changes locally without pushing the branch afterward. Future runs must push immediately after committing to prevent orphaning. Recovered intact; lesson logged.

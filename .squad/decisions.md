@@ -4260,3 +4260,38 @@ Full specification with regex patterns, rationale, false-positive notes, and exa
 **Effective immediately for all future spawns.**
 
  
+
+## 2026-05-22
+
+### 2026-05-22T03:32: User directive — HIG layout rules are ERROR day 1, no literal exceptions
+
+**By:** yashasg (via Copilot)
+**What:** Override Iris's "Error after grace period" severity bucket and her "allowed exception" carve-out for `minHeight: 44` / `minHeight: 56` HIG-touch-target floors. The new policy is:
+
+1. **All HIG layout rules ship at `severity: error` on day 1.** No grace period, no "warn now, error in 2 weeks" ramp. The CI gate is the gate from the moment the SwiftLint PR merges.
+2. **No literal numbers in layout — including HIG touch-target floors.** `.frame(minHeight: 44)`, `.frame(minHeight: 56)`, etc. must be backed by `@ScaledMetric` (e.g., `@ScaledMetric private var minTap: CGFloat = 44`). The raw literal does not satisfy the lint rule even though Iris originally exempted it.
+3. **The `missing_min_touch_target` rule regex must enforce `@ScaledMetric`** as the backing, not a literal `44`/`56`/`88` count. Literals fail.
+4. **Rationale (user-supplied):** Small screens (iPhone SE / mini) combined with AX5 Dynamic Type make a fixed-pixel 44pt tap target visibly cramped. `@ScaledMetric` lets the tap target grow proportionally with the user's text-size preference, which is what HIG actually intends. The literal is the easy interpretation of HIG; `@ScaledMetric` is the right one.
+
+**Supersedes:**
+- Iris's "Severity bucket recommendations" section in `iris-hig-lint-rule-catalog.md` (merged into `decisions.md` earlier this session) — specifically the "Error after grace period (warn for now, error in 2 weeks)" bucket for touch-target and padding rules.
+- Iris's "Allowed exception: Fixed minimum sizes that directly serve Apple HIG touch-target rules stay allowed (`minHeight: 44` / `56`)" carve-out documented in the same catalog.
+
+**Action items:** Applied via Kwame (commit 1c0c64c on `squad/swiftlint-hig-error-gate`): all HIG layout rules now `severity: error`, `missing_min_touch_target` regex requires `@ScaledMetric` backing, 31 baseline HIG violations identified.
+
+---
+
+### 2026-05-22T03:34: User directive — Iris enforces HIG, does not interpret it loosely
+
+**By:** yashasg (via Copilot)
+**What:** Iris's role is to ENFORCE Apple Human Interface Guidelines, not to interpret them loosely or carve out convenience exceptions. Specifically:
+
+1. **No "pragmatic adoption" softening.** When Iris specs lint rules or design policies, the default severity is `error`, not `warning`. Grace periods, soft-launches, and "warn now, error later" buckets are NOT acceptable defaults — they are emergency tools, used only when a CONCRETE engineering blocker (not a comfort or velocity concern) forces a delay.
+2. **No carve-outs for HIG-mandated minimums that defeat the spirit.** Example from this session: Iris exempted literal `minHeight: 44` / `minHeight: 56` from the touch-target rule because HIG names those numbers explicitly. That's the letter of HIG, not the spirit — `@ScaledMetric` so the target grows with Dynamic Type is what HIG actually intends on small screens at AX5. Iris should default to the spirit, not the letter.
+3. **HIG is the floor, period.** "Treats HIG as a floor, not a ceiling — but never deviates without a documented reason" already in Iris's charter is reaffirmed and TIGHTENED: deviations downward (softer enforcement, looser rules, longer grace periods) require explicit user approval. Deviations upward (stricter than HIG) are encouraged.
+4. **When speccing rules for lint/CI gates:** Iris's job is to write the rules at maximum reasonable strictness and document any escape hatches via per-line disable comments — not to pre-soften the rules globally.
+
+**Implementation:** `.squad/agents/iris/charter.md` updated this turn to encode this — the "Style" and "How I Work" sections now explicitly call out strict-error-default for lint specs, and a new "Voice" line reinforces "enforcer, not interpreter."
+
+**Supersedes:** Iris's own self-positioning as "pragmatic" w.r.t. lint adoption — her catalog's "Error after grace period" bucket and the `minHeight: 44/56` literal exemption were both manifestations of this looser posture. Both already overridden by the prior directive; this directive locks in the BEHAVIORAL change so future Iris spawns don't re-propose the soft pattern.
+
