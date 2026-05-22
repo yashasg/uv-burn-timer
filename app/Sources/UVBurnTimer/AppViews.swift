@@ -307,7 +307,7 @@ struct RootView: View {
             Label(locationChipTitle, systemImage: "location")
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .frame(maxWidth: .infinity, minHeight: minTap)
         }
         .buttonStyle(.bordered)
         .disabled(isFetching)
@@ -327,7 +327,7 @@ struct RootView: View {
         } label: {
             Label("SPF \(session.selectedSPF.displayName)", systemImage: "sun.dust")
                 .lineLimit(1)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .frame(maxWidth: .infinity, minHeight: minTap)
         }
         .menuOrder(.fixed)
         .buttonStyle(.bordered)
@@ -351,7 +351,7 @@ struct RootView: View {
             )
             .font(.caption.weight(.medium))
             .lineLimit(1)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: minTap)
         }
         .buttonStyle(.bordered)
         .accessibilityLabel(
@@ -2128,6 +2128,17 @@ struct BurnRiskGaugeUnavailableCard: View {
 }
 
 struct PersistentFooter: View {
+    // MARK: - HIG @ScaledMetric tokens
+    // Loop-28 WI-1 (Iris audit): migrate the literal `minHeight: 44` to a
+    // `@ScaledMetric`-backed token so the disclaimer-reach Label's tap
+    // target scales with Dynamic Type. At default Dynamic Type the rendered
+    // height is unchanged (44 pt); at AX5 the floor expands proportionally
+    // to ~88 pt per HIG, restoring reachability for users who depend on
+    // larger type sizes. Pre-Loop-28 the literal passed SwiftLint because
+    // the `missing_min_touch_target` rule anchors on `\bButton\s*(` at the
+    // call site and didn't see this NavigationLink-nested literal.
+    @ScaledMetric private var minTap: CGFloat = 44
+
     var body: some View {
         NavigationLink {
             AboutView(highlightEstimateApplicability: true)
@@ -2136,10 +2147,10 @@ struct PersistentFooter: View {
                 .font(.caption.weight(.semibold))
                 // WI-iris-e (Loop-11) — Plunder's always-visible disclaimer
                 // reach-back must not fall below the 44 pt HIG hit-target
-                // floor at default Dynamic Type. The chips at lines 295 /
-                // 315 / 337 already set this; the footer was the only
-                // disclaimer-reach surface without it.
-                .frame(minHeight: 44, alignment: .leading)
+                // floor at default Dynamic Type. Loop-28 WI-1 swapped the
+                // literal `44` for `minTap` so the floor also scales with
+                // Dynamic Type up to AX5.
+                .frame(minHeight: minTap, alignment: .leading)
         }
         .foregroundStyle(.tint)
         .accessibilityLabel(ProductCopy.disclaimerLinkLabel)
