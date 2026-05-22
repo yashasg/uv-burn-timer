@@ -58,7 +58,7 @@ hit-testing and sheet presentation.
 
 `NavigationStack` does not substitute for this boundary: `RootView`
 already wraps its content in `NavigationStack` (see
-`AppViews.swift:88`), and the bug still reproduced. The required
+`AppViews.swift:99`), and the bug still reproduced. The required
 boundary is a **distinct `View` struct** for the heavy child, not a
 container modifier.
 
@@ -167,7 +167,7 @@ enough to materially change the parent's diff signature.
    wrap the inlined hero in an extra `NavigationStack` (or `Group`,
    `VStack`, etc.) to introduce an identity break without a new struct.
    **Explored and rejected.** RootView already wraps its content in
-   `NavigationStack` (`AppViews.swift:88`) and the bug still
+   `NavigationStack` (`AppViews.swift:99`) and the bug still
    reproduced under `9da54cf`. The presentation-slot resolver keys on
    the **struct-type** identity of the modifier-owning view, not on
    intermediate container views. The only reliable boundary is a
@@ -184,11 +184,11 @@ enough to materially change the parent's diff signature.
 ## References
 
 - `app/Sources/UVBurnTimer/AppViews.swift`
-  - `RootView.heroTimerCardView` delegation site — lines **221–235**
+  - `RootView.heroTimerCardView` delegation site — lines **233–247**
     (the `private var heroTimerCardView: some View` that calls
     `HeroTimerCard(...)`)
-  - `struct HeroTimerCard: View` declaration — lines **783–1032**
-  - `RootView` `NavigationStack` wrapper — line **91** (referenced in
+  - `struct HeroTimerCard: View` declaration — lines **795–1070**
+  - `RootView` `NavigationStack` wrapper — line **99** (referenced in
     Alternative 3)
 - `app/Tests/UVBurnTimerCoreTests/BurnTimeCalculatorTests.swift`
   - `test_R1_heroTimerCardWrapperStructStillExists` — line **1383**
@@ -217,6 +217,33 @@ WI-loop14-high). Forward-pinning guard
 `test_S5_adr0001CitationsMatchLiveSourceLineNumbers` reads each cited
 symbol's live source line and fails CI if the ADR ever drifts again.
 
+**Loop-28 WI-0 — line-number refresh:** the References block + Addendum
++ worked-example citations were bumped again after `RootView` gained an
+`@ScaledMetric private var minTap` declaration plus its explanatory
+comment (AV-19) to floor the two toolbar `Image`s at HIG 44 pt
+(AV-20). The new symbols shifted every downstream line in
+`AppViews.swift` by ~14 lines; `test_S5_…` flagged the drift and this
+addendum closes it. The *rule* this ADR encodes is unchanged.
+
+**Loop-28 WI-0 / AV-19/AV-20 — current line manifest** (pinned by
+`test_S5_adr0001CitationsMatchLiveSourceLineNumbers`). The Settings
+gear `Image(systemName: "gearshape")` and the EstimateInfoButton
+`Image(systemName: "info.circle")` each gained a
+`.frame(minWidth: minTap, minHeight: minTap)` + `.contentShape(Rectangle())`
+pair (Group LT contract tests LT1/LT2/LT3), inserting two lines per
+toolbar item. Resulting `AppViews.swift` positions on this commit:
+
+- `struct HeroTimerCard: View` declaration — line **795**
+- `RootView.heroTimerCardView` delegation site — line **233**
+- EstimateInfoButton `NavigationLink(destination: AboutView(...))` —
+  line **133** (was 132 pre-Loop-28-WI-0)
+- `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
+  (was 138 pre-Loop-28-WI-0)
+- `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
+  push — line **2133**
+- `skinTypeChip` — line **339**, `locationChip` — line **301**,
+  `spfChip` — line **320**
+
 ## Audit
 
 Periodic: when adding a new toolbar-owning parent view (or attaching a
@@ -241,9 +268,9 @@ When this ADR was ratified (2026-05-21), `RootView` carried a single
 surface area expanded to **four** presentation modifiers and **two**
 `NavigationLink` push routes all resolving against `RootView`'s identity:
 
-1. `.sheet(isPresented: $showSettings)` — `AppViews.swift:70`
+1. `.sheet(isPresented: $showSettings)` — `AppViews.swift:78`
    (Settings sheet, owned by `RootView`).
-2. `.sheet(isPresented: $showSkinTypeEdit)` — `AppViews.swift:80`
+2. `.sheet(isPresented: $showSkinTypeEdit)` — `AppViews.swift:88`
    (Pattern-B skin-type edit sheet; added by WI-ff / Group GD).
 3. `.fullScreenCover(isPresented: $showDisclaimer)` — attached **from the
    parent `App`** at `UVBurnTimerApp.swift:94` via the
@@ -264,12 +291,12 @@ The two `NavigationLink` push routes that also key on `RootView`'s
 identity:
 
 - toolbar ⓘ `EstimateInfoButton` → `AboutView(highlightEstimateApplicability: true)`
-  at `AppViews.swift:123` (accessibility identifier `EstimateInfoButton`
-  at line 128).
+  at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
+  at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2121` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2120–2122), rendered inside the
-  `.safeAreaInset(edge: .bottom)` at line 131–139.
+  `AppViews.swift:2133` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2132–2134), rendered inside the
+  `.safeAreaInset(edge: .bottom)` at line 143–151.
 
 ### Rule (extended)
 
@@ -282,21 +309,21 @@ L1 cover stuck open, About push unresponsive, ⓘ tap dead).
 
 ### Lightweight-inlining clarification (worked examples)
 
-- ✅ `mainNavigationStack` / `navigationStackBase` (`AppViews.swift:58-140`)
+- ✅ `mainNavigationStack` / `navigationStackBase` (`AppViews.swift:66-156`)
   — these are `RootView`'s *own modifier chain*, decomposed into two
   computed properties purely for Swift's expression-complexity budget
-  (see the comment at lines 55–57). They are not children. The
+  (see the comment at lines 63–65). They are not children. The
   decomposition does not introduce a new identity boundary and cannot
   trigger identity-collapse.
-- ✅ `skinTypeChip` (`AppViews.swift:327-356`), `locationChip` (289-306),
-  `spfChip` (308-325) — each is a small `Button` whose action mutates
+- ✅ `skinTypeChip` (`AppViews.swift:339-368`), `locationChip` (301-318),
+  `spfChip` (320-337) — each is a small `Button` whose action mutates
   `RootView`'s `@State`. They are permitted as inline computed properties
   **as long as** they (a) carry no `@State`/`@StateObject`, (b) own no
   gestures beyond `Button` action, and (c) stay short. **WI-gaia-ii**
   (Loop-11) adds source-text guard `R8 — chip watchlist` (Group R8c
   in `BurnTimeCalculatorTests.swift`) that fires if any of these grow
   past those limits.
-- ❌ `heroTimerCardView` (221-235) inlining the full `HeroTimerCard`
+- ❌ `heroTimerCardView` (233-247) inlining the full `HeroTimerCard`
   body — explicitly forbidden, guarded by R1/R2.
 
 ### Operational

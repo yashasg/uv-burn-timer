@@ -4329,3 +4329,69 @@ Full specification with regex patterns, rationale, false-positive notes, and exa
 | Ralph | Work Monitor | auto (defaults — typically haiku) | per squad.agent.md |
 
 **Historical (do NOT retroactively edit):** Prior directives — `claude-opus-4.7-xhigh` (Loops 20–24), `claude-opus-4.7-xhigh → claude-opus-4.7` (2026-05-22T02:58, merged at commit `0777de2`) — remain in `decisions.md` / archive as the historical record. These two new directives supersede the prior policy without rewriting history.
+
+## 2026-05-22
+
+### 2026-05-22T03:32:09-07:00: User directive — HIG layout rules are ERROR day 1, no literal exceptions
+**By:** yashasg (via Copilot)
+**What:** Override Iris's "Error after grace period" severity bucket and her "allowed exception" carve-out for `minHeight: 44` / `minHeight: 56` HIG-touch-target floors. The new policy is:
+
+1. **All HIG layout rules ship at `severity: error` on day 1.** No grace period, no "warn now, error in 2 weeks" ramp. The CI gate is the gate from the moment the SwiftLint PR merges.
+2. **No literal numbers in layout — including HIG touch-target floors.** `.frame(minHeight: 44)`, `.frame(minHeight: 56)`, etc. must be backed by `@ScaledMetric` (e.g., `@ScaledMetric private var minTap: CGFloat = 44`). The raw literal does not satisfy the lint rule even though Iris originally exempted it.
+3. **The `missing_min_touch_target` rule regex must enforce `@ScaledMetric`** as the backing, not a literal `44`/`56`/`88` count. Literals fail.
+4. **Rationale (user-supplied):** Small screens (iPhone SE / mini) combined with AX5 Dynamic Type make a fixed-pixel 44pt tap target visibly cramped. `@ScaledMetric` lets the tap target grow proportionally with the user's text-size preference, which is what HIG actually intends. The literal is the easy interpretation of HIG; `@ScaledMetric` is the right one.
+
+**Supersedes:** Iris's "Severity bucket recommendations" section in `iris-hig-lint-rule-catalog.md`; Iris's "Allowed exception" carve-out for fixed minimum sizes.
+
+**Action items to Kwame:** Apply error severity to ALL HIG layout rules in `.swiftlint.yml`. Tighten `missing_min_touch_target` regex to require `@ScaledMetric`-backed minHeight. Update comment header in `.swiftlint.yml`. Issues #95/#96 become more urgent — must land before branch merges or CI will be red on main.
+
+**Note on Iris:** Catalog stays as historical artifact. Iris will update her skill to reflect new policy on next spawn. This directive is authoritative supersession.
+
+### 2026-05-22T02:30:00Z: Kwame — SwiftLint HIG error gate install
+**Author:** Kwame (iOS Developer)  
+**Decision:** Install SwiftLint in two places: (1) Exact-pin `SimplyDanny/SwiftLintPlugins` 0.63.2 in `app/Package.swift` for SPM/Xcode build-tool dependency. (2) Install Homebrew `swiftlint` in CI + invoke from `.github/workflows/ci.yml` and `build.sh` with `--strict` gate.
+
+**Consequences:** `build.sh` runs SwiftLint first. Baseline intentionally red: 16 HIG violations on current tree (11 `hardcoded_frame_dimensions`, 4 `literal_system_font_size`, 1 `navigation_stack_in_sheet`). Cleanup stays with issues #95/#96, not this wiring branch.
+
+### 2026-05-22T03:32:09-07:00: Kwame — SwiftLint strict day-1 HIG tightening
+**Author:** Kwame (iOS Developer)  
+**Decision:** Tighten HIG gate: all layout/touch/typography rules hard-error from day 1. `missing_min_touch_target` no longer accepts literal `minHeight: 44`/`56` as compliant — only @ScaledMetric-backed identifiers pass.
+
+**Consequence:** Baseline rises from 16 to **31 violations** on current tree (15 `missing_min_touch_target`, 11 `hardcoded_frame_dimensions`, 4 `literal_system_font_size`, 1 `navigation_stack_in_sheet`). Config-only; cleanup deferred to #95/#96.
+
+### 2026-05-22T04:55:00-07:00: Iris — Loop-26 Post-Merge HIG-Pass Review
+**Author:** Iris (UI/UX Designer)  
+**Scope:** PR #98 (`squad/swiftlint-hig-error-gate`) merge commit a8b1ac8, auditing commits 66cc6c9/a643523/174be71.
+
+**Verdict:** **PASS-WITH-NOTES**
+
+**Results:**
+- SwiftLint gate: 0 violations on github/main HEAD
+- ForecastPickerView: 15 @ScaledMetric identifiers faithful; all 13 violations resolved
+- AppViews: 5 struct @ScaledMetric declarations; all 18 violations + navigation_stack_in_sheet fixed
+- Group R guards: Extended to cover new @ScaledMetric tokens
+
+**Deviations accepted:**
+- Test R2 narrowed from file-wide to DisclaimerCover CTA (pragmatic — pre-existing out-of-scope sites at AppViews:298/318/342/2130 deferred as Loop-27 WI-1)
+- 4 extra swiftlint:disable comments (AV-12/13/15/16) — all justified by 200-char regex lookahead limitation
+
+**Loop-27 WIs generated:**
+- WI-1: Migrate chip/footer minHeight:44 to @ScaledMetric (HIGH PRIORITY)
+- WI-2: HIG catalog expansion — 14 additional rules pending
+- WI-3: AST-level missing_min_touch_target (eliminate lookahead, remove 6 disables)
+- WI-4: test_U2 7000-char window brittleness
+
+### 2026-05-22T12:20:00Z: Iris — Loop-28+ Gap Analysis (Structural Rule-Coverage Holes)
+**Author:** Iris (UI/UX Designer)  
+**Scope:** Post-merge review surfacing 5 structural SwiftLint rule-coverage gaps — not regressions from PR #98, but pre-existing blind spots.
+
+**Gaps surfaced:**
+- **GAP-1 (High):** `hardcoded_frame_dimensions` rule does not catch `minHeight:`/`minWidth:` literals
+- **GAP-2 (High):** `missing_min_touch_target` does not cover `Button { }` no-paren trailing-closure form
+- **GAP-3 (Medium):** `missing_min_touch_target` does not cover `NavigationLink` or `Link` controls
+- **GAP-4 (Medium):** `DisclaimerSeeAboutLink` button in DisclaimerCover has no explicit touch-target height
+- **GAP-5 (Low):** ForecastPickerView day-row `Button { }` pattern requires systematic audit
+
+**All five gaps are structural rule holes, not code regressions.** Recommended fixes documented for Loop-28+ owner.
+
+---

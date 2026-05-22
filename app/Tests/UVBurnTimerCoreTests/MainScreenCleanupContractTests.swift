@@ -738,3 +738,109 @@ private func forecastPickerViewSwiftURL(file: StaticString = #filePath) -> URL {
         "ForecastPickerView.swift must not contain `.frame(width: <literal>)` or `.frame(height: <literal>)` — use `@ScaledMetric`-backed identifiers (pillWidth/chipWidth/cellWidth/cellHeight/…) per Iris loop-26 playbook §A. Found \(matches.count) literal site(s)."
     )
 }
+
+// MARK: - Group LT: Loop-28 WI-0 — RootView toolbar item HIG touch-target floor
+//
+// Source-text guards that pin the Loop-28 WI-0 fix for iOS 26.4 simulator
+// XCUI hittability regressions in `testEstimateInfoButtonOpensAboutWith…`,
+// `testEstimateInfoNavigationRoundTripReturnsToMainScreen`, and
+// `testSettingsSheetOpens`.
+//
+// Root cause (Loop-28 WI-0, Kwame):
+//   PR #98's HIG cleanup (AV-1..AV-18) applied `@ScaledMetric`-backed
+//   `.frame(minHeight: minTap)` floors to almost every Button in the app —
+//   including the L1 disclaimer CTA, HeroTimerCard Recalculate/TryAgain/
+//   OpenSettings buttons, SettingsSheet/SkinTypeEditView toolbar Buttons,
+//   and the SkinTypePickerRow whole-row hit area.
+//
+//   The two RootView toolbar items themselves were the only Button-shaped
+//   controls left **without** an explicit `@ScaledMetric`-backed touch-
+//   target floor:
+//     • Settings gear `Button { … } label: { Image("gearshape") }`
+//     • `EstimateInfoButton` `NavigationLink { Image("info.circle") }`
+//   On the Xcode 26 / iOS 26.4 simulator (Liquid Glass nav-bar treatment),
+//   a toolbar item whose only label is a 22-pt SF Symbol Image is composited
+//   with a hit-test rectangle so tight that `XCUIElement.isHittable`
+//   returns `false`, regressing the three XCUI tests above.
+//   `testToolbarRendersBothSettingsAndEstimateInfoButtons` happens to pass
+//   because its long pre-warm sequence (existence-poll the navbar, then
+//   each Button separately) gives SwiftUI enough layout passes to finally
+//   resolve a hittable frame; the three failing tests skip that pre-warm
+//   and the toolbar never warms up.
+//
+// Fix (AV-19 / AV-20):
+//   1. Add `@ScaledMetric private var minTap: CGFloat = 44` to `RootView`.
+//   2. Apply `.frame(minWidth: minTap, minHeight: minTap)` to the toolbar
+//      gear Button's Image label and to the EstimateInfoButton
+//      NavigationLink's Image label, so both items composite with an
+//      explicit HIG-floor hit-test geometry on iOS 26+.
+//
+// These guards do NOT replace the XCUI tests; they pin the source-text
+// shape so a future refactor that removes the @ScaledMetric or the
+// frame modifier sees a red unit test before the XCUI flakiness returns.
+//
+// Reference: CURRENT_DATETIME = 2026-05-22T12:35:00Z
+
+/// LT1 — `RootView` (which owns the toolbar) must declare its own
+/// `@ScaledMetric private var minTap`. The pre-existing R1 guard only
+/// asserts that AppViews.swift contains the identifier *somewhere*
+/// (HeroTimerCard, DisclaimerCover, SettingsSheet, etc. each declared
+/// one). R1 passing did not stop the iOS 26.4 hittability regression
+/// because RootView itself had no such declaration, so the toolbar
+/// items had no symbol to reference. LT1 pins the RootView site
+/// specifically by isolating the `struct RootView` body slice between
+/// the struct opener and the next top-level `struct` declaration.
+@Test func test_LT1_rootViewDeclaresMinTapScaledMetric() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    // Slice the RootView body: from `struct RootView: View {` up to the
+    // next top-level `\nstruct ` declaration (HeroTimerCard et al.).
+    // Using a substring rather than a single regex avoids the non-greedy
+    // match running past the closing brace into sibling structs that
+    // legitimately declare their own `@ScaledMetric private var minTap`.
+    guard let openerRange = source.range(of: "struct RootView: View {") else {
+        Issue.record("AppViews.swift must contain `struct RootView: View {`")
+        return
+    }
+    let afterOpener = openerRange.upperBound
+    let nextStructRange = source.range(of: "\nstruct ", range: afterOpener..<source.endIndex)
+    let rootViewBody = source[afterOpener..<(nextStructRange?.lowerBound ?? source.endIndex)]
+    #expect(
+        rootViewBody.contains("@ScaledMetric private var minTap"),
+        "AppViews.swift `struct RootView` must declare `@ScaledMetric private var minTap` so the toolbar gear and EstimateInfoButton can floor their hit-test geometry on iOS 26+ Liquid Glass. Loop-28 WI-0 / AV-19."
+    )
+}
+
+/// LT2 — The toolbar gear Button's `Image("gearshape")` label must be
+/// floored with `.frame(minWidth: minTap, minHeight: minTap)`. Without
+/// this, iOS 26.4 composites the toolbar item with a hit-test rectangle
+/// XCUI cannot target, breaking `testSettingsSheetOpens`.
+@Test func test_LT2_toolbarGearImageHasMinTapFrame() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    // Match the gearshape Image followed (within a small window) by a
+    // .frame(...) modifier that references both `minWidth: minTap` and
+    // `minHeight: minTap`. Whitespace/newline-tolerant.
+    let pattern = #"Image\(systemName: "gearshape"\)[\s\S]{0,200}\.frame\([\s\S]{0,80}minWidth: minTap[\s\S]{0,80}minHeight: minTap"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    #expect(
+        regex.firstMatch(in: source, range: range) != nil,
+        "AppViews.swift toolbar gear `Image(systemName: \"gearshape\")` must carry `.frame(minWidth: minTap, minHeight: minTap)` so its hit-test geometry meets the HIG 44-pt floor on iOS 26.4 Liquid Glass. Loop-28 WI-0 / AV-20."
+    )
+}
+
+/// LT3 — The EstimateInfoButton NavigationLink's `Image("info.circle")`
+/// label must be floored with `.frame(minWidth: minTap, minHeight: minTap)`.
+/// Without this, iOS 26.4 composites the toolbar item with a hit-test
+/// rectangle XCUI cannot target, breaking
+/// `testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor`
+/// and `testEstimateInfoNavigationRoundTripReturnsToMainScreen`.
+@Test func test_LT3_estimateInfoButtonImageHasMinTapFrame() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let pattern = #"Image\(systemName: "info\.circle"\)[\s\S]{0,200}\.frame\([\s\S]{0,80}minWidth: minTap[\s\S]{0,80}minHeight: minTap"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    #expect(
+        regex.firstMatch(in: source, range: range) != nil,
+        "AppViews.swift EstimateInfoButton `Image(systemName: \"info.circle\")` must carry `.frame(minWidth: minTap, minHeight: minTap)` so its hit-test geometry meets the HIG 44-pt floor on iOS 26.4 Liquid Glass. Loop-28 WI-0 / AV-20."
+    )
+}
