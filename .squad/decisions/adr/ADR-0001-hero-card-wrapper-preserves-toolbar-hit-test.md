@@ -240,9 +240,28 @@ toolbar item. Resulting `AppViews.swift` positions on this commit:
 - `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
   (was 138 pre-Loop-28-WI-0)
 - `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
-  push — line **2133**
+  push — line **2144**
 - `skinTypeChip` — line **339**, `locationChip` — line **301**,
   `spfChip` — line **320**
+
+**Loop-28 WI-1 — line-number refresh (chip/footer `minTap` migration):**
+the `PersistentFooter` `AboutView` push citation was bumped from line
+**2133** → line **2144** (and the surrounding `NavigationLink { ... }`
+body block from lines 2132–2134 → 2143–2145) after `struct
+PersistentFooter` gained its own `@ScaledMetric private var minTap:
+CGFloat = 44` declaration plus an explanatory `// MARK: - HIG
+@ScaledMetric tokens` comment (Loop-28 WI-1 / Iris audit). The
+matching source-text contract guard is `test_LU4_persistentFooter
+DeclaresAndUsesMinTap` in `MainScreenCleanupContractTests.swift`,
+with `test_LU5_appViewsHasNoLiteralMinHeight44` enforcing the
+file-wide "no literal `minHeight: 44`" rule that replaced the
+narrowed Loop-26 R2. The chip computed properties (`locationChip` /
+`spfChip` / `skinTypeChip`) at lines **301 / 320 / 339** did not
+shift; only their `.frame(maxWidth: .infinity, minHeight: ...)`
+arguments changed from the literal `44` to the existing RootView-
+scoped `minTap` token. `test_S5_…` flagged the PersistentFooter
+drift and this addendum closes it. The *rule* this ADR encodes is
+unchanged.
 
 ## Audit
 
@@ -294,8 +313,8 @@ identity:
   at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
   at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2133` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2132–2134), rendered inside the
+  `AppViews.swift:2144` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2143–2145), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 143–151.
 
 ### Rule (extended)

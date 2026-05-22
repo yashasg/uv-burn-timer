@@ -3816,9 +3816,11 @@ private func _readmeContents() throws -> String {
 }
 
 /// EJ4 — WI-iris-e: `PersistentFooter`'s NavigationLink Label carries
-/// an explicit `.frame(minHeight: 44…)` so the always-visible Plunder
+/// an explicit `.frame(minHeight: minTap…)` so the always-visible Plunder
 /// reach-back link stays above the HIG 44 pt hit-target floor at every
-/// Dynamic Type size.
+/// Dynamic Type size. Loop-28 WI-1 (Iris audit) migrated the previous
+/// literal `minHeight: 44` to the `@ScaledMetric`-backed `minTap` token
+/// so the floor scales with Dynamic Type up to AX5.
 @Test func test_EJ4_persistentFooterMeetsHIG44ptHitTarget() throws {
     let source = try _appViewsSourceForGroupR()
     let lines = source.components(separatedBy: "\n")
@@ -3832,8 +3834,12 @@ private func _readmeContents() throws -> String {
     let body = lines[footerStart..<footerEnd].joined(separator: "\n")
 
     #expect(
-        body.contains(".frame(minHeight: 44"),
-        "PersistentFooter must apply `.frame(minHeight: 44…)` to its Label/NavigationLink — Plunder's always-visible disclaimer-reach surface must not fall below the 44 pt HIG hit-target floor at default Dynamic Type. See AppViews.swift chips at lines 295 / 315 / 337 for the existing pattern."
+        body.contains("@ScaledMetric private var minTap: CGFloat = 44"),
+        "PersistentFooter must declare `@ScaledMetric private var minTap: CGFloat = 44` so its tap-target floor scales with Dynamic Type. Loop-28 WI-1."
+    )
+    #expect(
+        body.contains(".frame(minHeight: minTap"),
+        "PersistentFooter must apply `.frame(minHeight: minTap…)` to its Label/NavigationLink — Plunder's always-visible disclaimer-reach surface must not fall below the HIG 44 pt floor at default Dynamic Type and must scale with Dynamic Type up to AX5. Loop-28 WI-1 migrated this site from the literal `44` to `minTap`."
     )
 }
 

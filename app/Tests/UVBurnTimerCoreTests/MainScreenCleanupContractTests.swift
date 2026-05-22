@@ -632,39 +632,19 @@ private func forecastPickerViewSwiftURL(file: StaticString = #filePath) -> URL {
     )
 }
 
-/// R2 — The DisclaimerCover "I understand" CTA must use `minHeight: minTap`,
-/// not the literal `44`. Iris loop-26 playbook §B (AV-8) prescribes this
-/// transformation; the literal would clip the tap target at AX5 on iPhone
-/// SE per the .swiftlint.yml policy comment.
-///
-/// Scope-limit rationale: there are pre-existing legitimate literal
-/// `minHeight: 44` sites in AppViews.swift outside Iris's playbook scope —
-/// the LocationChip / SPFChip / SkinTypeChip inputs row chips at lines
-/// 295 / 315 / 337 and the PersistentFooter disclaimer-reach Label
-/// (`WI-iris-e` Loop-11). These are NOT touched by loop-26 cleanup;
-/// they pass SwiftLint baseline because their host `Button {` / Menu /
-/// NavigationLink wrappers don't match the `\bButton\s*\(` rule anchor.
-/// R2 therefore guards the specific CTA Iris's playbook transformed,
-/// not the entire file.
-@Test func test_R2_appViewsDisclaimerCTAUsesMinTap() throws {
-    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
-    // Find the "I understand" CTA. Iris AV-8 prescribes
-    // `Text("I understand").frame(maxWidth: .infinity, minHeight: minTap)`.
-    #expect(
-        source.contains("Text(\"I understand\")"),
-        "AppViews.swift must contain the disclaimer CTA `Text(\"I understand\")`."
-    )
-    // Forbid the pre-cleanup shape with literal 44 on that exact CTA.
-    #expect(
-        !source.contains("Text(\"I understand\")\n                    .frame(maxWidth: .infinity, minHeight: 44)"),
-        "The DisclaimerCover \"I understand\" CTA must use `minHeight: minTap`, not the literal `44`. Iris loop-26 playbook §B AV-8."
-    )
-    // Positive assertion: the minTap form must be present somewhere.
-    #expect(
-        source.contains("minHeight: minTap"),
-        "AppViews.swift must apply `minHeight: minTap` to @ScaledMetric-backed touch targets per Iris loop-26 playbook §B."
-    )
-}
+// R2 — REMOVED in Loop-28 WI-1 (Iris audit). Previously: a narrowed guard
+// that only forbade the literal `minHeight: 44` on the DisclaimerCover
+// "I understand" CTA. Iris's Loop-26 post-merge audit flagged that scope
+// as too tight because four other literal `minHeight: 44` sites
+// (locationChip / spfChip / skinTypeChip in RootView, and PersistentFooter's
+// Label) were left unflagged. Loop-28 WI-1 migrates those four sites to
+// the `@ScaledMetric`-backed `minTap` token and replaces R2 with
+// `test_LU5_appViewsHasNoLiteralMinHeight44` (file-wide zero-literal guard)
+// plus LU1–LU4 (per-site positive guards). The narrowed R2 is intentionally
+// absent so a future regression at any `minHeight: 44` site fires LU5,
+// not a per-CTA guard that quietly permits literals elsewhere. See
+// `.squad/agents/kwame/history.md` Loop-28 WI-1 entry and
+// `.squad/decisions/inbox/kwame-loop28-wi1-chip-footer-mintap.md`.
 
 /// R3 — `AppViews.swift` must NOT contain any `.font(.system(size: <digit>` —
 /// literal system-font sizes bypass Dynamic Type. Iris playbook prescribes
