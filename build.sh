@@ -1,11 +1,15 @@
 #!/bin/zsh
-# build.sh - Canonical build and test entry point.
+# build.sh - Canonical build, lint, and test entry point.
 # Treat warnings as errors and fail on any warning.
+#
+# Usage:
+#   ./build.sh        # HIG lint gate + build/test cycle
+#   ./build.sh lint   # local SwiftLint pass with emoji reporter
 #
 # CI env vars (set by GitHub Actions / GitLab webhook bridge):
 #   CONFIGURATION        Build configuration to use (default: derives from CI_MODE)
 #   TEST_CONFIGURATION   Configuration used for the test run (default: Debug)
-#   DERIVED_DATA_PATH    DerivedData path (default: UV_BURN_TIMER_DERIVED_DATA_PATH or mktemp)
+#   DERIVED_DATA_PATH    DerivedData path (default: UV_BURN_TIMER_DERIVED_DATA_PATH or .build/derived-data)
 #   RUN_TESTS            "true"/"false" — whether to run the test suite (default: true)
 #   PLATFORM_MODE        "iphone" selects the default stable iPhone simulator
 #   RUN_ANALYZE          reserved, not yet used
@@ -17,15 +21,41 @@
 
 set -euo pipefail
 
+command_mode="${1:-build}"
+
+case "$command_mode" in
+  build|lint)
+    ;;
+  *)
+    echo "Usage: ./build.sh [lint]" >&2
+    exit 64
+    ;;
+esac
+
+run_swiftlint() {
+  local reporter="$1"
+  shift
+
+  if ! command -v swiftlint >/dev/null 2>&1; then
+    echo "warning: SwiftLint not installed; skipping lint gate. Install with 'brew install swiftlint' for local HIG linting." >&2
+    return 0
+  fi
+
+  swiftlint "$@" --config .swiftlint.yml --reporter "$reporter"
+}
+
+if [[ "$command_mode" == "lint" ]]; then
+  run_swiftlint emoji
+  exit 0
+fi
+
 # ---------------------------------------------------------------------------
 # Env var resolution
 # ---------------------------------------------------------------------------
 
 # Derived data: CI passes DERIVED_DATA_PATH; local dev uses UV_BURN_TIMER_DERIVED_DATA_PATH
-derived_data_path="${DERIVED_DATA_PATH:-${UV_BURN_TIMER_DERIVED_DATA_PATH:-}}"
-if [[ -z "$derived_data_path" ]]; then
-  derived_data_path="$(mktemp -d "${TMPDIR:-/tmp}/uv-burn-timer-derived-data.XXXXXX")"
-fi
+derived_data_path="${DERIVED_DATA_PATH:-${UV_BURN_TIMER_DERIVED_DATA_PATH:-.build/derived-data}}"
+mkdir -p "$(dirname "$derived_data_path")"
 
 # ---------------------------------------------------------------------------
 # WI-j: project membership guard.
@@ -43,6 +73,13 @@ fi
 ci_configuration="${CONFIGURATION:-}"
 test_configuration="${TEST_CONFIGURATION:-Debug}"
 run_tests="${RUN_TESTS:-true}"
+
+# ---------------------------------------------------------------------------
+# SwiftLint gate
+# ---------------------------------------------------------------------------
+
+echo "Running SwiftLint HIG gate..."
+run_swiftlint xcode --strict
 
 # ---------------------------------------------------------------------------
 # Simulator destination

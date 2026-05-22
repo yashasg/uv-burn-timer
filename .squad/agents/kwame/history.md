@@ -413,3 +413,15 @@ This third attempt keeps the visual cleanup the user originally asked for (no `B
 - `CONFIGURATION=Debug RUN_TESTS=false bash build.sh` (xcodebuild Debug build): ✅ BUILD SUCCEEDED, zero warnings (warnings-as-errors)
 - xcodebuild UI tests via `build.sh`: ✅ `testAppLaunchesWithoutCrash`, `testForecastPickerCardIsRendered`, `testSettingsSheetOpens` (22.1s — the test R-group guards) all passed before local simulator crashed mid-flight on `testSkinTypePickerEndToEnd`. Simulator instability is iOS 26 sim flake (IOHIDLib arch mismatch + xctrunner launch failures); not a code regression — CI will re-run on a clean macos-15 runner.
 
+---
+
+## Learnings
+
+### 2026-05-22T02:30:00Z — SwiftLint HIG error gate harness
+- Pinned `SimplyDanny/SwiftLintPlugins` at `0.63.2` in `app/Package.swift`; kept Homebrew `swiftlint` in CI/build.sh because the plugin is build-tool-only and the canonical pipeline still needs an explicit CLI invocation.
+- Added repo-root `.swiftlint.yml` that promotes HIG custom rules to `error` and seeds the current audit with `hardcoded_frame_dimensions` + `literal_system_font_size` so the gate is already red on known layout debt.
+- `build.sh` now runs `swiftlint --strict --config .swiftlint.yml --reporter xcode` before `xcodebuild`, exposes `./build.sh lint` for emoji-reporter local feedback, warns/skips when `swiftlint` is not installed locally, and defaults DerivedData to `.build/derived-data` instead of a temp dir.
+- `.github/workflows/ci.yml` now installs SwiftLint with Homebrew and runs the strict lint step before `./build.sh`.
+- Baseline sanity check: **16 HIG violations** on the current tree (`11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`). Those fixes stay with issues `#95` / `#96`, not the harness branch.
+- Validation: `swift package resolve --package-path app` resolved the plugin at `0.63.2`; Debug + Release builds still succeed when SwiftLint is intentionally absent locally; `xcodebuild test` remains non-green because of the repo’s existing two Swift Testing known-issue records in `ForecastPickerLogicTests`.
+
