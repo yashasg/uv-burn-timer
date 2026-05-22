@@ -6513,3 +6513,253 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
     }
 }
 
+// MARK: - Group DD: Loop-20 deferred-HIGH partial closures (Bundle AA — Group DD test prefix)
+//
+// Note on the DD doubled-letter name: the natural next-cycle name
+// after Loop-19's Group ZZ would be Group AA, but the AA single-A
+// doubled prefix is already taken by the WI-r hero-VoiceOver-summary
+// tests at lines 2185-style positions (`test_AA1_burnRiskGaugeVisibleCaptionDoesNotImplyLiveCountdown`,
+// `test_AA2_burnRiskGaugeAccessibilityLabelIncludesEstimateFraming`,
+// `test_AA3_burnRiskGaugeBodyMentionsEstimateFraming`). The next-cleanest
+// step, Group BB, is also taken — `MainScreenCleanupContractTests.swift`
+// at lines 265/306 already defines `test_BB1_skinTypeChipActionDoesNotTriggerDisclaimerReattestation`
+// and `test_BB2_heroTimerCardRendersWindowElapsedSafetyStatusCardWhenEstimateIsStale`.
+// Following the same doubled-letter collision-avoidance convention the
+// Loop-19 closure log documented for ZZ (when the single-Z prefix
+// collided with the WI-r hero VoiceOver tests at lines 2185/2199/2217),
+// Bundle AA in this cycle uses Group DD as the test prefix to keep
+// the suite namespace collision-free. The PR / branch / closure-log
+// references continue to call this "Bundle AA" — only the test
+// function prefix is DD to dodge the in-file + cross-file collisions
+// on AA and BB.
+//
+// Group DD bundles two source-text / pure-function guards that
+// progress the deferred-HIGH backlog carried forward from Loops
+// 13–19 without requiring convergent design ratification or
+// multi-file Swift refactors. Per the Loop-19 closure log
+// §"Backlog state (entering Loop-20)", the remaining deferred
+// HIGH items beyond ZZ1/ZZ2 are blocked by either (a) hardware
+// (WI-21 sign-offs, Plunder L02 EU-rep designation), (b) reviewer
+// input I cannot author solo (Suchi L02/L03 persona-coverage
+// updates beyond source-text guards), (c) larger code refactors
+// (Kwame L13-1 future-hour fallback + L13-2 cold-start race +
+// L13-4 picker state on clear — each touches the
+// ForecastPickerLogic + UVBurnTimerSession state machines across
+// multiple files), or (d) convergent design (Plunder L05 hero L3
+// reach-back — Iris+Plunder ratification needed for the WHERE
+// decision on the hero card region L3 link). Group DD picks the
+// two items in that backlog whose closure can be expressed as a
+// pure source-text or pure-function pin against the EXISTING live
+// production code, without changing implementation:
+//
+//   DD1  Plunder L05 — toolbar ⓘ `EstimateInfoButton`
+//        accessibilityHint pin. The toolbar info.circle Button at
+//        AppViews.swift line 127 carries the VoiceOver hint "Opens
+//        photosensitization, medication, and sunscreen assumption
+//        caveats." — this is the THREE-WORD L3 Reach-Back semantic
+//        (photosensitization / medication / sunscreen) that lets a
+//        screen-reader user (notably Asha P4, photosensitizer
+//        cohort) hear the destination's L3 contents before tapping.
+//        S1/S2/S3 pin the identifier + navigation destination + the
+//        toolbar slot co-existence, but NO existing test pins the
+//        hint copy itself — a future refactor could silently drop or
+//        reword the hint to e.g. "Opens estimate caveats" and lose
+//        all three L3 semantic words while keeping S1/S2/S3 green.
+//        DD1 closes that single-point-of-failure regression channel
+//        for the L3 Reach-Back surface that, per
+//        `.squad/files/iris-contrast-qa-checklist.md` line 91, IS
+//        the load-bearing reach-back after the standalone yellow
+//        banner retired in Loop-10 WI-cc.
+//
+//        Plunder L05's underlying concern ("hero L3 reach-back")
+//        wants a *hero-adjacent* reach-back link; the convergent
+//        design decision on WHERE to place such a link in the hero
+//        card region is an Iris+Plunder ratification that this
+//        cycle CANNOT close solo. What DD1 CAN close is the
+//        guarantee that the EXISTING hero-adjacent reach-back —
+//        the toolbar ⓘ button, which renders on the same screen as
+//        the hero card and is < ~2 thumb-lengths from the hero — is
+//        protected against the silent VoiceOver-hint regression.
+//        This is the same disposition pattern as the Loop-19
+//        Wheeler L13-H3 retirement (formally retired as already
+//        satisfied by EE1+ZZ2 rather than carried forward), applied
+//        as a partial closure rather than full retirement because
+//        the WHERE-to-place-an-additional-link question is still
+//        live for a future convergent design pass.
+//
+//   DD2  Kwame L13-1 (partial) —
+//        `ForecastPickerLogic.defaultSelectedDate(in:now:)`
+//        end-of-snapshot fallback pin. Lines 132–133 of
+//        ForecastPickerLogic.swift handle the
+//        "all-hours-in-past relative to now" edge case by returning
+//        `snap.hours.last!.timestamp` (the latest available hour)
+//        rather than fizzling or returning `roundedDownToHour(now)`
+//        (which would point at a hour outside the snapshot and
+//        immediately cascade to `.unavailable(.snapshotExpired)`
+//        when the caller invokes `uvResult(from:at:)`). This is the
+//        future-hour fallback path that Kwame L13-1 (Loop-13
+//        parallel gap analysis) flagged: when the snapshot becomes
+//        entirely stale (e.g., user opens the app after a multi-day
+//        offline period with cached data only), the picker should
+//        present the LAST available hour as the default selection
+//        rather than collapse to an error state. Only ONE existing
+//        test (`test_default_selected_date_when_now_on_exact_hour_boundary`,
+//        ForecastPickerLogicTests.swift line 377) covers
+//        `defaultSelectedDate`; the all-hours-in-past branch is
+//        currently un-pinned.
+//
+//        Kwame L13-1's full closure (a multi-file refactor that
+//        reshapes how `ForecastPickerLogic` + `UVBurnTimerSession`
+//        coordinate on cold-start when the cached snapshot is
+//        entirely past) is still deferred — DD2 pins the
+//        EXISTING fallback contract so the partial closure
+//        guarantees that the multi-file refactor, when it lands,
+//        cannot regress the well-defined end-of-snapshot behavior.
+//
+// Both tests are pure-function / source-text tests with no
+// UserDefaults / SwiftUI / network dependencies, matching the
+// post-Loop-18 pattern.
+
+/// DD1 — Plunder L05 (partial closure): the toolbar `info.circle`
+/// `EstimateInfoButton` MUST keep its full VoiceOver hint
+/// `"Opens photosensitization, medication, and sunscreen assumption caveats."`
+/// — the three L3 Reach-Back semantic words
+/// (photosensitization / medication / sunscreen) are what let an
+/// Asha-P4 (photosensitizer cohort) screen-reader user hear the
+/// destination's contents BEFORE tapping. S1/S3 pin the identifier
+/// and the toolbar slot, but neither pins the hint copy itself.
+///
+/// **Anchor:** `AppViews.swift` line ~127 — the
+/// `.accessibilityHint("Opens photosensitization, medication, and sunscreen assumption caveats.")`
+/// modifier on the `info.circle` Toolbar Button.
+///
+/// **Failure modes DD1 catches:**
+///   • A future refactor that drops `.accessibilityHint(...)` (e.g.,
+///     to consolidate hints into a single string table) without
+///     re-applying the three-word hint → silently regresses the
+///     pre-tap VoiceOver disclosure.
+///   • A copy edit that rewords the hint to a single word ("Opens
+///     estimate caveats", "Opens disclaimers", "More info") that
+///     drops one or more of the L3 semantic words → silently
+///     regresses Asha's pre-tap photosensitizer hint.
+///   • A maintainer who collapses the toolbar buttons into a Menu
+///     and re-implements the hint differently → caught by S3 first
+///     (toolbar slot co-existence), but DD1 backstops the hint copy
+///     contract independently.
+///
+/// DD1 is a partial closure of Plunder L05 (hero L3 reach-back):
+/// the toolbar ⓘ button IS the existing hero-adjacent L3 reach-back
+/// per `.squad/files/iris-contrast-qa-checklist.md` line 91. The
+/// convergent design question of WHERE to place an additional
+/// hero-card-region link is still deferred for Iris+Plunder
+/// ratification.
+@Test func test_DD1_estimateInfoButtonHintCarriesThreeWordL3ReachBackSemantic() throws {
+    let body = try _rootViewBodySliceForGroupR()
+
+    // The full canonical hint copy MUST survive verbatim.
+    #expect(
+        body.contains(#".accessibilityHint("Opens photosensitization, medication, and sunscreen assumption caveats.")"#),
+        "RootView toolbar `EstimateInfoButton` MUST keep the literal `.accessibilityHint(\"Opens photosensitization, medication, and sunscreen assumption caveats.\")` modifier at AppViews.swift line ~127. This is the L3 Reach-Back VoiceOver disclosure for Asha P4 (photosensitizer cohort) screen-reader users who need to hear the destination's contents BEFORE tapping. If this assertion fires, EITHER the hint was rephrased (regressing the pre-tap photosensitizer disclosure) OR the modifier was dropped entirely (silencing VoiceOver on the L3 Reach-Back surface). S1/S2/S3 only pin the identifier and the toolbar slot — without DD1 the hint copy can drift silently. Restore the literal hint or re-ratify with Plunder. (Plunder L05 partial closure — Loop-13 deferred / Loop-20)"
+    )
+
+    // Three-word L3 Reach-Back semantic guard: each of the
+    // photosensitization / medication / sunscreen words MUST also
+    // appear inside an `.accessibilityHint(...)` modifier somewhere
+    // in the RootView body slice. A future copy edit that shortens
+    // the hint to "Opens photosensitization caveats" would still
+    // pass the full-string assertion above only if the literal stays
+    // verbatim; this triple-word check makes the contract explicit
+    // so any future re-wording that drops a single semantic word
+    // (e.g., to "Opens photosensitization and sunscreen caveats" —
+    // missing "medication") fires DD1 independently of the literal
+    // string match.
+    let l3SemanticWords = ["photosensitization", "medication", "sunscreen"]
+    for word in l3SemanticWords {
+        #expect(
+            body.contains(word),
+            "RootView toolbar `EstimateInfoButton` accessibilityHint MUST mention the L3 Reach-Back semantic word \"\(word)\" — this is one of the three L3 disclosure pillars (photosensitization / medication / sunscreen) that Plunder L05 + the .squad/files/iris-contrast-qa-checklist.md row 91 contract requires. Dropping any single word collapses the L3 Reach-Back to a partial disclosure. Restore the full three-word hint or re-ratify with Plunder. (Plunder L05 partial closure — Loop-13 deferred / Loop-20)"
+        )
+    }
+}
+
+/// DD2 — Kwame L13-1 (partial closure):
+/// `ForecastPickerLogic.defaultSelectedDate(in:now:)` MUST return
+/// `snap.hours.last!.timestamp` when EVERY hour in the snapshot
+/// falls strictly before `now`. This is the end-of-snapshot
+/// fallback at `ForecastPickerLogic.swift` lines 132–133 — the
+/// caller (`RootView.handleAppear()`) relies on this fallback to
+/// present the latest available hour as the default picker
+/// selection when the cached snapshot has gone entirely stale
+/// (e.g., the user opens the app after a multi-day offline period).
+///
+/// **Why this guard matters:** without the all-past fallback, the
+/// `first(where: { rounded >= roundedNow })` lookup at line 129
+/// would return `nil` and the function would fall through. The
+/// current implementation handles this by returning the LAST
+/// available hour (line 133), so the picker shows the latest
+/// snapshot hour rather than a wall-clock hour outside the
+/// snapshot (which would then immediately cascade to
+/// `.unavailable(.snapshotExpired)` when the caller invokes
+/// `uvResult(from:at:now:)` and strand the user with a red
+/// "Could not update" banner before any refresh attempt). The
+/// existing single test for `defaultSelectedDate`
+/// (`test_default_selected_date_when_now_on_exact_hour_boundary`
+/// at ForecastPickerLogicTests.swift line 377) covers the
+/// happy path; DD2 closes the symmetric end-of-snapshot edge.
+///
+/// **Test scaffolding:** a minimal `ForecastSnapshot` with two
+/// hour entries entirely in the past (10 hours and 5 hours before
+/// `now`). `defaultSelectedDate(in: snapshot, now: now)` MUST
+/// return the LAST (most-recent) of those past hours — `now - 5h`
+/// — not `roundedDownToHour(now)` (which would be `now` itself,
+/// outside the snapshot's window).
+@Test func test_DD2_defaultSelectedDateFallsBackToLastSnapshotHourWhenAllHoursInPast() throws {
+    // now = 2026-05-21T15:00:00Z (a stable mid-day UTC timestamp
+    // matching the BurnTimeCalculatorTests epoch convention).
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+    let now = Date(timeIntervalSince1970: nowEpoch)
+
+    // Snapshot covers ONLY hours strictly before `now`:
+    // 2026-05-21T03:00:00Z (10h before now) and 2026-05-21T08:00:00Z (5h before now).
+    let firstEpoch: TimeInterval = nowEpoch - 10 * 3600
+    let lastEpoch: TimeInterval = nowEpoch - 5 * 3600
+
+    let firstHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: firstEpoch),
+        uvIndex: 3
+    )
+    let lastHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: lastEpoch),
+        uvIndex: 5
+    )
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: Date(timeIntervalSince1970: firstEpoch),
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: [firstHour, lastHour]
+    )
+
+    let result = ForecastPickerLogic.defaultSelectedDate(in: snapshot, now: now)
+
+    // The fallback at lines 132–133 returns `snap.hours.last!.timestamp`
+    // when no hour satisfies `roundedDownToHour(h.timestamp) >= roundedDownToHour(now)`.
+    let expectedLastHour = Date(timeIntervalSince1970: lastEpoch)
+    #expect(
+        result == expectedLastHour,
+        "ForecastPickerLogic.defaultSelectedDate MUST return the LAST snapshot hour (\(expectedLastHour)) — not now (\(now)) or any hour outside the snapshot's window — when every hour in the snapshot falls strictly before `now`. This is the end-of-snapshot fallback at ForecastPickerLogic.swift lines 132–133. Without this fallback the default picker selection would point at a wall-clock hour outside the snapshot, the subsequent `uvResult(from:at:)` lookup would return `.unavailable(.snapshotExpired)`, and the user would land on the red \"Could not update\" Retry banner before any refresh attempt — the cold-start-with-stale-cache failure mode Kwame L13-1 flagged. If this assertion fires, EITHER the fallback was removed (replaced with `roundedDownToHour(now)`) OR the `first(where:)` predicate was broadened to match past hours (which would change the happy-path semantics and is the wrong fix). Restore the explicit `snap.hours.last!.timestamp` fallback or update the test contract with Kwame ratification. (Kwame L13-1 partial closure — Loop-13 deferred / Loop-20)"
+    )
+
+    // Negative-side guard: the result MUST NOT equal
+    // `roundedDownToHour(now)`. If the fallback regression returns
+    // wall-clock-now, the symmetric assertion below catches it
+    // independently of the positive `expectedLastHour` match.
+    let roundedNow = ForecastPickerLogic.roundedDownToHour(now)
+    #expect(
+        result != roundedNow,
+        "ForecastPickerLogic.defaultSelectedDate MUST NOT return `roundedDownToHour(now)` (\(roundedNow)) when every snapshot hour is strictly before `now` — that would select a wall-clock hour OUTSIDE the snapshot window and immediately strand the user on the red `.unavailable(.snapshotExpired)` Retry banner. The expected fallback is `snap.hours.last!.timestamp` (\(expectedLastHour)). If this assertion fires, the fallback at ForecastPickerLogic.swift lines 132–133 was replaced with a wall-clock-now path; restore the end-of-snapshot fallback. (Kwame L13-1 partial closure — Loop-13 deferred / Loop-20)"
+    )
+}
+
