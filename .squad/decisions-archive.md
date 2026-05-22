@@ -1314,3 +1314,426 @@ Squad agents were using inconsistent models, leading to:
 
 Establish `claude-opus-4.7-xhigh` as the default model for all squad agents and sub-agents, with explicit exceptions for Ralph and Scribe.
 
+### 2026-05-21T07:45:00Z: User directive — UI tests are too expensive
+**By:** Yashas (via Copilot)
+**What:** "we have way too many ui tests, this app is a simulator resource hog." Going forward, favor unit/contract tests (Core test target) over UI tests (UI test target). When existing UI tests fail because of intentional UI removals, prefer DELETE over fix-in-place. Maintain only a minimal UI smoke-test set; coverage belongs at the model/logic/contract layer.
+**Why:** User request — captured for team memory. Cost/value trade-off: UI test runs are 5-10min each in simulator and have caused 49+min iteration cycles; contract-level tests are seconds and survive UI refactors.
+
+### 2026-05-21T07:00:00Z: Iris — Skin-type persistence spec (Pattern B, chip + policyVersion)
+**Author:** Iris
+**Type:** Design spec — ready for implementation
+**Full spec:** `.squad/designs/iris-skin-type-persistence-spec.md`
+
+**What was decided:** Yashas ratified Pattern B (UserDefaults persistence + ambient tap-to-change chip). This spec translates that into a Kwame-executable implementation plan.
+
+**Key outcomes:**
+- New `skinTypeChip` in `mainInputsRow` (§2) — ambient, tappable, 44pt min target, AX5-safe
+- `DisclaimerCover` now triggers via `policyVersion` integer, not unconditionally (§4)
+- Existing users silently migrated to v1 on upgrade — no re-fire
+- G27/G28 are **unchanged** — they guard ForecastSnapshot JSON, not UserDefaults
+- 11-item Kwame checklist (K-1 through K-11) with file:line references (§7)
+- 4 new test stubs for Ma-Ti (G-D1 through G-D4) (§6)
+
+**Blockers before Kwame ships:**
+1. **Plunder P-3:** L1 cover must gain a storage-disclosure sentence before K-3/K-4 can ship
+2. **Wheeler W-1:** Chip copy confirm (low risk, quick)
+3. **E13 counsel gate** (Plunder's lane — EU/UK consent basis confirmation)
+
+### 2026-05-21T06:35:00Z: Plunder — Skin-type persistence & re-attestation cadence (Pattern B recommended)
+**Author:** Plunder (Legal & Compliance)
+**Requested by:** Yashas
+**Memo:** `.squad/designs/plunder-skin-type-persistence-floor.md`
+
+**TL;DR:**
+- The "skin type stays `@State`-only / L1 fires every cold launch" posture is **self-imposed defensive overkill, not a regulatory floor.** No regulation requires it.
+- `UserDefaults`-local persistence: ✅ permissible under FDA, EU MDR, UK MHRA, Apple §5.1.1, and GDPR Art.9 (with explicit consent — the act of selection qualifies)
+- Minimum defensible re-attestation cadence: **first install + material policy/methodology change + user request.** Per-cold-launch is permitted but not required.
+- **Recommended pattern: Pattern B** — `UserDefaults` persistence + always-visible result-surface chip ("Fitzpatrick III · tap to change") with one-tap edit. Solves the UX friction Yashas named while strengthening the photosensitizer-cohort safety surface.
+
+**Verdict on the four patterns:**
+| Pattern | Verdict |
+# Squad Decisions
+
+## Decisions Ledger
+
+
+### 2026-05-21T06:35:00Z: Suchi — Skin-type re-prompt friction research (Pattern B ranked #1)
+**Author:** Suchi (User Researcher)
+**Requested by:** Yashas
+**Full memo:** `.squad/designs/suchi-skin-type-friction-research.md`
+
+**Answer (user-research POV only):** Persist. Specifically: **Pattern B — Persist + tap-confirm chip** ("Fitzpatrick III ✓ — tap to change") is the strongest user-side recommendation.
+
+**Ranking (1=best, 4=worst):**
+1. **Pattern B** — persist + tap-confirm chip on cold launch. Matches user mental model (identity-as-constant, §2), matches market convention (every major competitor persists, §3), zero friction for 6 of 7 personas, *actively safer* for Tomás (reduces auto-pilot under-pick risk).
+2. **Pattern A** — persist + 30-day re-confirm modal. Acceptable; 30-day cadence is arbitrary and doesn't map to a real user behavior.
+3. **Pattern C** — don't persist, in-memory default-to-last. Marginal; addresses backgrounding but not dominant JTBD.
+4. **Status quo** — full picker every cold launch. Below user-acceptability floor. No major competitor does this.
+
+**Load-bearing findings:**
+- User mental model: "I'm a Fitz III" (identity-as-constant), not state-as-variable.
+- Every major competitor persists indefinitely after one-time setup.
+- Zero user-voiced complaints in major UV-app reddit cohorts of re-prompting (because no competitor does it).
+- L1 re-attestation ≠ Fitzpatrick re-prompt; decoupling preserves every safety dividend.
+- Tomás's under-pick risk is *worse* under re-prompting, not better.
+- No persona in inventory benefits from per-launch Fitzpatrick re-attestation.
+
+**Critical decoupling note:** Fitzpatrick picker (captures stable trait) vs. Photosensitization disclosure (captures session-volatile state). These are two different controls with different scientific loads. Decoupling them is scientifically clean.
+
+### 2026-05-21T06:35:00Z: Wheeler — Skin-type re-attestation: science verdict (Pattern B defensible)
+**Owner:** Wheeler (Skin Science Expert)
+**Full memo:** `.squad/designs/wheeler-skin-type-reattestation-science.md`
+
+**TL;DR (science lane only):** Dermatologically, Fitzpatrick should be captured once at first use and never re-prompted on a calendar — only on user-initiated edit. The trait is stable in adults at session/month/year scale; melanocyte attrition is decade-scale (8–20%/decade per Gilchrest & Yaar 1992). All real photoresponsiveness-shifting events (medications, procedures, conditions, pregnancy) are *not* captured by re-asking the Fitzpatrick picker — they live on the photosensitization-disclosure surface. Re-asking the picker more often only injects self-report instrument noise.
+
+**Pattern verdicts (science only):**
+| Pattern | Verdict |
+|---|---|
+| A — persist + 30-day re-prompt | ❌ scientifically unjustified — no biological basis for 30-day cadence |
+| **B — persist + per-launch tap-confirm chip** | ✅ scientifically defensible — closest to clinical-workflow precedent |
+| C — don't persist; default to last value | ⚠️ neutral — similar profile to status quo with slight noise reduction |
+| Status quo — per-launch full picker | ❌ over-cautious; net-negative (injects noise, catches no real safety events) |
+
+**Critical decoupling note for synthesis:** The current implementation entangles **Fitzpatrick re-attestation** with **photosensitization-disclosure re-presentation** via the shared `@State`-only model. From a dermatological standpoint these are two different controls with different scientific loads. Decoupling them is scientifically clean (though regulatorily, Plunder owns that call).
+
+### 2026-05-21T07:50:00Z: Kwame — Pattern B implementation complete (LAUNCH-PLAN reversal, policyVersion, chips)
+**Author:** Kwame (iOS Developer)
+**Branch:** `feature/main-screen-cleanup`
+**Status:** IMPLEMENTED
+**Commits:** af2205a, c23ed4e, 93e7c3b, c66c93d, 8f31a25
+
+**LAUNCH-PLAN reversal — IMPLEMENTED:**
+The `@State`-only rule for skin type + SPF (LAUNCH-PLAN §9, line 293) has been reversed per Yashas ratification 2026-05-21. `LAUNCH-PLAN.md` updated with verbatim Iris §5 text. `UserPreferenceStorage.persist(skinType:)` and `persist(spf:)` now write to `UserDefaults`.
+
+**policyVersion-gated L1 trigger — IMPLEMENTED:**
+`UserPreferenceStorage.disclaimerPolicyVersionKey` and `currentDisclaimerPolicyVersion = 1` added. `shouldShowDisclaimerCover(defaults:currentVersion:) -> Bool` extracted as a testable free function. `UVBurnTimerApp.init` now calls this function instead of hardcoding `true`. `onAcknowledge` closure writes the current version synchronously.
+Migration: existing users (presence of `selectedSkinTypeKey` or `locationRationaleAcknowledgedKey`) silently receive `policyVersion = 1` on first upgrade — no surprise L1 re-fire.
+
+**Free function extracted for Ma-Ti contract tests — DONE:**
+`UserPreferenceStorage.shouldShowDisclaimerCover(defaults:currentVersion:)` is on branch. Ma-Ti can pull and write G-D1..G-D4 tests against this function without touching `UVBurnTimerApp`.
+
+**Fitzpatrick chip + SPF chip — IMPLEMENTED:**
+`skinTypeChip` added to `mainInputsRow` as first chip (SkinType → Location → SPF). Full VoiceOver spec, 44pt min target, `.bordered` style per Iris §2.5. Tap-to-change via `SkinTypeEditView` sheet (type set) or onboarding (nil). No parallel SPF chip needed — `spfChip` already exists (Iris §2.4 confirmed).
+
+**Open items NOT blocking this PR:**
+- P-1 (Plunder): confirm `"Type III"` / `"Set skin type"` copy is legally acceptable
+- P-2 (Plunder): confirm `"Clear stored skin type"` button wording
+- P-3 (Plunder/Yashas): E13 gate — add storage-disclosure sentence to `ProductCopy.disclaimerBody`
+- W-1 (Wheeler): confirm `"Type III"` chip display doesn't induce anchoring noise
+
+### 2026-05-21T07:00:00Z: Kwame-8 — Drop LocationRationaleCard; OS prompt is sole permission UI
+**Author:** Kwame (iOS Developer)
+**Branch:** `feature/main-screen-cleanup`, commit `22e98a5`
+
+**Decision:** Remove `LocationRationaleCard` and all its plumbing. The OS system prompt is the **sole** permission UI for location access in UV Burn Timer.
+
+**Rationale:**
+- Approximate location is low-sensitivity; OS dialog already uses "approximate" and use case (UV index) is immediately understandable.
+- Extra taps create friction without benefit.
+- Privacy substance is covered elsewhere (`locationPrivacyLine`, `aboutPrivacy` in `AboutView`).
+- Reduced-accuracy = self-evident consent.
+
+**What changed:** Removed `LocationRationaleCard` rendering and acknowledgement flow. See `kwame/history.md` for file:line touchpoints.
+
+**What was NOT changed:**
+- `LocationPromptGate` struct is kept (unit test still exercises it).
+- `UserPreferenceStorage.locationRationaleAcknowledgedKey` is kept for migration cleanup.
+- `locationPrivacyLine` constant is kept (no render site; retained per instruction).
+
+**Reversibility:** If a future version requests full precise location or a non-obvious background mode, a custom rationale card may become appropriate again.
+
+### 2026-05-21T07:00:00Z: Ma-Ti-3 — Pre-existing test failure fix (6 UI tests, 4 dispositions)
+**Author:** Ma-Ti (Test Engineer)
+**Branch:** feature/main-screen-cleanup
+**Commit:** fa13021
+
+**Context:** Kwame-8 reported 6 pre-existing failures in `UVBurnTimerUITests` when removing `LocationRationaleCard`. Investigation confirmed all 6 were introduced silently during `9402465` (K-1/K-6/K-7) and missed because previous handoffs only verified the unit test target, not the UI test target.
+
+**Root causes:**
+- K-1 removed `PhotosensitizationBanner` from the main scroll view.
+- K-6 removed the `reapplicationFooter` `Text` from `PersistentFooter`.
+- K-7 removed the `mainVerdictCaveatLinkLabel` `NavigationLink` from `HeroTimerCard`.
+
+**Disposition summary:**
+- **Disposition B (Delete):** `testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero` — permanently gone layout.
+- **Disposition A (Update):** 5 tests updated for new tap targets / removed assertions:
+  - `testScenario4PhotosensitizationReachBackOpensAboutApplicability` — new target: EstimateInfoButton
+  - `acknowledgeDisclaimerAndChooseTypeIII` helper — new settle signal
+  - `testScenario1ColdLaunchShowsRequiredDisclaimerThenScenario2RequiresSkinTypeSelection` — removed "Reapply" assertion
+  - `testScenario8StaleEstimateShowsWarningRecalculateAndAccessibleTierSeverity` — same removal
+  - `testScenario5CappedEstimateRendersLongCaveatAndFooter` — same removal
+  - `testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor` — rewritten for EstimateInfoButton
+
+**No Disposition D (real bugs) found:** All 6 failures were caused by intentional K-1/K-6/K-7 removals.
+
+**Post-fix state:**
+- `UVBurnTimerUITests`: **38 tests, 0 failures** (was 39 tests, 6 failures)
+- `UVBurnTimerCoreTests`: **122 tests, 0 failures** (5 withKnownIssue — unchanged)
+
+**Discipline note:** These failures were missed across two handoffs because both agents reported counts from the unit target only. Correct verification procedure going forward: verify BOTH `UVBurnTimerCoreTests` + `UVBurnTimerUITests`.
+
+### 2026-05-21T07:50:00Z: Ma-Ti-4 — UI Test Axe: 38 → 5 smoke tests (Yashas directive)
+**Author:** Ma-Ti (Test Engineer)
+**Branch:** feature/main-screen-cleanup
+**Directive from:** Yashas
+**Commits:** ba37d2f + 4e474a2
+
+**The 5 Tests Kept:**
+1. `testAppLaunchesWithoutCrash` — Cold start; main screen renders within 10s
+2. `testSkinTypePickerEndToEnd` — Disclaimer → skin type picker → select Type III → main screen
+3. `testLocationButtonFiresLocationRequest` — Tap "Use my location" → location flow starts
+4. `testForecastPickerCardIsRendered` — Scroll to "UV Forecast" header on main screen (structural)
+5. `testSettingsSheetOpens` — Tap gear → "Settings" nav bar appears
+
+**Categories Deleted (33 tests):**
+- **Copy-string assertion tests (6):** covered by ProductCopy contract tests
+- **Attribution visibility tests (7):** covered by ProductCopy constants
+- **Per-surface presence tests (4):** covered by unit/contract tests
+- **Edge-case UI state tests (8):** covered by unit tests
+- **Scenario tests that duplicate contract coverage (8):** complex scenarios replaced by targeted smoke tests
+
+**Result:**
+- **Before:** 38 UI tests, ~1188 lines, ~5–8 min simulator time
+- **After:** 5 UI tests, 177 lines, ~60 s simulator time
+- **Unit suite:** 122 tests unchanged, 0 new failures
+---
+
+## Changes implemented
+
+### 2026-05-21T01:06:16Z: User directive — burn-time picker horizon
+
+**By:** yashasg (via Copilot)
+
+**What:** The burn-time picker (Iris's "Plan for another time" sheet from work item #7) horizon is **7 days rolling, today → today + 7 days** ("Tuesday to Tuesday, Wednesday to Wednesday, etc."). This resolves the open delta between Iris's spec (D+10 = WeatherKit data-availability cap) and Wheeler's recommendation (D+7 = forecast-skill cap). Wheeler's stricter cap wins.
+
+**Why:** User decision — answers Call 1 from the v2 forecast pushback synthesis. Closes the picker-horizon question. Aligns with Wheeler's photobiology argument (Joslyn & Savelli 2010 + WHO/WMO operational publishing horizon; ±1 UVI input error past D+7 makes the burn-time output statistically meaningless).
+
+**Impact:**
+- Iris's picker spec needs its `DatePicker` range updated: `in: Date.now ... Date.now + 7 days`.
+- The 10-day forecast card itself is unchanged — it still shows all 10 days. The picker simply cannot anchor to days 8–10.
+- Days 8–10 on the forecast card show WHO category band only (per Wheeler's condition).
+- Kwame should treat the picker upper bound as a hard structural cap, not a "soft suggestion past 7 days."
+
+---
+
+### 2026-05-21T01:06:30Z: User directive — days 6–10 scalar on forecast card
+
+**By:** yashasg (via Copilot)
+
+**What:** On the 10-day forecast card, **days 1–5 show the numeric peak UVI plus the WHO `TierBadge`**; **days 6–10 show the `TierBadge` only (no numeric UVI integer)**. This resolves Call 2 from the v2 forecast pushback synthesis.
+
+**Impact / consolidated spec (work item #7 now fully locked):**
+
+Feature: 10-day UV Index forecast via "View UV Forecast" chip on main screen, opening a `.sheet`. The sheet contains:
+
+1. **Hourly "Today" card** — `ScrollView(.horizontal)` of hourly cells; auto-adapts to `LazyVStack` at `dynamicTypeSize >= .accessibility3`.
+2. **10-day card** — `LazyVStack` of daily rows. Days 1–5: numeric peak UVI + `TierBadge`. Days 6–10: `TierBadge` only.
+3. **Card-level science footnote** — *"UV accuracy beyond ~5 days decreases as cloud cover becomes harder to predict."*
+4. **L3 disclosure chevron** — *"Is this estimate for me?"* at foot of card.
+
+Owners: Kwame (SwiftUI, WeatherKit), Iris (design review), Ma-Ti (tests), Wheeler (health review), Plunder (copy gate), Apple Weather attribution.
+
+---
+
+### 2026-05-21T01:31:09Z: User directives — forecast cache staleness & coord eviction
+
+**By:** yashasg (via Copilot)
+
+#### A. Staleness signal — use WeatherKit's own expiration metadata
+
+**What:** Replace any hardcoded N-hour staleness threshold with Apple's expiration timestamp on the `Weather` response. Re-fetch when `Date.now() > snapshot.expirationDate`.
+
+**Why:** Apple is the source of truth for forecast staleness. Using `Weather.metadata.expirationDate` is the same signal Apple's own Weather app trusts.
+
+**Supersedes:**
+- Kwame's "6h staleness threshold" (forecast-storage-mechanism.md §4)
+- Gi's "1h stale on foreground" (forecast-data-lifecycle.md §3)
+
+#### B. Coord eviction — 50 km validity radius
+
+**What:** Discard the cached snapshot and re-fetch only when the user's current rounded coordinate is more than ~50 km from the snapshot's stored coordinate.
+
+**Why:** Apple's approximate-location returns coordinates within ~1–20 km of true position. 50 km envelope never invalidates cache for normal movement. UVI varies negligibly over 50 km.
+
+**Distance check:**
+- Use `CLLocation(latitude: snapshot.latitude, longitude: snapshot.longitude).distance(from: currentCLLocation) > 50_000` (meters)
+
+**Supersedes:**
+- Kwame's "0.1° (~10 km) coord delta" (forecast-storage-mechanism.md §6)
+
+---
+
+### 2026-05-21T01:34:16Z: User directive — dynamic data shape + days 8-10 progressive disclosure
+
+**By:** yashasg (via Copilot)
+
+#### A. Picker hard cap D+7 confirmed
+
+Default visible range on the 10-day forecast surface is days 1–7. Days 8–10 are revealed via progressive-disclosure interaction.
+
+#### B. Progressive disclosure — days 8-10 revealed via right-arrow gesture
+
+**What:** Days 1–7 visible by default. Days 8–10 revealed when user presses right-arrow button.
+
+**Why:** Reduces visual emphasis on lowest-skill days without hiding them. Appropriate friction for band-only/no-integer rendering already locked for days 6–10.
+
+#### C. Dynamic UI principle — never hardcode hour or day counts
+
+**What:** No layer of the codebase shall hardcode `168`, `240`, or any other fixed hour count. Storage persists whatever WeatherKit returned; UI renders dynamically over actual array length.
+
+**Why:** *"there are places in the world where the sun doesnt set and places in the world where the sun doesnt rise, our UI should be dynamic"* — polar regions break the assumption that a forecast day = 24 hours.
+
+---
+
+### 2026-05-21T01:36:00Z: User clarification — data shape always 24 rows per day; UI translates
+
+**By:** yashasg (via Copilot)
+
+**What:**
+- **Storage layer:** Always store **24 rows per day**. Total stored hours = `daysReturnedByWeatherKit × 24` (typically 240 if WeatherKit returns 10 days). Assertion that `hours.count == days.count × 24` is acceptable.
+- **UI layer:** Translates the 24-rows-per-day data into appropriate display.
+
+**Why:** Keeps the data layer maximally regular and concentrates all dynamism in the rendering layer.
+
+---
+
+### 2026-05-21T01:52:54Z: User directive — trust WeatherKit signals directly for polar detection; no fallback heuristics
+
+**By:** yashasg (via Copilot)
+
+**What:**
+- The polar-night detection trigger uses **only** signals that WeatherKit returns directly.
+- **No reverse-engineered fallback heuristics** — the "18+ consecutive zero hours" fallback in Iris's spec §3.3 is dropped.
+- If WeatherKit gives us ambiguous data, we render whatever we got rather than substituting our own inference.
+
+**Why:** Reduces surface area for bugs. Apple has more sources than we can replicate. Trust the vendor signal.
+
+**Supersedes:**
+- Iris v3 spec §3.3 fallback: "18+ consecutive hours with UVI = 0.0" — DROPPED.
+
+---
+
+### 2026-05-21T01:58:19Z: User directive — treat polar night as nighttime; no polar-specific UI or copy
+
+**By:** yashasg (via Copilot)
+
+**What:**
+- **Polar night = nighttime.** No special case. No special copy. No special detection logic.
+- UVI = 0 hours render with whatever the burn-timer/UI does for nighttime today.
+- A 24-hour stretch of UVI = 0 is just a day where the burn timer shows "no UV risk" for every hour.
+
+**Why:**
+- Apple treats it this way at the data layer (UVI = 0 in polar night, same as midnight on a regular day)
+- Adding educational copy is unnecessary visual noise
+- Eliminates an entire detection-and-render code path
+- Consistent with prior directives: trust the data, don't reinvent semantics, don't add noise
+
+**Implications — what gets dropped:**
+- **Iris v3 spec §3.3 (Polar Adaptation):** ENTIRELY DROPPED. No replacement text needed.
+- **Wheeler's polar-night copy recommendations** (memo §4.2 single-day and §4.3 multi-day variants): archived as "not used in v1."
+
+**Implications — what does NOT change:**
+- **Storage layer:** unchanged. Still exactly 24 rows per day.
+- **`UVResult` enum:** unchanged. The `.nighttime` case handles UVI = 0 hours.
+- **Burn-timer logic:** unchanged. UVI = 0 → no burn risk.
+- **Picker horizon:** unchanged (D+7 cap, 8-10 reveal).
+
+**Supersedes:**
+- Iris v3 spec §3.3 — DROPPED ENTIRELY
+- Wheeler memo §4.2 (single-day polar copy) — ARCHIVED, not used in v1
+- Wheeler memo §4.3 (multi-day polar copy) — ARCHIVED, not used in v1
+- Prior directive 2026-05-21T01:52:54Z — SUPERSEDED IN SCOPE
+
+---
+
+## WI #7 Design Spec Artifacts — Reference Memos (moved to .squad/designs/wi-7/)
+
+### 2026-05-21T01:34:16Z: Iris — Forecast Card Redesign v3
+
+**Author:** Iris (UI/UX Designer)  
+**Status:** Design spec — ready for Kwame implementation + Wheeler ratification  
+**Source file:** `.squad/designs/wi-7/iris-forecast-card-redesign-v3.md`
+
+**Key locked items:**
+- Loading-state UX: skeleton rows (10 rows, days 1–5 have UVI placeholders, days 6–10 omit numeric UVI), shimmer with `accessibilityReduceMotion` fallback
+- Skeleton hourly strip: 6 visible cells (60pt × 88pt each)
+- VoiceOver per-row announcements
+- Dynamic Type >= accessibility3 adapts hourly scroll to LazyVStack
+- Days 8–10 behind progressive-disclosure right-arrow button
+- Polar-night UI: collapsed single-row badge — **now pure nighttime rendering per polar-treat-as-nighttime directive**
+- Countdown timer UX on burn-time picker result
+
+**Note:** Iris's v3 spec §3.3 polar-adaptation section is superseded by user directive 2026-05-21T01:58:19Z.
+
+---
+
+### 2026-05-21T01:52:54Z: Kwame — WeatherKit Polar API Research
+
+**Author:** Kwame (iOS Developer)  
+**Status:** Research complete; type-name correction locked  
+**Source file:** `.squad/designs/wi-7/kwame-weatherkit-polar-api-research.md`
+
+**Key findings:**
+- WeatherKit type is `SunEvents`, not `Sun`. `DayWeather.sun: SunEvents` (non-optional struct)
+- Canonical polar-night trigger: `DayWeather.sun.solarNoon == nil`
+- `HourWeather.uvIndex` returns `0.0` for polar-night hours (not nil)
+
+**Note:** Scope narrowed per user directive 2026-05-21T01:58:19Z (polar-as-nighttime). The canonical signal is locked but will not be used in v1 UI detection.
+
+---
+
+### 2026-05-20T18:42:00Z: Wheeler — Polar-Region UV Science Ratification
+
+**Author:** Wheeler (Skin Science / UV Photobiology)  
+**Status:** Approved with modifications  
+**Source file:** `.squad/designs/wi-7/wheeler-polar-region-uv-science.md`
+
+**Key locked items:**
+- Burn-time formula at UVI=0 (polar night): uses existing `.infinity` / `.none` tier semantic
+- Polar-day sustained 24h UVI: single-session "minutes to first MED" is correct; cumulative-dose concern deferred to v1.1
+- WeatherKit UVI quality: trust vendor, no gating on latitude
+- All five WI-7 v1/v2 ratifications hold unchanged
+
+**Note:** Wheeler's §4.2 (single-day polar copy) and §4.3 (multi-day polar copy) are archived — not used in v1.
+
+---
+
+### 2026-05-20T18:06:16Z: Kwame — iOS Forecast Storage Mechanism
+
+**Author:** Kwame (iOS Developer)  
+**Status:** Proposed; coordinated with Gi lifecycle policy  
+**Source file:** `.squad/designs/wi-7/kwame-forecast-storage-mechanism.md`
+
+**Key locked items:**
+- File location: `Caches/forecast-snapshot.json`
+- Schema: `schemaVersion`, `latitude` (2dp), `longitude` (2dp), `fetchedAt`, `expirationDate`, `days: [DayForecast]` (10 items), `hours: [HourForecast]` (240 items)
+- Actor: `ForecastStore: ForecastStoring` with async load/save/clear
+- Offline behavior: show stale + disclosure banner
+- Schema mismatch: throw and re-fetch, no migration
+
+---
+
+### 2026-05-20T18:06:16Z: Gi — Forecast Data Lifecycle
+
+**Author:** Gi (Data Specialist)  
+**Status:** Proposed; coordinated with Kwame storage mechanism  
+**Source file:** `.squad/designs/wi-7/gi-forecast-data-lifecycle.md`
+
+**Key locked items:**
+- Data shape: `ForecastSnapshot` wrapper with `days` (10 items) and `hours` (240 items = 10 days × 24 rows/day)
+- DayForecast fields: `date`, `peakUVI`, `peakUVIHour`, `whoCategory`, `sunrise`, `sunset`
+- HourForecast fields: `timestamp`, `uvIndex`, `condition`
+- Staleness: `Date.now() >= snapshot.expirationDate`
+- Coord eviction: > 50 km from stored coordinate
+- Loading states: `.idle → .loading → .loaded → .failed` per Iris §1
+- Offline: show stale + disclosure banner
+- Schema bump: throw and re-fetch, no migration
+- Lookup API: `UVResult` enum (.value | .nighttime | .unavailable(reason))
+
+---
+
+**End of WI #7 consolidation — design memos moved to .squad/designs/wi-7/**
+
+
+---
+

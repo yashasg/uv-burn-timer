@@ -36,7 +36,7 @@
 
 ## Model
 
-- **Preferred:** claude-opus-4.7-xhigh
+- **Preferred:** claude-opus-4.7
 - **Rationale:** User pinned. Deep reasoning required for photobiology research and formula derivation.
 - **Fallback:** Standard chain — coordinator handles fallback automatically
 

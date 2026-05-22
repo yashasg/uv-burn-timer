@@ -4166,4 +4166,97 @@ For live SwiftUI content, raw numeric `.padding(N)` and raw `.frame(width:/heigh
 - `ForecastPickerView.swift:357` — numeric badge `40×22`
 - `AppViews.swift:1288` — disclaimer content `.padding(32)`
 
+---
 
+### Iris — SwiftLint HIG Rule Catalog
+
+**Owner:** Iris (UI/UX Designer — Apple HIG & Accessibility)  
+**Requested by:** yashasg  
+**Date:** 2026-05-22T02:30:00Z  
+**Status:** ready for Kwame's SwiftLint harness
+
+**Scope note:** These regexes are pragmatic smell-detectors for SwiftLint `custom_rules`, not AST proofs. Scope them to `app/Sources/**/*.swift`, exclude `app/Tests/**`, previews, and generated code, and use `// swiftlint:disable:next {rule_id}` only for real, documented exceptions.
+
+#### 20-Rule Catalog
+
+**Always error (10 rules):**
+- `color_literal_rgb` — Ban raw RGB/white color constructors; use semantic colors for dark-mode adaptation
+- `no_hex_color_initializer` — Ban hex-based custom color initializers (`Color(hex:)`)
+- `navigation_stack_in_sheet` — Ban `NavigationStack` inside `.sheet { ... }`
+- `no_navigation_bar_title_deprecated` — Ban deprecated `.navigationBarTitle(...)`
+- `no_uppercased_in_code` — Ban `.uppercased()` on user-facing strings (locale-unsafe)
+- `no_lowercased_in_code` — Ban `.lowercased()` on user-facing strings
+- `unsafe_user_string_assembly` — Ban `+` concatenation in `Text()/Label()/Button()` constructors
+- `no_raw_feedback_generator` — Ban direct `UINotificationFeedbackGenerator` etc.; use `.sensoryFeedback(...)`
+- `no_forced_color_scheme` — Ban `.preferredColorScheme(.light)` or `.(.dark)` locks
+- `explicit_ignores_safe_area_edges` — Ban no-arg `.ignoresSafeArea()` calls
+
+**Error after grace period (5 rules, warn now, flip in 2 weeks):**
+- `unsafe_fixed_typography` — Ban `.font(.system(size: ...))`, fixed custom fonts, weight-only styling
+- `no_fixed_text_frame_height` — Ban `Text`/`Label` locked to literal `.frame(height: ...)`
+- `no_fixed_frame_both_axes` — Ban `.frame(width: N, height: N)` with raw literals
+- `no_numeric_padding` — Ban positive numeric padding literals (`.padding(12)`, `.padding(.horizontal, 16)`)
+- `missing_min_touch_target` — Ban `Button`/`.onTapGesture` with no 44pt hit-target clue
+
+**Always warn (5 rules):**
+- `geometry_reader_requires_justification` — Unqualified `GeometryReader` usage
+- `unsafe_motion_without_reduce_motion_guard` — `withAnimation(.default)` / `repeatForever` without Reduce Motion guard
+- `image_requires_accessibility_semantics` — `Image(...)` must have `.accessibilityLabel(...)` or `.accessibilityHidden(...)`
+- `no_plain_list_style_for_settings` — Ban `.listStyle(.plain)` on settings/about/preferences surfaces
+- `scrollview_requires_keyboard_dismiss` — `ScrollView` with text input/search must have `.scrollDismissesKeyboard(...)`
+
+Full specification with regex patterns, rationale, false-positive notes, and examples: see `.squad/skills/swiftlint-hig-ruleset/SKILL.md`.
+
+---
+
+### Gaia decision — HIG issue bundling
+
+**Date:** 2026-05-22T02:26:49.194-07:00  
+**Author:** Gaia (Lead / Architect)
+
+**Decision:** When a SwiftUI HIG audit clusters into a small number of concrete view files, file the implementation work **per file**, not per violation category. Bootstrap missing squad labels if the repo workflows expect them, but apply only the implementation owner's `squad:{member}` label on the issue. Keep reviewer requirements in the body as an explicit gate.
+
+**Context:** Iris's 2026-05-22 `Apple-idiom SwiftUI layout policy` audit surfaced cleanup concentrated in two files: `ForecastPickerView.swift` and `AppViews.swift`. The repository had no `squad:*` labels even though the squad workflows reference them. The repo also currently exposes only `yashasg` as an assignable GitHub user, so squad personas cannot be represented faithfully via GitHub assignees.
+
+**Trade-offs:**
+- **Per-file bundling:** Keeps each cleanup local to a SwiftUI surface and reduces merge/conflict risk. Cost: one issue can mix frames, padding, and symbol sizing concerns.
+- **Per-category bundling:** Cleaner metrics but forces cross-file PRs and higher coordination overhead.
+- **Dual owner + reviewer labels:** Would encode more metadata but would misroute work (each `squad:*` label is treated as ownership).
+
+**Consequences:**
+- Use `enhancement` plus `squad:{owner}` for this class of cleanup issue.
+- State the reviewer explicitly in the issue body with a gate: **Iris must HIG-pass before merge.**
+- Reserve top-5-only bundles for emergency fast-ship cases.
+
+**Applied example:**
+- Filed `#95` — `[HIG] Apple-idiom layout cleanup in ForecastPickerView.swift`
+- Filed `#96` — `[HIG] Apple-idiom layout cleanup in AppViews.swift`
+
+---
+
+### User directive — Opus 4.7 model rename
+
+**By:** yashasg (via Copilot)  
+**Date:** 2026-05-22T02:58:03-07:00
+
+**What:** All squad members previously configured with the model identifier `claude-opus-4.7-xhigh` now use `claude-opus-4.7`. This supersedes the prior policy that pinned Wheeler, Suchi, Plunder, and Argos to `claude-opus-4.7-xhigh` via `agentModelOverrides`.
+
+**Why:** User directive. The `-xhigh` suffix was never a real model identifier in the platform's valid catalog (documented in Loops 20–24 closure logs) — every cycle that requested it silently fell back to `claude-opus-4.7`. The fallback is now codified as the policy.
+
+**Live state updated this turn:**
+- `.squad/config.json` — `agentModelOverrides` rewritten: wheeler/suchi/plunder/argos all → `claude-opus-4.7`. Iris's `claude-sonnet-4.6` override unchanged.
+- `.squad/agents/wheeler/charter.md` — `Preferred:` updated
+- `.squad/agents/suchi/charter.md` — `Preferred:` updated
+- `.squad/agents/plunder/charter.md` — `Preferred:` updated
+- `.squad/agents/argos/charter.md` — `Preferred:` updated
+
+**Historical records intentionally NOT modified** (append-only files, per Source of Truth Hierarchy):
+- `.squad/log/*` (session logs)
+- `.squad/orchestration-log/*` (routing evidence)
+- `.squad/sessions/*`, `.squad/orchestrations/*` (historical records)
+- `.squad/decisions/archive/gaia-model-default-loop.md` (archived prior policy)
+- Prior entries in `.squad/decisions.md` that reference the old identifier — they record what was true at the time.
+
+**Effective immediately for all future spawns.**
+
+ 

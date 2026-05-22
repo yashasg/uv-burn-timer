@@ -119,3 +119,33 @@ Iris-6 consolidated Plunder/Wheeler/Suchi consensus into executable spec for Kwa
 - Item 10: Increase Contrast borders + opacity boost (colorSchemeContrast-keyed helpers, overlay strokes, band bar 4→6pt, selected row 0.12→0.25)
 
 **All 10 Iris §8 items now complete.** Branch feature/wi-7-uv-forecast ready for user GitLab MR.
+---
+
+## Learnings — 2026-05-22T00:44:46.015-07:00 (Apple layout audit)
+
+**Verdict:** ⚠️ Mostly Apple-idiomatic. The codebase has strong HIG scaffolding (safe-area insets, Dynamic Type reflow branches, system text styles, `@ScaledMetric`) but still carries repeated raw numeric padding plus fixed forecast cell/chip dimensions.
+
+**Files audited:**
+- Clean for this audit: `app/Sources/UVBurnTimer/UVBurnTimerApp.swift`, `app/Sources/UVBurnTimer/UVBurnTimerShortcuts.swift`
+- No SwiftUI surface to audit: `app/Sources/UVBurnTimer/WeatherLocationServices.swift`
+- Needs cleanup: `app/Sources/UVBurnTimer/ForecastPickerView.swift` (10 hardcoded width/height frames, 23 numeric padding calls, 2 literal symbol sizes), `app/Sources/UVBurnTimer/AppViews.swift` (1 hardcoded literal width frame, 12 numeric padding calls, 2 literal symbol sizes)
+
+**Strong Apple-native signals present:**
+- 26 `maxWidth`/`maxHeight` frames, 86 named text-style fonts, 9 `@ScaledMetric` usages, 2 `.safeAreaInset(edge: .bottom)` placements, 0 `GeometryReader`, 0 `.dynamicTypeSize(...)` caps
+- Dynamic Type reflow exists via environment branches: `ForecastPickerView.swift:436` swaps the hourly strip to a vertical list; `AppViews.swift:272` and `AppViews.swift:1617` reflow controls at accessibility sizes
+
+**Top offenders to revisit first:**
+- `ForecastPickerView.swift:583` — `.frame(width: 60, height: 88)`
+- `ForecastPickerView.swift:515` — `.frame(width: 64, alignment: .leading)`
+- `ForecastPickerView.swift:371` — `.frame(width: 56, height: 22)`
+- `ForecastPickerView.swift:357` — `.frame(width: 40, height: 22)`
+- `AppViews.swift:1288` — `.padding(32)`
+
+---
+
+## Learnings — 2026-05-22T02:30:00Z (SwiftLint HIG catalog)
+
+- Produced **20** SwiftLint-ready HIG rule specs covering color, typography, layout, touch targets, navigation, localization, motion/haptics, image accessibility, dark mode, safe area, and list/scroll behavior.
+- Severity rollout strategy: make deterministic color/locale/API regressions immediate CI errors, give legacy spacing/touch-target/fixed-size cleanup a 2-week grace period, and keep regex-noisy heuristics visible as warns until AST-aware lint exists.
+- Best reusable rule families: semantic-color enforcement, Dynamic Type-safe typography bans, locale-safe string handling, Reduce Motion-aware animation guardrails, and safe-area/container policy checks.
+

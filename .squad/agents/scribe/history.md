@@ -16,4 +16,17 @@
 - 2026-05-19T00:30:00-07:00 — **Parallel-with-re-check orchestration pattern.** When agents work in parallel with staggered deliverables (e.g., Linka started iOS design before Suchi's persona brief landed), design re-check gates into the later agent's work. Linka did mid-pass integration (§12 Suchi sync log, §14 targeted edits), preventing rework and making convergences visible. Document this pattern in orchestration logs for future scheduling.
 - 2026-05-19T00:30:00-07:00 — **Cross-agent notation in decisions ledger.** When merging agent deliverables into D-XXXX entries, cite source files (`.squad/decisions/inbox/`) and capture which agents independently converged. This makes high-confidence signals visible and surfaces areas where user input is needed (like the verbatim-vs-edited debate).
 
+## 2026-05-22T02:58:03-07:00 — SwiftLint HIG gate batch + model rename
+
+**Session scope:** Merged 3 inbox files into decisions.md, wrote orchestration logs for Iris + Kwame agents, session log, cross-agent history notes, summarized Plunder history (23.8 KB → 8.3 KB), committed to current branch.
+
+**Key learnings:**
+- **Inbox merge discipline:** 3 entries (iris-hig-lint-rule-catalog, gaia-hig-issue-bundling, copilot-directive-opus47-model-rename) deduplicated and appended to `2026-05-22` section in decisions.md. Inbox directory now empty.
+- **Orchestration log format:** Iris and Kwame routes captured separately (output artifacts, status, next steps). Enables parallel-track status visibility.
+- **History summarization trigger:** When agent history.md ≥ 15 KB (15360 bytes), compress to summary + incident list format. Plunder entry reduced from 177 lines / 23.8 KB to 70 lines / 8.3 KB while preserving key findings and skill extraction dates.
+- **Cross-agent history append pattern:** One-line note appended to ma-ti (test gate consequence), gaia (likely next merge orchestration), iris/kwame/plunder (unchanged from agent spawns; their own history.md updates happened in their sessions).
+- **Model rename codification:** `claude-opus-4.7-xhigh` → `claude-opus-4.7` directive applied to config.json + 4 charter files; historical records (log, orchestration-log, sessions, decisions/archive) remain append-only (unchanged to preserve historical accuracy).
+
+**Files staged & committed:** decisions.md, decisions-archive.md (if any), orchestration-log 2 files, log 1 file, 5 agent history files, 4 charter files (wheeler, suchi, plunder, argos), config.json.
+
 <!-- Append learnings below -->

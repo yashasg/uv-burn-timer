@@ -1,10 +1,10 @@
 {
   "version": 1,
   "agentModelOverrides": {
-    "wheeler": "claude-opus-4.7-xhigh",
-    "suchi": "claude-opus-4.7-xhigh",
-    "plunder": "claude-opus-4.7-xhigh",
-    "argos": "claude-opus-4.7-xhigh",
+    "wheeler": "claude-opus-4.7",
+    "suchi": "claude-opus-4.7",
+    "plunder": "claude-opus-4.7",
+    "argos": "claude-opus-4.7",
     "iris": "claude-sonnet-4.6"
   }
 }
