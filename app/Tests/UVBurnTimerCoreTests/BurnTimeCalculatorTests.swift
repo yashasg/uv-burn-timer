@@ -4422,8 +4422,12 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
     let window = String(after.prefix(500))
 
     #expect(
-        window.contains("minHeight: 44"),
-        "ForecastPickerAttribution Link must carry `.frame(...minHeight: 44...)` — HIG 44pt tap target (Iris L03)."
+        window.contains("minHeight: minTap"),
+        "ForecastPickerAttribution Link must carry `.frame(...minHeight: minTap...)` — HIG 44pt tap target backed by @ScaledMetric `minTap` token (Iris L03, Loop-29 WI-3)."
+    )
+    #expect(
+        !window.contains("minHeight: 44"),
+        "ForecastPickerAttribution Link must use the @ScaledMetric `minTap` token, not the literal `44` (Loop-29 WI-3)."
     )
     #expect(
         !window.contains("minHeight: 32"),
@@ -5865,8 +5869,8 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
         "ForecastPickerView's `.error` banner Retry button must invoke the owner-supplied `onRetry()` closure — dropping the call (e.g., to `onRetry` without parentheses, or to a stale `Task { … }` that doesn't escalate to the RootView refresh coordinator) would render the banner inert. RootView wires `onRetry: { Task { await performForecastRefresh() } }` at AppViews.swift line 257; X2 pins the receiving end. (Ma-Ti L04 — Loop-13 deferred / Loop-17)"
     )
     #expect(
-        source.contains(".frame(minHeight: 44)"),
-        "ForecastPickerView's `.error` banner Retry button must keep `.frame(minHeight: 44)` so the HIG / WCAG 2.2 SC 2.5.8 44pt tap-target floor is met. The `.font(.footnote)` modifier shrinks the intrinsic content height below 44pt — without the explicit frame the tap target drops to ~22pt. (Ma-Ti L04 — Loop-13 deferred / Loop-17)"
+        source.contains(".frame(minHeight: minTap)"),
+        "ForecastPickerView's `.error` banner Retry button must keep `.frame(minHeight: minTap)` so the HIG / WCAG 2.2 SC 2.5.8 44pt tap-target floor is met (and scales with Dynamic Type via the @ScaledMetric `minTap` token — Loop-29 WI-3). The `.font(.footnote)` modifier shrinks the intrinsic content height below 44pt — without the explicit frame the tap target drops to ~22pt. (Ma-Ti L04 — Loop-13 deferred / Loop-17 + Loop-29 WI-3)"
     )
 }
 

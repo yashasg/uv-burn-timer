@@ -240,7 +240,7 @@ toolbar item. Resulting `AppViews.swift` positions on this commit:
 - `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
   (was 138 pre-Loop-28-WI-0)
 - `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
-  push — line **2144**
+  push — line **2150**
 - `skinTypeChip` — line **339**, `locationChip` — line **301**,
   `spfChip` — line **320**
 
@@ -262,6 +262,26 @@ arguments changed from the literal `44` to the existing RootView-
 scoped `minTap` token. `test_S5_…` flagged the PersistentFooter
 drift and this addendum closes it. The *rule* this ADR encodes is
 unchanged.
+
+**Loop-29 WI-3 — line-number refresh (SkinTypePickerRow `rowMinHeight`):**
+the `PersistentFooter` `AboutView` push citation was bumped from
+line **2144** → line **2150** (body block 2143–2145 → 2149–2151)
+after `struct SkinTypePickerRow` (AppViews.swift:1618) gained a
+`@ScaledMetric private var rowMinHeight: CGFloat = 56` declaration
+plus a five-line explanatory comment. The literal outer
+`.frame(minHeight: 56)` on SkinTypePickerRow's Button was migrated
+to `.frame(minHeight: rowMinHeight)` so the row's taller-than-44pt
+hit-target floor (two text lines) now scales with Dynamic Type
+(Iris loop-29 GAP-1). The matching source-text guards are
+`test_LV2_appViewsHasNoLiteralMinFrameAxis` (zero literal `min*:
+<digit>` frame axes in AppViews.swift) and
+`test_LV5_skinTypePickerRowDeclaresRowMinHeightScaledMetric`
+(substring-bounded to the SkinTypePickerRow struct body). The
+SwiftLint `hardcoded_frame_dimensions` regex was widened to
+`(?:width|height|minWidth|minHeight|maxWidth|maxHeight)` so the
+gate catches all six axes — the inline-frame-axis blind spot
+Iris's Loop-29 gap analysis flagged. The *rule* this ADR encodes
+is unchanged.
 
 ## Audit
 
@@ -313,8 +333,8 @@ identity:
   at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
   at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2144` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2143–2145), rendered inside the
+  `AppViews.swift:2150` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2149–2151), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 143–151.
 
 ### Rule (extended)
