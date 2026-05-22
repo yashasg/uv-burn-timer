@@ -13,8 +13,9 @@ Local commits waiting for `gh` auth restoration.
 
 ### `squad/wi-loop30-1-ui-flake-stabilization`
 - **Base:** `main` (`85080a8`)
-- **Head:** `758e784`
-- **Status:** queued
+- **Head:** `a9dc664`
+- **Status:** pushed
+- **PR:** https://github.com/yashasg/uv-burn-timer/pull/114
 - **PR title:** `WI-loop30-1: stabilize toolbar settle + nav pop in UVBurnTimerUITests`
 - **PR body:**
 

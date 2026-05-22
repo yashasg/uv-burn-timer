@@ -374,3 +374,33 @@ Hand-off detail in `.squad/decisions/inbox/kwame-wi-loop30-1-noop.md`.
   scheme resolution (Abort trap: 6 / rc=134). No CLI escape hatch.
   If `getconf DARWIN_USER_CACHE_DIR` fails for >2 minutes, abandon
   local sim verification for the session and lean on CI.
+
+## 2026-05-22T19:30:00Z: WI-loop30-1 — pushed + PR #114 opened
+
+Drained the push-queue entry now that `gh` is authenticated
+(`yashasg` on github.com). Branch
+`squad/wi-loop30-1-ui-flake-stabilization` (HEAD `a9dc664`) is
+pushed to the `github` remote; PR **#114**
+(https://github.com/yashasg/uv-burn-timer/pull/114) opened
+against `main` with body copied verbatim from `push-queue.md`.
+Rebase was a no-op — branch was already ahead of
+`github/main@d0bb752`. CI runs **26309680580** (pull_request)
+and **26309668853** (push) kicked off; not blocked-on per
+hand-off protocol.
+
+### Learnings
+
+- **`github` vs `origin` matters here.** This repo wires
+  `github` → GitHub and `origin` → GitLab. Every push/PR
+  command must name `github` explicitly; `git push -u origin …`
+  would silently land on the wrong forge. Worth a one-line
+  guardrail in any future per-repo `.squad/` README.
+- **`gh pr create --body-file` over heredoc.** Multi-paragraph
+  PR bodies copied from the push-queue go through cleanest as a
+  scratch file under `.squad/.scratch/` (NEVER `/tmp` — runtime
+  rejects it), passed via `--body-file`, then deleted. Zero
+  shell-quoting hazard, zero residue in the tree.
+- **A `git fetch` + `github/main..HEAD` check is a 2-second
+  insurance policy.** Confirmed no rebase needed before pushing;
+  prevented a wasted force-push round-trip if the branch had
+  drifted. Always do it before `git push -u`.
