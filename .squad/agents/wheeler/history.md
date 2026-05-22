@@ -32,3 +32,9 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
   - WI-7 polar-region ratifications (2026-05-21) — intact.
 - **New skin-science gaps surfaced for Loop-28:** none. No inbox memo written.
 - Status: standing by; nothing required from Wheeler this loop beyond this verification pass.
+
+---
+
+## 2026-05-22: Loop-28 closure — No new skin-science gaps; overlay intact
+
+**Wheeler (skin science) perspective:** Loop-28 shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper). All HIG-only changes; no UVI formula, phototype personalization, or attribution copy touched. Persona overlays (LANE 4: Greta / Maya / Devon / Asha / Tomás) remain unchanged and on-canvas. No new science gaps surfaced. All 31 prior violations (from Loop-26/27) resolved. Carry-forward: WI-2-flake investigation (UI cold-start timing race).

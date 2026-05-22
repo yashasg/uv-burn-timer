@@ -65,7 +65,14 @@ custom_rules:
     # onTapGesture, not prove the identifier is declared with @ScaledMetric. Use a
     # per-line disable with PR justification for genuine exceptions; perfect
     # @ScaledMetric validation would need an AST.
-    regex: '(?:\.onTapGesture\b|\bButton\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
+    #
+    # Iris loop-29 GAP-2 / WI-29-2: the alternation now also catches the
+    # trailing-closure form `Button { ... }` (in addition to `Button(`). The
+    # Loop-28 toolbar gear-Button hittability regression (AppViews.swift
+    # line 122) slipped through SwiftLint because the original alternation
+    # only recognized the paren form. The 200-char lookahead window and
+    # identifier-backed `min(Width|Height):` floor check are unchanged.
+    regex: '(?:\.onTapGesture\b|\bButton\s*\(|\bButton\s*\{)(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
     message: "HIG: touch targets need @ScaledMetric-backed minWidth/minHeight identifiers near Button/onTapGesture. Literals like 44/56 are violations."
     severity: error
 

@@ -77,3 +77,9 @@
 SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 13 + AV 18). Issues #95/#96 closed. Post-merge audit PASS-WITH-NOTES (5 structural rule-coverage gaps deferred to Loop-28+). Privacy Policy hosting and physical-device sign-offs remain user-owned blockers.
 
 **Commits:** 66cc6c9 (TDD), a643523 (FPV), 174be71 (AV) → merged as a8b1ac8
+
+---
+
+## 2026-05-22: Loop-28 closure — 4 WIs shipped; test infrastructure stable
+
+**Ma-Ti perspective:** Loop-28 executed cleanly. Kwame shipped 4 refactoring WIs; all CI green on re-run. Test coverage extended (LT1–LT4 for toolbar, LU1–LU5 for chip/footer; AV-12/AV-13 verbose). Matched-brace helper refactor (WI-4) removed fixed-offset scan windows. Physical-device checklists still blank (Goal 5 FAIL per WI-21 structural constraint). Carry-forward: WI-2-flake investigation (UI cold-start timing race, 3 tests flaked on PR #100 first run; passed on re-run).

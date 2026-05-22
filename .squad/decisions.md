@@ -4396,6 +4396,60 @@ Full specification with regex patterns, rationale, false-positive notes, and exa
 
 ---
 
+## 2026-05-22 (Loop-28 WI decisions inbox merge)
+
+### SwiftLint HIG gate install (Kwame decision)
+
+**Date:** 2026-05-22T02:30:00Z
+**Author:** Kwame (iOS Developer)
+
+Install SwiftLint in two places:
+1. Exact-pin `SimplyDanny/SwiftLintPlugins` `0.63.2` in `app/Package.swift`.
+2. Install Homebrew `swiftlint` in CI and invoke it explicitly from both `.github/workflows/ci.yml` and `build.sh`, using `--strict`.
+
+Seed the harness with four HIG rules plus two audit-backed layout rules (`hardcoded_frame_dimensions`, `literal_system_font_size`).
+
+**Trade-offs:** `SwiftLintPlugins` vs `realm/SwiftLint` — chose `SimplyDanny` for plugin-only package advantages. SPM plugin keeps integration Apple-native; Homebrew gives deterministic CLI availability. `--strict` ensures a rule misconfigured as warning still fails CI.
+
+**Consequences:** `build.sh` now runs SwiftLint before any `xcodebuild` work. CI installs SwiftLint via Homebrew and runs a dedicated strict lint step. Baseline is intentionally red: **16 HIG violations** (11 `hardcoded_frame_dimensions`, 4 `literal_system_font_size`, 1 `navigation_stack_in_sheet`).
+
+---
+
+### SwiftLint HIG gate tightening — hard-error day 1 (Kwame decision)
+
+**Date:** 2026-05-22T03:32:09-07:00
+**Author:** Kwame (iOS Developer)
+
+Tighten the SwiftLint HIG gate so layout/touch/typography rules are hard errors from day 1. `missing_min_touch_target` no longer accepts literal `minHeight: 44` / `56` as compliant.
+
+**Context:** User overruled Iris's softer rollout policy. Rationale: iPhone SE/mini widths combined with AX5 Dynamic Type make fixed 44pt touch targets feel cramped; `@ScaledMetric` lets the hit area grow.
+
+**Trade-offs:** Regex heuristic vs real semantic validation — SwiftLint cannot prove `@ScaledMetric`. Broader touch-target failures; justified exceptions must use per-line disable comment. Hard-error rollout with no grace period.
+
+**Consequences:** Layout/touch/typography rules stay at `severity: error`. `missing_min_touch_target` now flags literal touch-target floors. Strict lint baseline rises from 16 to **31 violations**.
+
+---
+
+### User directive — HIG layout rules are ERROR day 1, no literal exceptions
+
+**Date:** 2026-05-22T03:32:09-07:00
+**By:** yashasgujjar (via Copilot)
+
+Override Iris's "Error after grace period" severity bucket and allowed exception for `minHeight: 44` / `minHeight: 56`. New policy:
+
+1. **All HIG layout rules ship at `severity: error` on day 1.** No grace period.
+2. **No literal numbers in layout.** `.frame(minHeight: 44)` must be backed by `@ScaledMetric`.
+3. **The `missing_min_touch_target` rule regex must enforce `@ScaledMetric`** as backing, not literals.
+
+**Rationale:** Small screens + AX5 Dynamic Type make 44pt tap targets cramped. `@ScaledMetric` lets the target grow, which is what HIG intends.
+
+**Supersedes:** Iris's "Error after grace period" bucket and literal `44`/`56` exception.
+
+**Action:** Applied via Kwame: all HIG layout rules now `severity: error`, 31 baseline violations identified.
+
+---
+
+### Kwame decision — Loop-28 WI-1: chip/footer `minTap` migration
 ### 2026-05-22T03:32:09-07:00: User directive — HIG layout rules are ERROR day 1, no literal exceptions
 **By:** yashasg (via Copilot)
 **What:** Override Iris's "Error after grace period" severity bucket and her "allowed exception" carve-out for `minHeight: 44` / `minHeight: 56` HIG-touch-target floors. The new policy is:
@@ -4507,6 +4561,20 @@ Both WI-0 and WI-1 meet HIG compliance. All `@ScaledMetric` declarations verifie
 **Date:** 2026-05-22T13:00:00Z
 **Author:** Kwame (iOS Developer)
 **Branch:** `squad/wi-loop28-1-chip-footer-mintap`
+
+Migrated four literal `minHeight: 44` call sites in `app/Sources/UVBurnTimer/AppViews.swift` to `@ScaledMetric`-backed `minTap`:
+- `RootView.locationChip` Button (line 310)
+- `RootView.spfChip` Menu (line 330)
+- `RootView.skinTypeChip` Button (line 354)
+- `PersistentFooter` Label (line 2153)
+
+**Why:** PR #98's `missing_min_touch_target` regex anchors on `\bButton\s*(` and misses literals nested inside `} label: { ... }` closures. These four sites survived the baseline while still representing real Dynamic-Type-scaling debt.
+
+**Test coverage:** Added Group LU (LU1–LU5); LU5 is file-wide regex guard for `minHeight:\s*44\b` → zero matches. Removed R2; updated EJ4. Refreshed ADR-0001 line citations.
+
+**Verification:** `./build.sh` GREEN; all tests pass; SwiftLint strict 0 violations. UI tests 9/9 green on re-run (cold-start flakiness observed on first run; candidate for Loop-29 WI-2-flake).
+
+**SwiftLint blind spot:** Label-closure gap confirmed; scheduled for swift-syntax AST replacement.
 **Loop:** 28 / Work Item 1
 **Status:** Local commit ready. Not yet pushed (Coordinator-gated).
 
