@@ -1160,7 +1160,12 @@ private func unsuppressedNavigationLinkLinkViolations(
     let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
     let navLinkBracePattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*NavigationLink\\s\*\\\{[^']*'"#
     let navLinkParenPattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*NavigationLink\\s\*\\\([^']*'"#
-    let linkParenPattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*\bLink\\s\*\\\([^']*'"#
+    // Anchor on the YAML alternation token `|\bLink\s*\(` literally — the
+    // leading `\|` distinguishes the `Link` alternation from the sibling
+    // `NavigationLink` alternation without relying on a regex `\b` word
+    // boundary firing between `b` and `L` in the YAML source text (both are
+    // word chars in the literal `\bLink…`, so `\b` never matches there).
+    let linkParenPattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*\|\\bLink\\s\*\\\([^']*'"#
     let range = NSRange(source.startIndex..., in: source)
     #expect(
         try NSRegularExpression(pattern: navLinkBracePattern).firstMatch(in: source, range: range) != nil,
@@ -1172,7 +1177,7 @@ private func unsuppressedNavigationLinkLinkViolations(
     )
     #expect(
         try NSRegularExpression(pattern: linkParenPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `missing_min_touch_target` regex must include the `Link\\s*\\(` alternation. Iris loop-29 GAP-7 / WI-29-7."
+        ".swiftlint.yml `missing_min_touch_target` regex must include the `|\\bLink\\s*\\(` alternation token (anchored on the leading pipe to disambiguate from the sibling `NavigationLink` alternation). Iris loop-29 GAP-7 / WI-29-7."
     )
 }
 
