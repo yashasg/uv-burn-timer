@@ -420,12 +420,13 @@ final class ReduceMotionUnguardedAnimationRuleTests: XCTestCase {
     private func appSourcesPath() -> URL {
         // This test file lives at:
         //   tools/swiftlint-rules/Tests/SwiftLintASTRulesTests/<this>.swift
-        // Repo root is 4 levels up; app sources are at app/Sources/UVBurnTimer.
+        // Repo root is 4 directory-ups from the file's parent dir.
         URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // SwiftLintASTRulesTests
-            .deletingLastPathComponent() // Tests
-            .deletingLastPathComponent() // swiftlint-rules
-            .deletingLastPathComponent() // tools
+            .deletingLastPathComponent() // drop filename → …/SwiftLintASTRulesTests
+            .deletingLastPathComponent() // → …/Tests
+            .deletingLastPathComponent() // → …/swiftlint-rules
+            .deletingLastPathComponent() // → …/tools
+            .deletingLastPathComponent() // → repo root
             .appendingPathComponent("app/Sources/UVBurnTimer", isDirectory: true)
     }
 }
