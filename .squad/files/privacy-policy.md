@@ -152,11 +152,42 @@ listing's "Developer Information" section.
 - Audit lane: `BurnTimeCalculatorTests.swift` Group CC (Loop-11 WI-iris-c),
   Group EH (Loop-11 WI-plunder-m1).
 
+## 15. EU representative (GDPR Art.27)
+
+Article 27 of the EU General Data Protection Regulation requires
+controllers and processors established outside the European Union who
+offer goods or services to data subjects in the EU, EEA, or UK to
+designate a representative *in writing* within the Union (Art.27(1)).
+
+UV Burn Timer is published by a non-EU developer (sole developer; see
+"Developer" in §1). The Apple Weather pipeline transmits a rounded
+two-decimal coordinate to Apple each time the user taps **Use my
+location** or **Recalculate** (§4). Per the EDPB Guidelines 03/2021 on
+the territorial scope of the GDPR (§3.1), this processing is
+*not* "occasional" within the meaning of Art.27(2)(a), so the
+small-processor carve-out does not apply. A designated EU/EEA
+representative is therefore required before App Store distribution to
+EU, EEA, or UK storefronts.
+
+**Designated representative:** `{EU_REPRESENTATIVE_TBD}`
+
+The designated representative acts as a contact point for EU/EEA
+supervisory authorities and data subjects under Art.27(4). Once
+designated, the entry above will record the representative firm name,
+EU/EEA postal address, and contact email; data subjects in the EU,
+EEA, or UK may exercise their rights (§5) through the representative
+in addition to the developer-contact email in §13.
+
+For UK data subjects, the equivalent obligation arises under the UK
+GDPR Art.27 + the Data Protection Act 2018; the same representative
+may serve dual EU + UK roles where the rep firm holds the requisite
+contracts.
+
 ---
 
-## Automation status (WI-21-style — Plunder L01)
+## Automation status (WI-21-style — Plunder L01 + L02)
 
-This stub carries **two load-bearing placeholders** that an automated
+This stub carries **three load-bearing placeholders** that an automated
 agent or CI runner **cannot fill in**:
 
 - `{LAUNCH_DATE_TBD}` — the App Store launch date that goes in the
@@ -170,48 +201,66 @@ agent or CI runner **cannot fill in**:
   one. Faking the address would violate GDPR Art.12 transparency
   ("provide a means of contact") and App Store §5.1.1.4 ("provide
   clear and accessible information about your privacy practices").
+- `{EU_REPRESENTATIVE_TBD}` — the GDPR Art.27 designated EU/EEA
+  representative recorded in §15 (**Plunder L02 — Loop-15**). Article
+  27(1) requires a *written* designation between the controller and a
+  Union-established representative; no automated agent can sign that
+  contract on the repo owner's behalf or invent a representative firm.
+  Faking the value would violate Art.27(1) + Art.12 transparency, and
+  shipping to EU, EEA, or UK App Store storefronts without a real rep
+  designation would create direct supervisory-authority exposure.
 
 ### Why this gate is manual, not automated
 
-Both placeholders mark **information the repo owner is the only
+All three placeholders mark **information the repo owner is the only
 authoritative source for**. Unlike the in-app `ProductCopy` constants
 (which an automated agent can synchronise via the pre-existing
 substring guards in `BurnTimeCalculatorTests.swift` Group EH), these
-two values come from outside the codebase — the repo owner's App
-Store Connect account and email address.
+values come from outside the codebase — the repo owner's App Store
+Connect account, email address, and the legal contract with the
+designated EU/EEA Art.27 representative firm.
 
 A blank or unfilled placeholder is treated as **submission blocker**:
-shipping the App Store URL with literal `{LAUNCH_DATE_TBD}` or
-`{CONTACT_EMAIL_TBD}` would violate App Store §5.1.1.4 + GDPR
-Art.12 + UK ICO transparency guidance. The hosted policy URL must
-be filled before the App Store submission goes to review.
+shipping the App Store URL with literal `{LAUNCH_DATE_TBD}`,
+`{CONTACT_EMAIL_TBD}`, or `{EU_REPRESENTATIVE_TBD}` would violate
+App Store §5.1.1.4 + GDPR Art.12 + UK ICO transparency guidance, and
+(for the EU rep specifically) GDPR Art.27(1)'s written-designation
+requirement. The hosted policy URL must be filled before the App
+Store submission goes to review.
 
 ### Owner for the manual fill
 
-- **Plunder** (Legal & Compliance) drafts the replacement values and
-  countersigns the final policy.
-- **Repo owner** supplies the real launch date + contact email and
-  commits the redacted-into-real replacement before App Store
-  submission.
+- **Plunder** (Legal & Compliance) drafts the replacement values,
+  vets the chosen Art.27 representative firm against EDPB Guidelines
+  03/2021, and countersigns the final policy.
+- **Repo owner** supplies the real launch date + contact email +
+  designated EU representative (firm name, EU/EEA postal address,
+  contact email) and commits the redacted-into-real replacement before
+  App Store submission to EU/EEA/UK storefronts.
 
 ### Triggering event
 
 - The first App Store submission. From that point forward, every
-  policy update (substantive content change in §1–§13) bumps the
-  `disclaimerPolicyVersion` integer, refreshes the **Last updated**
-  date, and re-presents the in-app disclaimer cover on cold launch
-  (per §12).
+  policy update (substantive content change in §1–§13 or §15) bumps
+  the `disclaimerPolicyVersion` integer, refreshes the **Last
+  updated** date, and re-presents the in-app disclaimer cover on cold
+  launch (per §12). A change to the designated EU representative is
+  treated as a material change because it modifies the data-subject
+  contact path under Art.27(4).
 
-### Until both TBDs are filled
+### Until all three TBDs are filled
 
-The contract test
-`test_S6_privacyPolicyTBDsCarryAutomationStatusBlock` (in
-`BurnTimeCalculatorTests.swift`) keeps the placeholders visible by
-asserting the literal markers remain present alongside this block.
-That guard fails CI if a future agent silently replaces them with
+The contract tests
+`test_S6_privacyPolicyTBDsCarryAutomationStatusBlock` (covering the
+two §S6 placeholders) and
+`test_U1_privacyPolicyDeclaresEURepresentativeSectionWithTBDPlaceholder`
+(covering the §15 EU-rep placeholder) keep the markers visible by
+asserting the literal strings remain present alongside this block.
+Those guards fail CI if a future agent silently replaces them with
 fake values; the next build cycle whose owner has the real launch
-date + email must fill the placeholders before the policy URL goes
-live, then update the test (or remove the contract) in the same MR.
+date + email + EU rep designation must fill the placeholders before
+the policy URL goes live, then update each test (or retire the
+contract) in the same MR.
 
 A blank `Automation status` block — or a quietly replaced TBD with
 no companion test update — is treated as **fail** by the
