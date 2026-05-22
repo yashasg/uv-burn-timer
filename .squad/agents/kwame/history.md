@@ -321,3 +321,107 @@ should land green now that the rule exists upstream.
 2. **iOS 26 `.topBarTrailing` settle is async w.r.t. nav-bar arrival** — assert composition stability via "both items hittable in same UI snapshot" before per-item hittability, not after. Same class of fix as Loop-20 cover-chain `tapWithRetry`, hoisted up one composition layer (toolbar vs. fullScreenCover).
 3. **Local sim infra is unreliable for repeat-loop validation** — Mach -308 simulator runner crashes recurred deterministically across `./build.sh` invocations in this cycle. Defer confidence-gathering to CI rather than burning N×5min retry cycles on the host.
 4. **Concurrent-agent branch chaos requires defensive fetch+stash discipline** — main moved twice during this session (Scribe iter-2 close + Gaia Loop-30 PR #112 merge) and my squad branch was momentarily reset by another agent's branch tip. Always `git fetch github` + verify HEAD + `git stash -u` before any rebuild, and re-verify branch tip after long-running builds.
+## 2026-05-22T19:00:00Z: WI-loop30-1 — toolbar UI-test flake patch implemented; push/CI blocked by host
+
+WI-loop30-1 (Stabilize toolbar UI-test flake on iOS 26.4 simulator):
+Implemented Ma-Ti's GAP-iter2-B plan exactly on branch
+`squad/wi-loop30-1-ui-flake-stabilization` at commit `758e784`
+(branched from `85080a8`). Three additive XCUITest-only edits (no SUT
+touched), +35 / −3 LOC. **Patch is local-only — not pushed, no PR, no
+CI signal, no merge.**
+
+The patch:
+
+1. New helper `waitForToolbarSettled(in:timeout:)` polls BOTH
+   `buttons["Settings"]` AND `buttons.matching("EstimateInfoButton")
+   .firstMatch` for `exists && isHittable` in a single 100 ms-cadence
+   loop, returning one `Bool` the caller XCTAsserts.
+2. `acknowledgeDisclaimerAndChooseTypeIII` now `XCTAssertTrue`s
+   `waitForToolbarSettled(timeout: 10)` instead of discarding a
+   single-item `_ = waitForHittable(...)`.
+3. Round-trip test's tail uses `XCTNSPredicateExpectation(predicate:
+   NSPredicate(format: "exists == false"), object: navigationBars[
+   "About & Citations"])` waited via `XCTWaiter.wait(timeout: 5)`,
+   replacing the immediate `XCTAssertFalse(...exists)` that raced
+   the pop-animation tail.
+
+Hand-off detail in `.squad/decisions/inbox/kwame-wi-loop30-1-noop.md`.
+
+### Learnings
+
+- **Never leave XCUITest patch edits uncommitted between tool calls
+  in a shared workspace.** A concurrent peer agent in this workspace
+  ran `git checkout` mid-session, twice silently discarding our
+  uncommitted working-tree edits to `UVBurnTimerUITests.swift` and
+  `kwame/history.md`. Protocol: `git add && git commit` immediately
+  after the edit batch, before any other shell operation.
+- **XCUI multi-trailing-item hittability idiom.** When asserting
+  hittability of >1 `.topBarTrailing` item on iOS 26+, the helper
+  must poll **both** items together in a single `Bool`-returning loop
+  the caller XCTAsserts. Polling one (and worse, discarding the
+  result) leaks the layout-race into whichever assertion the test
+  writes next — the canonical "one-or-the-other" flake.
+- **`XCTNSPredicateExpectation` for animation-tail "doesn't exist"
+  assertions.** SwiftUI `NavigationStack` pop animations on iOS 26.4
+  can leave the popped nav bar in the a11y tree one frame after the
+  underlying screen's nav bar reappears. `NSPredicate(format: "exists
+  == false")` + `XCTWaiter.wait` is the symmetric counterpart to
+  `waitForExistence(timeout:)` and should be default for any post-pop
+  "gone" check in this codebase.
+- **`./build.sh` is brittle to host `dirhelper`/userdir I/O faults.**
+  `xcodebuild` calls `confstr(_CS_DARWIN_USER_CACHE_DIR)` very early
+  in startup; when that returns `EIO`, xcodebuild aborts before any
+  scheme resolution (Abort trap: 6 / rc=134). No CLI escape hatch.
+  If `getconf DARWIN_USER_CACHE_DIR` fails for >2 minutes, abandon
+  local sim verification for the session and lean on CI.
+
+## 2026-05-22T19:30:00Z: WI-loop30-1 — pushed + PR #114 opened
+
+Drained the push-queue entry now that `gh` is authenticated
+(`yashasg` on github.com). Branch
+`squad/wi-loop30-1-ui-flake-stabilization` (HEAD `a9dc664`) is
+pushed to the `github` remote; PR **#114**
+(https://github.com/yashasg/uv-burn-timer/pull/114) opened
+against `main` with body copied verbatim from `push-queue.md`.
+Rebase was a no-op — branch was already ahead of
+`github/main@d0bb752`. CI runs **26309680580** (pull_request)
+and **26309668853** (push) kicked off; not blocked-on per
+hand-off protocol.
+
+### Learnings
+
+- **`github` vs `origin` matters here.** This repo wires
+  `github` → GitHub and `origin` → GitLab. Every push/PR
+  command must name `github` explicitly; `git push -u origin …`
+  would silently land on the wrong forge. Worth a one-line
+  guardrail in any future per-repo `.squad/` README.
+- **`gh pr create --body-file` over heredoc.** Multi-paragraph
+  PR bodies copied from the push-queue go through cleanest as a
+  scratch file under `.squad/.scratch/` (NEVER `/tmp` — runtime
+  rejects it), passed via `--body-file`, then deleted. Zero
+  shell-quoting hazard, zero residue in the tree.
+- **A `git fetch` + `github/main..HEAD` check is a 2-second
+  insurance policy.** Confirmed no rebase needed before pushing;
+  prevented a wasted force-push round-trip if the branch had
+  drifted. Always do it before `git push -u`.
+
+## 2026-05-22T19:50Z — PR #114 rebase on post-#111 main (mechanical reconciliation)
+
+PR #111 squash-merged to `main` at `c3f2bbc`; PR #114 flipped to `CONFLICTING` on `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`. Pre-rebase HEAD `e7c8ab4` → rebased onto `github/main` → post-rebase HEAD `2074035` → force-with-lease push (`a9dc664...2074035`). PR #114 now `mergeable: MERGEABLE` (mergeStateStatus `UNSTABLE` while CI 26310521349 + 26310522801 run).
+
+### Conflict shape
+
+Both sides added a "wait for both `.topBarTrailing` items to settle" helper at the same file location. Different signatures, complementary uses:
+
+- `waitForMainToolbarSettled` (PR #111) → returns `ToolbarSettleSnapshot` struct; used by tests that interrogate per-button existence/hittability.
+- `waitForToolbarSettled` (PR #114, my 758e784) → returns `Bool`; used as setup-time gate inside `acknowledgeDisclaimerAndChooseTypeIII`.
+
+Resolution: KEPT BOTH. No test logic invented; no tests deleted. Added a doc-comment cross-reference on the Bool variant.
+
+### Learnings
+
+1. **Rebase, not merge, when base is squash-merged.** GitHub's squash collapses N commits into 1 with a new SHA; my branch's old base commits no longer exist in history. A merge would create a 2nd copy of the work on a parallel history line — confusing reviewers and producing a duplicate squash-merge later. Rebase replays the leaf commits onto the new SHA cleanly. The PR's `MERGEABLE` flip after force-push confirms this is what reviewers expect.
+2. **`--force-with-lease` discipline.** Always pair force-push with `--force-with-lease` so a concurrent agent push to the same branch tip aborts the push instead of overwriting their commits. In this session a fresh-fetch + immediate rebase + immediate push made the window small; the lease flag would have caught any racing push.
+3. **Two helpers with overlapping intent are fine if call sites diverge.** Tempting to consolidate `waitForToolbarSettled` (Bool) into `waitForMainToolbarSettled` (struct) — but the Bool gate is what `XCTAssertTrue(...)` wants, and the struct lets per-button assertions pinpoint *which* button missed. Consolidation would either lose per-button blame in error messages or force every caller to read snapshot fields. Mechanical-reconciliation rule: when in doubt during conflict resolution, KEEP BOTH and let a future PR consolidate if it's actually warranted. Don't invent design in a rebase.
+4. **Build-for-testing is the right smoke for a test-file-only rebase.** Full sim suite is ~5 min × N flakes; `xcodebuild build-for-testing` is ~30s and proves the merged Swift compiles in the UI test target. CI runs the real thing — don't double-spend the local box.
+5. **Stash-list discipline.** This repo has 40+ accumulated stashes from agents that didn't drop after recovery. None of mine added this session, but the inventory is becoming a hazard — a future cleanup pass should `git stash drop` everything older than 7 days.

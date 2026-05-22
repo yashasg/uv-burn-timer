@@ -253,8 +253,16 @@ final class UVBurnTimerUITests: XCTestCase {
             app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10),
             "Tapping back from About must restore the main \"UV Burn Timer\" navigation bar"
         )
-        XCTAssertFalse(
-            app.navigationBars["About & Citations"].exists,
+        // Wait for the pop animation's tail — the About nav bar can linger one frame
+        // after the main bar appears on iOS 26.4 sim, flaking an immediate
+        // `XCTAssertFalse(...exists)`. Use a predicate expectation per Ma-Ti's plan.
+        let aboutGone = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: app.navigationBars["About & Citations"]
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [aboutGone], timeout: 5),
+            .completed,
             "About navigation bar must be gone after popping back to the main screen"
         )
     }
@@ -286,7 +294,10 @@ final class UVBurnTimerUITests: XCTestCase {
         continueButton.tap()
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 15))
-        _ = waitForHittable(app.buttons.matching(identifier: "EstimateInfoButton").firstMatch, timeout: 5)
+        XCTAssertTrue(
+            waitForToolbarSettled(in: app, timeout: 10),
+            "Both toolbar trailing items must settle to hittable before tests proceed."
+        )
     }
 
     private func acknowledgeDisclaimer(in app: XCUIApplication) {
@@ -383,6 +394,32 @@ final class UVBurnTimerUITests: XCTestCase {
             settingsHittable: settingsButton.exists && settingsButton.isHittable,
             infoHittable: infoButton.exists && infoButton.isHittable
         )
+    }
+
+    /// WI-loop30-1: Polls until BOTH `.topBarTrailing` items (Settings gear + EstimateInfoButton)
+    /// are simultaneously `exists && isHittable`. On iOS 26.4 the large-title →
+    /// inline-title animation can leave one of the two trailing items present-but-not-
+    /// hittable while the layout engine finishes, producing a one-or-the-other flake.
+    /// Mirrors `waitForHittable` semantics but covers both items in a single loop so
+    /// the caller asserts a single `Bool`. See Ma-Ti's GAP-iter2-B investigation.
+    ///
+    /// Companion to `waitForMainToolbarSettled` (WI-loop29-5): this Bool-returning
+    /// variant is used as a setup-time gate inside helper flows (e.g.
+    /// `acknowledgeDisclaimerAndChooseTypeIII`), while the snapshot-returning helper
+    /// is used by tests that need to interrogate per-button existence/hittability.
+    private func waitForToolbarSettled(in app: XCUIApplication, timeout: TimeInterval) -> Bool {
+        let settingsGear = app.buttons["Settings"]
+        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if settingsGear.exists && settingsGear.isHittable
+                && infoButton.exists && infoButton.isHittable {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return settingsGear.exists && settingsGear.isHittable
+            && infoButton.exists && infoButton.isHittable
     }
 
     private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
