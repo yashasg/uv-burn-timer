@@ -90,3 +90,5 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
 **Argos (monetization) perspective:** Loop-28 shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper). All HIG-only changes; no pricing, StoreKit, paywall surfaces, or App Store listing touched. $2.99 one-time wedge, 90-day no-IAP guardrail, and break-even math all intact. No monetization domain changes.
 
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
+
+### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.

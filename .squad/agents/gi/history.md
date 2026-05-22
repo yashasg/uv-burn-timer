@@ -29,3 +29,5 @@ Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always
 - **5 carry-forward observations** (none regression): D1 coordinator/app refresh-logic drift, D2 silent save-error in coordinator, D3 schema-mismatch-while-offline UX gap, D4 isStale not time-injected, D5 no auto-retry on transient WeatherKit failures.
 - **3 Loop-31 WIs proposed:** D1 (reconcile coordinator+app, Med/M, Kwame), D2 (dataCorrupted banner state, Low/S, Iris+Kwame), D3 (single jittered auto-retry, Low/S, Kwame).
 - Written to `.squad/decisions/inbox/gi-loop30-data-verdict.md`.
+
+### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.

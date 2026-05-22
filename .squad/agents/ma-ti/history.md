@@ -107,3 +107,5 @@ First batch-1 rule from Iris's WI-loop30-4 cluster (rule #2, High/S — the smal
 - ToolbarImage-style visitor scaffold ports cleanly across rules — parent-walking + silent-closure-ID stack + modifier-chain inspection is a reusable template. ADR-0003 §Rollout WI-30-B hypothesis confirmed at N=2 rules.
 - Co-tenant repo hazard: a parallel agent (on `squad/wi-loop30-ast-ly-retire-regex`) `git checkout`-stomped the working dir mid-session, blowing away an untracked impl file. Mitigation for future sessions: commit early (even WIP), or work in a dedicated worktree.
 - Iris's FP scan is AppViews-only by default. Future scope memos for rules whose target surface spans multiple files should explicitly enumerate the scan scope so the TDD harness can be sized correctly upfront.
+
+### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.

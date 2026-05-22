@@ -40,3 +40,5 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
 **Wheeler (skin science) perspective:** Loop-28 shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper). All HIG-only changes; no UVI formula, phototype personalization, or attribution copy touched. Persona overlays (LANE 4: Greta / Maya / Devon / Asha / Tomás) remain unchanged and on-canvas. No new science gaps surfaced. All 31 prior violations (from Loop-26/27) resolved. Carry-forward: WI-2-flake investigation (UI cold-start timing race).
 
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
+
+### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.

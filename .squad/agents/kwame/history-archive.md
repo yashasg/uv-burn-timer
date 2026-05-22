@@ -1,146 +1,50 @@
-# Kwame — History Archive
 
-Archived entries from earlier cycles:
+1. **Rebase, not merge, when base is squash-merged.** GitHub's squash collapses N commits into 1 with a new SHA; my branch's old base commits no longer exist in history. A merge would create a 2nd copy of the work on a parallel history line — confusing reviewers and producing a duplicate squash-merge later. Rebase replays the leaf commits onto the new SHA cleanly. The PR's `MERGEABLE` flip after force-push confirms this is what reviewers expect.
+2. **`--force-with-lease` discipline.** Always pair force-push with `--force-with-lease` so a concurrent agent push to the same branch tip aborts the push instead of overwriting their commits. In this session a fresh-fetch + immediate rebase + immediate push made the window small; the lease flag would have caught any racing push.
+3. **Two helpers with overlapping intent are fine if call sites diverge.** Tempting to consolidate `waitForToolbarSettled` (Bool) into `waitForMainToolbarSettled` (struct) — but the Bool gate is what `XCTAssertTrue(...)` wants, and the struct lets per-button assertions pinpoint *which* button missed. Consolidation would either lose per-button blame in error messages or force every caller to read snapshot fields. Mechanical-reconciliation rule: when in doubt during conflict resolution, KEEP BOTH and let a future PR consolidate if it's actually warranted. Don't invent design in a rebase.
+4. **Build-for-testing is the right smoke for a test-file-only rebase.** Full sim suite is ~5 min × N flakes; `xcodebuild build-for-testing` is ~30s and proves the merged Swift compiles in the UI test target. CI runs the real thing — don't double-spend the local box.
+5. **Stash-list discipline.** This repo has 40+ accumulated stashes from agents that didn't drop after recovery. None of mine added this session, but the inventory is becoming a hazard — a future cleanup pass should `git stash drop` everything older than 7 days.
 
-# Kwame — History (Summarized)
+**2026-05-22T20:30:00Z** — Loop-30 iter-2 closure: PR #114 merged (5b899df), PR #111 merged (c3f2bbc), cross-agent review discipline held, UI-runner flake corpus ready for WI-30-1 dispatch.
 
-**Latest Status (2026-05-22T03:32:09-07:00):** Loop-26 closure complete. PR #98 merged as a8b1ac8. SwiftLint HIG hard-gate live on main. Applied Iris playbook across 3 commits (66cc6c9 TDD, a643523 FPV, 174be71 AV). All 31 violations resolved (13 FPV + 18 AV). CI green. Post-merge audit PASS-WITH-NOTES.
+## 2026-05-22T20:55:00Z — WI-loop30-4a-iris-3sites: fix 3 SF Symbol a11y sites per Iris catalog (PR #120)
 
-**Previous Status (2026-05-21T04:40:00Z):** Main screen cleanup (K-1 through K-11) shipped. Removed photosensitization banner, added ⓘ toolbar button, flattened PersistentFooter, simplified status messages. Build: clean, 114 unit tests passing.
+Iris's image-a11y fixture catalog (`.squad/decisions/inbox/iris-image-accessibility-fixtures.md`) classified three `app/Sources/` sites as POSITIVE under the upcoming `image_systemname_missing_accessibility_label` AST rule. All three are P5 shape — bare `Image(systemName:)` adjacent to a `Text`/`Label` sibling — leaking the SF Symbol name through VoiceOver, violating WCAG SC 1.1.1. This PR is the hard prerequisite for PR #119's revised landing per Gaia's adjudication (`gaia-pr119-adjudication.md`).
 
----
+**Sites fixed:**
 
-## Key Implementations
+1. `app/Sources/UVBurnTimer/AppViews.swift:1152` (TierBadge accessory `differentiateWithoutColor` glyph) — `.accessibilityHidden(true)` on the `Image`. The sibling `Label(title, systemImage:)` already announces the tier; the accessory is purely visual.
+2. `app/Sources/UVBurnTimer/ForecastPickerView.swift:209` (stale-banner spinner, `arrow.clockwise`) — `.accessibilityElement(children: .combine)` + `.accessibilityLabel("Updating forecast")` on the parent `HStack`. Banner is a single status announcement.
+3. `app/Sources/UVBurnTimer/ForecastPickerView.swift:230` (refresh-error banner, `exclamationmark.icloud`) — `.accessibilityElement(children: .combine)` + `.accessibilityLabel("Could not update forecast")` on the parent `HStack`. Retry `Button` remains focusable (combine respects controls).
 
-### Loop-26 HIG Cleanup (PR #98)
+**TDD:** new file `app/Tests/UVBurnTimerCoreTests/ImageSystemNameAccessibilityContractTests.swift` with three `@Test` cases (`test_A11Y_1/2/3`). Source-scan contract per WI brief — slices around each `Image(systemName:)` expression and asserts the expected accessibility modifier appears. RED confirmed pre-edit; GREEN confirmed post-edit under `./build.sh`. Wired into `app/app.xcodeproj/project.pbxproj` (XCUI + SPM both see it; `scripts/check-test-membership.sh` clean).
 
-**Commits:**
-- **66cc6c9** — TDD group R guards (MainScreenCleanupContractTests.swift) — 5 source-text contracts (R1–R5) pinning @ScaledMetric presence and literal absence
-- **a643523** — ForecastPickerView.swift HIG cleanup (FPV-1 through FPV-13) — 15 @ScaledMetric identifiers, all 13 violations resolved
-- **174be71** — AppViews.swift HIG cleanup (AV-1 through AV-18) — 5 struct @ScaledMetric declarations, all 18 violations + navigation_stack_in_sheet fixed
+**Side-effect:** Adding `.accessibilityHidden(true)` to TierBadge shifted lines below 1152 by +1, breaking `test_S5_adr0001CitationsMatchLiveSourceLineNumbers`. Bumped ADR-0001 PersistentFooter `AboutView` push citation: `line **2170**` → `line **2171**`, body block `2169–2171` → `2170–2172`. S5 now passes. All other ADR-0001 anchors are above line 1152 and unaffected.
 
-**Playbook fidelity:** All FPV/AV sections implemented faithfully. 4 additional swiftlint:disable comments added (AV-12, 13, 15, 16) — justified by 200-char regex lookahead constraint, not HIG softening. Pre-existing out-of-scope chip/footer literal minHeight:44 sites deferred as Loop-27 WI-1.
+**Verification:** `./build.sh` — SwiftLint HIG gate ✓ (0 violations), AST gate ✓ (0 violations), Debug + Release builds clean, all `UVBurnTimerCoreTests` pass (including new A11Y-1/2/3 and refreshed S5). One pre-existing UI-test flake (`testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor`) also fails on `github/main` baseline — unrelated to this change.
 
-### Main Screen Cleanup (WI prior)
+**Scope guardrails:** `tools/swiftlint-rules/` untouched (Gaia's territory), `.swiftlint.yml` untouched, PR #119 not modified. 3 sites + 1 contract-test file + 1 ADR line-number refresh + 1 pbxproj wiring.
 
-**K-1 through K-11 shipped:**
-- K-1: Removed `photosensitizationBanner` (37-line computed property)
-- K-2: Added ⓘ toolbar button with NavigationLink to AboutView
-- K-6: Flattened `PersistentFooter` to pure NavigationLink
-- K-7/K-8/K-9: Removed verdict caveats, simplified location rationale
-- K-10/K-11: Added `aboutSunSafetyActions` constants to satisfy Plunder C2
+**PR #120:** https://github.com/yashasg/uv-burn-timer/pull/120 — CI runs `26312959589` (push) and `26313088707` (PR) in flight at write time. Decision-inbox file: `.squad/decisions/inbox/kwame-iris-3sites-opened.md` (full before/after snippets, HIG choice per site, CI capture).
 
-**Test integration:** Groups N–Q (8 new tests) guard main screen cleanup contracts. Source-text guards (@filePath + grep) used for cross-target verification.
+### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
 
----
+1. **Rebase, not merge, when base is squash-merged.** GitHub's squash collapses N commits into 1 with a new SHA; my branch's old base commits no longer exist in history. A merge would create a 2nd copy of the work on a parallel history line — confusing reviewers and producing a duplicate squash-merge later. Rebase replays the leaf commits onto the new SHA cleanly. The PR's `MERGEABLE` flip after force-push confirms this is what reviewers expect.
+2. **`--force-with-lease` discipline.** Always pair force-push with `--force-with-lease` so a concurrent agent push to the same branch tip aborts the push instead of overwriting their commits. In this session a fresh-fetch + immediate rebase + immediate push made the window small; the lease flag would have caught any racing push.
+3. **Two helpers with overlapping intent are fine if call sites diverge.** Tempting to consolidate `waitForToolbarSettled` (Bool) into `waitForMainToolbarSettled` (struct) — but the Bool gate is what `XCTAssertTrue(...)` wants, and the struct lets per-button assertions pinpoint *which* button missed. Consolidation would either lose per-button blame in error messages or force every caller to read snapshot fields. Mechanical-reconciliation rule: when in doubt during conflict resolution, KEEP BOTH and let a future PR consolidate if it's actually warranted. Don't invent design in a rebase.
+4. **Build-for-testing is the right smoke for a test-file-only rebase.** Full sim suite is ~5 min × N flakes; `xcodebuild build-for-testing` is ~30s and proves the merged Swift compiles in the UI test target. CI runs the real thing — don't double-spend the local box.
+5. **Stash-list discipline.** This repo has 40+ accumulated stashes from agents that didn't drop after recovery. None of mine added this session, but the inventory is becoming a hazard — a future cleanup pass should `git stash drop` everything older than 7 days.
 
-## Learnings
+**2026-05-22T20:30:00Z** — Loop-30 iter-2 closure: PR #114 merged (5b899df), PR #111 merged (c3f2bbc), cross-agent review discipline held, UI-runner flake corpus ready for WI-30-1 dispatch.
 
-### SwiftLint Implementation (Loop-26)
+## 2026-05-22T20:55:00Z — WI-loop30-4a-iris-3sites: fix 3 SF Symbol a11y sites per Iris catalog (PR #120)
 
-- **User directive superseded Iris's softer policy:** hard-error day 1, no grace period, no literal exceptions. All HIG layout/touch/typography rules at `severity: error` from day 1.
-- **@ScaledMetric backing required:** `missing_min_touch_target` no longer accepts literal minHeight:44/56. Regex heuristic checks for nearby `.frame(...minWidth|minHeight: someIdentifier)` — pragmatic proxy for @ScaledMetric, not proof.
-- **200-char regex lookahead is a real constraint:** Multi-line Button bodies push `.frame()` past the window. Justified disable comments with prose explanation required.
-- **Loop-28 follow-ups identified:** (1) Residual literal minHeight:44 at AppViews:295/315/337/2135 in Button/Menu/NavigationLink wrappers. (2) ForecastPickerView header minHeight:28. (3) Semantic-font vs. ScaledMetric choice needs annotation. (4) Schedule swift-syntax AST replacement for missing_min_touch_target. (5) Line-number-fragile tests need symbol anchors.
+Iris's image-a11y fixture catalog (`.squad/decisions/inbox/iris-image-accessibility-fixtures.md`) classified three `app/Sources/` sites as POSITIVE under the upcoming `image_systemname_missing_accessibility_label` AST rule. All three are P5 shape — bare `Image(systemName:)` adjacent to a `Text`/`Label` sibling — leaking the SF Symbol name through VoiceOver, violating WCAG SC 1.1.1. This PR is the hard prerequisite for PR #119's revised landing per Gaia's adjudication (`gaia-pr119-adjudication.md`).
 
-### Main Screen Cleanup (WI prior)
+**Sites fixed:**
 
-- **Avoid redeclaration errors:** grep for constant names before adding ProductCopy.swift entries.
-- **Toolbar placement:** `.primaryAction` (far trailing) + `.topBarTrailing` coexist cleanly; ⓘ sits left of gear button.
-- **LocationRationaleCard removal logic:** When app requests only approximate location (kCLLocationAccuracyReduced), OS dialog is self-explanatory. In-app rationale card adds UX friction with no privacy benefit.
+1. `app/Sources/UVBurnTimer/AppViews.swift:1152` (TierBadge accessory `differentiateWithoutColor` glyph) — `.accessibilityHidden(true)` on the `Image`. The sibling `Label(title, systemImage:)` already announces the tier; the accessory is purely visual.
+2. `app/Sources/UVBurnTimer/ForecastPickerView.swift:209` (stale-banner spinner, `arrow.clockwise`) — `.accessibilityElement(children: .combine)` + `.accessibilityLabel("Updating forecast")` on the parent `HStack`. Banner is a single status announcement.
+3. `app/Sources/UVBurnTimer/ForecastPickerView.swift:230` (refresh-error banner, `exclamationmark.icloud`) — `.accessibilityElement(children: .combine)` + `.accessibilityLabel("Could not update forecast")` on the parent `HStack`. Retry `Button` remains focusable (combine respects controls).
 
----
-
-## 2026-05-22: Loop-26 closure — PR #98 merged (a8b1ac8)
-
-SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 13 + AV 18). Issues #95/#96 closed. Post-merge audit PASS-WITH-NOTES (5 structural rule-coverage gaps deferred to Loop-28+). Privacy Policy hosting and physical-device sign-offs remain user-owned blockers.
-
-**Commits:** 66cc6c9 (TDD), a643523 (FPV), 174be71 (AV) → merged as a8b1ac8
-
----
-
-## 2026-05-22T12:35:00Z: Loop-28 WI-0 — RootView toolbar @ScaledMetric floor (AV-19/AV-20)
-
-Fixed three regressed XCUITests on Xcode 26.4 / iPhone 17 Pro / iOS 26.4:
-`testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor`,
-`testEstimateInfoNavigationRoundTripReturnsToMainScreen`,
-`testSettingsSheetOpens`.
-
-**Root cause.** PR #98 (AV-1..AV-18) gave virtually every Button in the
-app a `@ScaledMetric private var minTap` + `.frame(minHeight: minTap)`
-HIG floor — except the two RootView toolbar items (gear `Button` and
-`EstimateInfoButton` `NavigationLink`), whose labels are just a single
-SF Symbol `Image`. On iOS 26.4 Liquid Glass nav-bar treatment, a
-toolbar item with only a ~22 pt Image label is composited with a
-hit-test rectangle so tight that `XCUIElement.isHittable` returns
-false. ADR-0002's prior fix (`.primaryAction` → `.topBarTrailing`) is
-necessary but, on iOS 26.4, no longer sufficient. Iris's GAP-2/GAP-3
-(Loop-28+) already noted that `missing_min_touch_target` doesn't cover
-`NavigationLink` or trailing-closure `Button` forms — these two
-toolbar items are exactly that blind spot.
-
-**Fix.** Two minimum-diff edits to `AppViews.swift`:
-
-- **AV-19** — added `@ScaledMetric private var minTap: CGFloat = 44`
-  to `struct RootView` (with an explanatory comment + LT test
-  reference).
-- **AV-20** — applied `.frame(minWidth: minTap, minHeight: minTap)`
-  to the gear `Image(systemName: "gearshape")` and the
-  EstimateInfoButton `Image(systemName: "info.circle")`.
-
-**TDD discipline.** Wrote Group LT (Loop-Twenty-eight) source-text
-contract tests in `MainScreenCleanupContractTests.swift` first
-(LT1/LT2/LT3), confirmed RED, then applied AV-19/AV-20. LT1 anchors
-specifically to RootView's body via a substring-bounded slice
-(struct-opener → next `\nstruct `) — the pre-existing R1 guard at
-file-level was insufficient because it didn't scope to the
-declaring struct.
-
-**ADR-0001 drift.** `test_S5_adr0001CitationsMatchLiveSourceLineNumbers`
-fired after the fix shifted every downstream line in `AppViews.swift`
-by ~2 lines (AV-19 declaration + .frame additions). Refreshed all
-References + Addendum + worked-example line citations and added a
-Loop-28 WI-0 line-number-refresh paragraph at the bottom of the
-References section to keep the audit trail intact.
-
-**AV-9 red herring.** The original prompt hypothesised that PR #98's
-`.sheet`→`.fullScreenCover` swap in `DisclaimerCover` was the cause.
-It is not — that cover is internal to `DisclaimerCover`'s "see About"
-link and never on the failing tests' path (they acknowledge the
-disclaimer first). Kept `.fullScreenCover` as-is.
-
-**Verification.** Core unit suite green (incl. LT1/LT2/LT3 + S5
-refreshed citation gate). All originally-failing UI tests pass
-individually and on re-run in the full UI suite. Suite-level
-"TEST FAILED" exit remains attributable to the documented
-IOHIDLib.kext arch-mismatch flake (`have x86_64,arm64e need arm64`)
-that occasionally restarts the test runner mid-suite — orthogonal to
-this fix.
-
-**Files touched:**
-- `app/Sources/UVBurnTimer/AppViews.swift` — AV-19/AV-20.
-- `app/Tests/UVBurnTimerCoreTests/MainScreenCleanupContractTests.swift`
-  — Group LT (LT1/LT2/LT3).
-- `.squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md`
-  — line-citation refresh + Loop-28 WI-0 audit-trail paragraph.
-- `.squad/decisions/inbox/kwame-loop28-wi0-ui-test-fix.md` — decision
-  drop for Iris.
-
-### Learnings (added to ## Learnings)
-
-- **iOS 26.4 Liquid Glass extends ADR-0002's hittability concern.**
-  `.topBarTrailing` is necessary but not sufficient: any toolbar item
-  whose label is just an `Image` needs a `@ScaledMetric` 44 pt frame
-  on the inner `Image` to keep `XCUIElement.isHittable` true.
-- **@ScaledMetric floor must cover every Button-shaped control,
-  including `NavigationLink` and toolbar `Button { Image(...) }`
-  forms.** Iris's GAP-2/GAP-3 was right; we paid the bill in Loop-28.
-- **Source-text contract tests must anchor to the declaring struct,
-  not file-level.** Non-greedy regex `[\s\S]*?` still matches into
-  sibling structs and silently passes; a substring slice between the
-  struct opener and the next `\nstruct ` is the correct primitive.
-- **ADR line-citation drift is detected by `test_S5_*` — refresh it
-  whenever AppViews.swift grows.** A two-line drift was enough to red
-  the suite.
-
-
+**TDD:** new file `app/Tests/UVBurnTimerCoreTests/ImageSystemNameAccessibilityContractTests.swift` with three `@Test` cases (`test_A11Y_1/2/3`). Source-scan contract per WI brief — slices around each `Image(systemName:)` expression and asserts the expected accessibility modifier appears. RED confirmed pre-edit; GREEN confirmed post-edit under `./build.sh`. Wired into `app/app.xcodeproj/project.pbxproj` (XCUI + SPM both see it; `scripts/check-test-membership.sh` clean).

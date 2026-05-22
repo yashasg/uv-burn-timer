@@ -118,3 +118,5 @@ The rule is intentionally conservative — it does not honor "implicit decoratio
 - `AccessibilityRotorEntry` / `accessibilityChildren` — out of scope for batch-1.
 
 No code changes to `app/` or `.swiftlint.yml` made (per scope constraint). Catalog is the deliverable.
+
+### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
