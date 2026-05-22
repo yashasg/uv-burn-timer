@@ -989,13 +989,26 @@ struct HeroTimerCard: View {
             .minimumScaleFactor(0.5)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
 
+        // WI-bundleV / Iris L04 (Loop-15) — the parent HeroTimerCard
+        // applies `.accessibilityElement(children: .contain) +
+        // .accessibilityLabel(HeroAccessibilitySummary.text(...))`,
+        // and that curated summary already speaks
+        // `estimate.accessibilitySummary` verbatim. Re-attaching the
+        // same summary as an inner accessibility label here would
+        // double-bind VoiceOver: the screen-reader user would hear
+        // the burn-time once at the container and again on swipe
+        // into the static numeric. `.accessibilityHidden(true)` drops
+        // the static numeric out of the VoiceOver tree while keeping
+        // `.accessibilityIdentifier(estimate.displayText)` for XCUI
+        // pickup (identifier metadata persists through hidden
+        // elements). Pinned by `test_V3_heroTimerCardEstimateTextIsHiddenFromVoiceOverToAvoidParentLabelDoubleBind`.
         if accessibilityReduceMotion {
             text
-                .accessibilityLabel(estimate.accessibilitySummary)
+                .accessibilityHidden(true)
                 .accessibilityIdentifier(estimate.displayText)
         } else {
             text.contentTransition(.numericText())
-                .accessibilityLabel(estimate.accessibilitySummary)
+                .accessibilityHidden(true)
                 .accessibilityIdentifier(estimate.displayText)
         }
     }
