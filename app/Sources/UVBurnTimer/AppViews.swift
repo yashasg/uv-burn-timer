@@ -44,6 +44,14 @@ struct RootView: View {
     // Prevents system snap-to-nearest from overriding an explicit user choice.
     @State private var selectedDateIsUserOverridden: Bool = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    // Loop-28 WI-0 / AV-19 — toolbar items need an explicit @ScaledMetric-
+    // backed touch-target floor. Without this declaration on RootView,
+    // the gear and EstimateInfoButton are composited by iOS 26.4 Liquid
+    // Glass with a hit-test rectangle so tight that
+    // `XCUIElement.isHittable` returns false, regressing three XCUI tests
+    // (testEstimateInfoButtonOpensAboutWith…, …NavigationRoundTrip…,
+    // testSettingsSheetOpens). Pinned by Group LT contract tests LT1/2/3.
+    @ScaledMetric private var minTap: CGFloat = 44
     // WI-kwame-k2 (Loop-11) — `colorSchemeContrast` env was previously
     // declared on RootView but never read in its body. Removed; TierBadge
     // (the only consumer) declares its own copy at the consumer site.
@@ -115,6 +123,8 @@ struct RootView: View {
                         showSettings = true
                     } label: {
                         Image(systemName: "gearshape")
+                            .frame(minWidth: minTap, minHeight: minTap)
+                            .contentShape(Rectangle())
                     }
                     .accessibilityLabel("Settings")
                     .accessibilityHint("Opens skin type, SPF, attribution, and app information.")
@@ -122,6 +132,8 @@ struct RootView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: AboutView(highlightEstimateApplicability: true)) {
                         Image(systemName: "info.circle")
+                            .frame(minWidth: minTap, minHeight: minTap)
+                            .contentShape(Rectangle())
                     }
                     .accessibilityLabel("About this estimate")
                     .accessibilityHint("Opens photosensitization, medication, and sunscreen assumption caveats.")
