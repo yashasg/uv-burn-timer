@@ -5498,3 +5498,196 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
     )
 }
 
+// MARK: - Group W: WI-bundleW — Loop-16 Ma-Ti L01 + L02 closure
+//
+// Closes two of the seven remaining Ma-Ti test-coverage gaps surfaced
+// by the Loop-13 gap-analysis pass (claude-opus-4.7-xhigh) and carried
+// forward through Loops 14 + 15. The deferred backlog (Loop-15 closure
+// log §"Backlog state (entering Loop-16)") enumerates them as
+// "L01-L05/L07/L08 — `.nighttime` mapping, stale snapshot, persist
+// coercion, picker retry, DST gap, override guard, eighth". Bundle W
+// closes L01 (`.nighttime` mapping) and L02 (stale snapshot / live
+// fallback).
+//
+//   W1 — Ma-Ti L01 (`.nighttime` mapping):
+//        `RootView.activeUVIndex` is the single source of truth that
+//        feeds `activeEstimate` for both the live-now reading and any
+//        future-hour forecast selection. Its `switch selectedDateUVResult`
+//        block contains a `case .nighttime: return 0.0` branch — without
+//        which the picker-driven nighttime / polar-night / sunset-hour
+//        selection would silently fall through to the `default:` branch
+//        and inherit the live `uvIndex` reading. That regression would
+//        re-introduce the pre-WI-7 bug where picking 11 PM showed the
+//        midday UV-driven burn estimate instead of "No UV at this hour".
+//        Pinning the branch shape protects the polar-night = UVI 0 =
+//        `.nighttime` directive ratified 2026-05-21 (Yashas) which is
+//        already pinned upstream by `test_polar_night_day_renders_via_nighttime_path`
+//        in ForecastUVResultTests.swift — Bundle W closes the
+//        downstream picker→estimate side of the same contract.
+//
+//   W2 — Ma-Ti L02 (stale snapshot / live fallback):
+//        The `default:` branch of `activeUVIndex` must read the bare
+//        `uvIndex` (the live-now optional Double on RootView). This is
+//        the fallback path when `selectedDateUVResult` is
+//        `.unavailable(.snapshotExpired)`, `.unavailable(.outOfRange)`,
+//        or any other non-`.value` / non-`.nighttime` case. Without it
+//        the hero would either crash (force-unwrapping a nil) or
+//        produce a stale-but-blank estimate when the forecast snapshot
+//        is missing — the latter is exactly the silent-regression
+//        Suchi L02 (Maya stale-hero) warns about. Pinning the
+//        live-fallback branch is the source-text complement to the
+//        S7/Ma-Ti L06 SPF wiring guard at line 4943, which already
+//        pins the activeEstimate caller.
+//
+// Test names use the W1/W2 suffix to anchor the bundle name without
+// colliding with any prior W-prefixed group (Group W at line 1906 is
+// "UVIndexCard chrome inversion" — different scope; its tests are
+// W1_uvCardSecondaryRoleHelperReadsSeparator-style names with longer
+// suffixes, so the `test_W1_` / `test_W2_` short prefixes were never
+// claimed by the chrome-inversion bundle).
+//
+// Both guards are localized to AppViews.swift `RootView.activeUVIndex`
+// and pin existing wiring against silent regression. No product
+// behavior changes; the merge is pure test-coverage growth, matching
+// the S5/S6/S7 + T1/T2 + U1/U2 + V3/V4 source-text-guard pattern.
+
+/// Returns the body slice of `RootView.activeUVIndex` (the
+/// `switch selectedDateUVResult { … }` block) so the W1 + W2 guards
+/// can assert the case shape without re-grepping the full AppViews
+/// source per assertion. Anchored on the unique
+/// `private var activeUVIndex: Double?` declaration (only one such
+/// computed property in AppViews.swift as of the Loop-15 closure
+/// `0c406cb`); the slice extends ~600 chars after the declaration,
+/// which on the current main is enough to cover the full body
+/// (~10 lines / ~350 chars) plus the next computed property's
+/// declaration line as a natural terminator.
+private func _activeUVIndexBodyForGroupW() throws -> String {
+    let source = try _appViewsSourceForGroupR()
+    guard let declRange = source.range(of: "private var activeUVIndex: Double?") else {
+        Issue.record(
+            "RootView.activeUVIndex computed property not found in AppViews.swift — the W1/W2 guards anchor on this declaration. If it has been renamed (e.g., `effectiveUVIndex`, `forecastOrLiveUVIndex`) update the helper to track the new name."
+        )
+        return ""
+    }
+    let bodyStart = declRange.upperBound
+    let bodyEnd = source.index(bodyStart, offsetBy: 600, limitedBy: source.endIndex) ?? source.endIndex
+    return String(source[bodyStart..<bodyEnd])
+}
+
+/// W1 — Ma-Ti L01: `RootView.activeUVIndex` maps a `.nighttime`
+/// `UVResult` to `0.0` so the picker-driven nighttime selection feeds
+/// `BurnTimeCalculator.estimate(uvIndex: 0)` and produces the
+/// `tier == .none` / "No UV at this hour" hero state.
+///
+/// **Why this guard matters:** `ForecastPickerLogic.uvResult(from:at:now:)`
+/// collapses UVI=0 hours AND missing-hour-in-window edges to the
+/// single `.nighttime` UVResult case (per the 2026-05-21 Yashas
+/// directive "polar night = UVI 0 = same `.nighttime` code path",
+/// pinned upstream by `test_polar_night_day_renders_via_nighttime_path`
+/// in ForecastUVResultTests.swift). The downstream wiring in
+/// `RootView.activeUVIndex` must explicitly map that case to `0.0`
+/// — falling through to the `default:` branch (the live `uvIndex`
+/// fallback) would silently re-introduce the pre-WI-7 bug where
+/// picking a nighttime hour showed the midday UV-driven burn
+/// estimate. The fix has shipped since WI-7 (`0056ff1`); W1 pins
+/// the branch shape so the next refactor cannot collapse the case
+/// without CI failing.
+///
+/// **Convergence with upstream tests:** ForecastUVResultTests already
+/// pins that `.nighttime` is returned at the snapshot lookup layer
+/// (C1–C15 + M4 in ForecastPickerLogicTests.swift). W1 closes the
+/// downstream picker→estimate side of the same contract — the gap
+/// Ma-Ti L01 flagged in the Loop-13 gap-analysis.
+@Test func test_W1_activeUVIndexMapsNighttimeUVResultToZeroForBurnCalculator() throws {
+    let body = try _activeUVIndexBodyForGroupW()
+    guard !body.isEmpty else { return }
+
+    // (a) The body must contain a `case .nighttime:` branch — pinning
+    // that `.nighttime` is matched explicitly rather than folded into
+    // `default:` (the live-fallback path).
+    #expect(
+        body.contains("case .nighttime:"),
+        "RootView.activeUVIndex must keep an explicit `case .nighttime:` branch — folding `.nighttime` into `default:` would inherit the live `uvIndex` reading instead of the 0.0 the burn calculator expects for nighttime / polar-night / out-of-sun-hours states, silently regressing the WI-7 picker→burn wiring. (Ma-Ti L01 — Loop-13 deferred / Loop-16)"
+    )
+
+    // (b) That branch must return `0.0` (or the `0.0` Double literal
+    // adjacent to the `.nighttime` case). The 0.0 specifically feeds
+    // `BurnTimeCalculator.estimate(uvIndex: 0)`, which returns
+    // `BurnTimeEstimate(rawMinutes: .infinity, tier: .none)` per
+    // BurnTimeCalculator.swift line 132–134 — the "No UV at this
+    // hour" / Wheeler-hedged nighttime hero state. A `return nil`
+    // or `return uvIndex` here would produce a wrong estimate at
+    // nighttime hours.
+    //
+    // The substring search uses `case .nighttime:` + `return 0.0`
+    // both present in the slice. Swift's switch syntax forces the
+    // `return 0.0` to appear after `case .nighttime:` and before
+    // the next `case`/`default:`, so the co-presence in the body
+    // slice is a sufficient signal.
+    #expect(
+        body.contains("return 0.0"),
+        "RootView.activeUVIndex's `case .nighttime:` branch must `return 0.0` so it feeds `BurnTimeCalculator.estimate(uvIndex: 0)` (returns `rawMinutes: .infinity, tier: .none`). Returning `nil` or the live `uvIndex` instead would either crash the optional-binding in `activeEstimate` or apply the daytime UV to a nighttime hour. (Ma-Ti L01 — Loop-13 deferred / Loop-16)"
+    )
+}
+
+/// W2 — Ma-Ti L02: `RootView.activeUVIndex`'s `default:` branch
+/// returns the live `uvIndex` so the hero falls back to the
+/// live-now reading when the forecast snapshot is unavailable,
+/// expired, or out-of-range.
+///
+/// **Why this guard matters:** `ForecastPickerLogic.uvResult(from:at:now:)`
+/// returns `.unavailable(.snapshotExpired)` /
+/// `.unavailable(.outOfRange)` whenever the in-memory snapshot is
+/// missing or the target hour is outside `[firstHour, lastHour]`
+/// (see ForecastPickerLogicTests.swift line 447). The downstream
+/// `RootView.activeUVIndex` `default:` branch is the **only** path
+/// that produces a usable UV reading in those states — without it
+/// `activeEstimate` would be `nil`, the hero would render its
+/// empty-state copy, and Maya (P2 swimmer persona, see Suchi L02)
+/// would see a stale-snapshot regression: a confident-looking
+/// hero with no number even though the live-now UV reading is
+/// fresh in memory.
+///
+/// The fallback path was added in WI-7 and reaffirmed by Ma-Ti L06
+/// (Bundle S, Loop-14) which pins the activeEstimate caller side.
+/// W2 closes the symmetric gap on the activeUVIndex producer side
+/// so a future refactor cannot drop the `default:` branch without
+/// CI failing.
+@Test func test_W2_activeUVIndexDefaultBranchFallsBackToLiveUVIndexForStaleOrOutOfRangeForecast() throws {
+    let body = try _activeUVIndexBodyForGroupW()
+    guard !body.isEmpty else { return }
+
+    // (a) The body must contain a `default:` branch — pinning that
+    // `.unavailable(...)` and any other non-`.value` / non-`.nighttime`
+    // cases are caught by an explicit fallback rather than an
+    // unhandled-case compile error or a silent return.
+    #expect(
+        body.contains("default:"),
+        "RootView.activeUVIndex must keep an explicit `default:` branch as the live-`uvIndex` fallback — `.unavailable(.snapshotExpired)` and `.unavailable(.outOfRange)` from ForecastPickerLogic must land here so the hero falls back to the live-now reading instead of rendering the empty state with a fresh live UV in memory. (Ma-Ti L02 — Loop-13 deferred / Loop-16)"
+    )
+
+    // (b) That branch must return `uvIndex` — i.e., the live-now
+    // optional Double on RootView. Returning `nil`, `0`, or
+    // `activeUVIndex` itself would either drop the live reading or
+    // recurse forever. The exact substring `return uvIndex` is
+    // sufficient because no other branch returns the bare live
+    // identifier (`.value(let uvi): return uvi` binds a local,
+    // `.nighttime: return 0.0` is a literal; only the live-fallback
+    // path returns the outer `uvIndex` symbol).
+    #expect(
+        body.contains("return uvIndex"),
+        "RootView.activeUVIndex's `default:` branch must `return uvIndex` (the live-now optional Double on RootView) so a missing / expired / out-of-range forecast still surfaces the freshest UV reading to `activeEstimate`. Returning `nil` would force the hero to its empty state even when a live-now reading is in memory — the exact silent-regression Maya (P2 swimmer) faces in Suchi L02. (Ma-Ti L02 — Loop-13 deferred / Loop-16)"
+    )
+
+    // (c) The bare live `uvIndex` symbol must not be name-shadowed by
+    // a parameter or local in the branch — i.e., the substring
+    // `return uvIndex` must NOT be paired with `let uvIndex =` inside
+    // the body (which would mean the `default:` branch returns a
+    // shadowed local rather than the RootView property). Loop-15
+    // never introduced such shadowing; W2 pins that posture.
+    #expect(
+        !body.contains("let uvIndex ="),
+        "RootView.activeUVIndex must not introduce a local `let uvIndex = ...` binding inside the switch — that would shadow the RootView state property of the same name and break the W2 live-fallback contract (the `default:` branch would return a local, not the live reading). (Ma-Ti L02 — Loop-13 deferred / Loop-16)"
+    )
+}
+
