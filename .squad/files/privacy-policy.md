@@ -154,6 +154,71 @@ listing's "Developer Information" section.
 
 ---
 
+## Automation status (WI-21-style — Plunder L01)
+
+This stub carries **two load-bearing placeholders** that an automated
+agent or CI runner **cannot fill in**:
+
+- `{LAUNCH_DATE_TBD}` — the App Store launch date that goes in the
+  **Effective date** header (§1). The launch date is a business
+  decision the repo owner makes at App Store submission time. An
+  automated guess (e.g. "today" or a hardcoded future date) would
+  publish a policy with the wrong effective date.
+- `{CONTACT_EMAIL_TBD}` — the developer privacy-contact email that
+  appears in §1 and §13. The address is the repo owner's
+  personal/business email; no automated agent has the right to invent
+  one. Faking the address would violate GDPR Art.12 transparency
+  ("provide a means of contact") and App Store §5.1.1.4 ("provide
+  clear and accessible information about your privacy practices").
+
+### Why this gate is manual, not automated
+
+Both placeholders mark **information the repo owner is the only
+authoritative source for**. Unlike the in-app `ProductCopy` constants
+(which an automated agent can synchronise via the pre-existing
+substring guards in `BurnTimeCalculatorTests.swift` Group EH), these
+two values come from outside the codebase — the repo owner's App
+Store Connect account and email address.
+
+A blank or unfilled placeholder is treated as **submission blocker**:
+shipping the App Store URL with literal `{LAUNCH_DATE_TBD}` or
+`{CONTACT_EMAIL_TBD}` would violate App Store §5.1.1.4 + GDPR
+Art.12 + UK ICO transparency guidance. The hosted policy URL must
+be filled before the App Store submission goes to review.
+
+### Owner for the manual fill
+
+- **Plunder** (Legal & Compliance) drafts the replacement values and
+  countersigns the final policy.
+- **Repo owner** supplies the real launch date + contact email and
+  commits the redacted-into-real replacement before App Store
+  submission.
+
+### Triggering event
+
+- The first App Store submission. From that point forward, every
+  policy update (substantive content change in §1–§13) bumps the
+  `disclaimerPolicyVersion` integer, refreshes the **Last updated**
+  date, and re-presents the in-app disclaimer cover on cold launch
+  (per §12).
+
+### Until both TBDs are filled
+
+The contract test
+`test_S6_privacyPolicyTBDsCarryAutomationStatusBlock` (in
+`BurnTimeCalculatorTests.swift`) keeps the placeholders visible by
+asserting the literal markers remain present alongside this block.
+That guard fails CI if a future agent silently replaces them with
+fake values; the next build cycle whose owner has the real launch
+date + email must fill the placeholders before the policy URL goes
+live, then update the test (or remove the contract) in the same MR.
+
+A blank `Automation status` block — or a quietly replaced TBD with
+no companion test update — is treated as **fail** by the
+goals-checklist sign-off in `loop.md` §6 Goal 5.
+
+---
+
 *This stub satisfies Plunder M1 (Loop-11 carryover). Hosting at a stable
 public URL is a follow-on Plunder + repo-owner action — the substring
 guards in Group EH below will keep the hosted copy in sync with the
