@@ -864,6 +864,20 @@ private func swiftlintYAMLURL(file: StaticString = #filePath) -> URL {
         .appendingPathComponent(".swiftlint.yml")
 }
 
+/// Resolves the on-disk path of the canonical SwiftSyntax AST rule source
+/// for `toolbar_image_needs_scaled_frame`. Used by LY1 to assert the AST
+/// gate (now the sole source of truth) is still present after the regex
+/// retirement. ADR-0003 §Rollout WI-30-C.
+private func astRuleSourceURL(file: StaticString = #filePath) -> URL {
+    let testFile = URL(fileURLWithPath: String(describing: file))
+    return testFile
+        .deletingLastPathComponent()   // UVBurnTimerCoreTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // app
+        .deletingLastPathComponent()   // <repo>
+        .appendingPathComponent("tools/swiftlint-rules/Sources/SwiftLintASTRules/ToolbarImageNeedsScaledFrameRule.swift")
+}
+
 /// LV1 — `ForecastPickerView.swift` must contain no
 /// `.frame(...minHeight: <literal>)` or `.frame(...minWidth: <literal>)`.
 /// Every touch-target / banner floor must use a `@ScaledMetric`-backed
@@ -1231,14 +1245,18 @@ private func unsuppressedNavigationLinkLinkViolations(
 // Swift `NSRegularExpression` so unit tests catch regressions independently
 // of the lint pass.
 //
-// Group LY strategy:
-//   LY1 — `.swiftlint.yml` contains a `toolbar_image_needs_scaled_frame:`
-//         custom rule entry with a `regex:` field referencing both
-//         `\.toolbar` and `\bImage\s*\(`, at `severity: error`.
+// Group LY strategy (post-WI-loop30-AST-LY-retire-regex, 2026-05-22):
+//   LY1 — `.swiftlint.yml` must NOT contain a
+//         `toolbar_image_needs_scaled_frame:` custom-rule entry. The
+//         SwiftSyntax AST gate at `tools/swiftlint-rules/Sources/
+//         SwiftLintASTRules/ToolbarImageNeedsScaledFrameRule.swift` is
+//         the sole source of truth for this rule (ADR-0003 §Rollout
+//         WI-30-C — regex retired after one CI cycle of belt-and-braces
+//         co-existence following PR #116 merge `1a4eecb`).
 //   LY2 — `AppViews.swift`: every `.toolbar { ... }` block has every
 //         `Image(` inside floored by an adjacent `@ScaledMetric`-backed
 //         `.frame(...min(Width|Height): <id>...)` within 200 chars
-//         (mirror of the SwiftLint regex).
+//         (compile-independent mirror of the AST rule).
 //   LY3 — `ForecastPickerView.swift`: same mirror-guard. May be vacuously
 //         true (no `.toolbar` blocks today), but the guard is added so a
 //         future toolbar-bearing edit cannot regress silently.
@@ -1304,33 +1322,30 @@ private func unsuppressedToolbarImageViolations(
     }
 }
 
-/// LY1 — `.swiftlint.yml` must declare a `toolbar_image_needs_scaled_frame:`
-/// custom rule entry with a `regex:` field that references both `\.toolbar`
-/// and `\bImage\s*\(` literals, at `severity: error`. Iris loop-29 GAP-4 /
-/// WI-29-4 — codifies the iOS 26.4 toolbar Image hit-target requirement
-/// that PR #99 manually fixed at the call site.
-@Test func test_LY1_swiftlintToolbarImageNeedsScaledFrameRuleExists() throws {
-    let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
-    let range = NSRange(source.startIndex..., in: source)
-    let entryPattern = #"toolbar_image_needs_scaled_frame:\s*\n"#
-    let toolbarLiteralPattern = #"toolbar_image_needs_scaled_frame:[\s\S]{0,2500}regex:\s*'[^']*\\\.toolbar[^']*'"#
-    let imageLiteralPattern = #"toolbar_image_needs_scaled_frame:[\s\S]{0,2500}regex:\s*'[^']*\\bImage\\s\*\\\([^']*'"#
-    let severityPattern = #"toolbar_image_needs_scaled_frame:[\s\S]{0,2500}severity:\s*error"#
+/// LY1 — `.swiftlint.yml` must NOT contain a
+/// `toolbar_image_needs_scaled_frame:` custom-rule entry. After
+/// WI-loop30-AST-LY-retire-regex (ADR-0003 §Rollout WI-30-C), the
+/// SwiftSyntax AST gate is the sole source of truth for this rule;
+/// the regex co-existed for one CI cycle (PR #116 merge `1a4eecb`)
+/// before retirement. The AST rule source file must remain present
+/// at the canonical path so the gate continues to fire.
+@Test func test_LY1_swiftlintToolbarImageRegexRuleRetired_astIsCanonical() throws {
+    let yaml = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
+    let yamlRange = NSRange(yaml.startIndex..., in: yaml)
+    let entryPattern = #"(?m)^\s{2}toolbar_image_needs_scaled_frame:\s*$"#
     #expect(
-        try NSRegularExpression(pattern: entryPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml must declare a `toolbar_image_needs_scaled_frame:` custom rule entry. Iris loop-29 GAP-4 / WI-29-4."
+        try NSRegularExpression(pattern: entryPattern).firstMatch(in: yaml, range: yamlRange) == nil,
+        ".swiftlint.yml must NOT declare a `toolbar_image_needs_scaled_frame:` custom-rule entry — the SwiftSyntax AST gate is the canonical source of truth post WI-loop30-AST-LY-retire-regex (ADR-0003 §Rollout WI-30-C)."
     )
+    let astRuleSource = astRuleSourceURL()
     #expect(
-        try NSRegularExpression(pattern: toolbarLiteralPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `toolbar_image_needs_scaled_frame` regex must reference the `\\.toolbar` literal. Iris loop-29 GAP-4 / WI-29-4."
+        FileManager.default.fileExists(atPath: astRuleSource.path),
+        "AST rule source must exist at \(astRuleSource.path) — it is now the sole source of truth for the toolbar Image @ScaledMetric floor (ADR-0003)."
     )
+    let astRuleText = try String(contentsOf: astRuleSource, encoding: .utf8)
     #expect(
-        try NSRegularExpression(pattern: imageLiteralPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `toolbar_image_needs_scaled_frame` regex must reference the `\\bImage\\s*\\(` trigger literal. Iris loop-29 GAP-4 / WI-29-4."
-    )
-    #expect(
-        try NSRegularExpression(pattern: severityPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `toolbar_image_needs_scaled_frame` rule must ship at `severity: error` (HIG hard gate — no warning tier). Iris loop-29 GAP-4 / WI-29-4."
+        astRuleText.contains("toolbar_image_needs_scaled_frame"),
+        "AST rule source must declare the `toolbar_image_needs_scaled_frame` id so diagnostics remain traceable to ADR-0003 / Iris loop-29 GAP-4 lineage."
     )
 }
 

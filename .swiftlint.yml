@@ -87,39 +87,14 @@ custom_rules:
     message: "HIG: touch targets need @ScaledMetric-backed minWidth/minHeight identifiers near Button/onTapGesture. Literals like 44/56 are violations."
     severity: error
 
-  toolbar_image_needs_scaled_frame:
-    name: "HIG: toolbar Image labels need @ScaledMetric floor"
-    # Heuristic only — same caveat as `missing_min_touch_target`: regex can
-    # enforce "Image( inside .toolbar { lacks a nearby identifier-backed
-    # .frame(min*: ...) floor" but cannot prove the identifier is declared
-    # with @ScaledMetric. Use a per-line disable with PR justification for
-    # genuine exceptions; perfect validation would need an AST.
-    #
-    # Iris loop-29 GAP-4 / WI-29-4: the general `missing_min_touch_target`
-    # rule's trigger alternation watches Button / onTapGesture /
-    # NavigationLink / Link but NOT bare `Image(`. Inside a SwiftUI
-    # `.toolbar { ... }` closure the toolbar item label is frequently an
-    # `Image(systemName:)` whose intrinsic rendered size is ≈22pt. Prior
-    # to iOS 26.4 the toolbar chrome padded these to ≥44pt automatically;
-    # in iOS 26.4 that implicit floor regressed and toolbar Image labels
-    # need an explicit @ScaledMetric-backed `.frame(minWidth:, minHeight:)`
-    # floor. PR #99 manually fixed the RootView gear + info-circle Images
-    # (AppViews.swift line 120 toolbar block) but the rule did not
-    # codify the requirement — this entry closes that blind spot.
-    #
-    # Pattern shape: a 2000-char outer window from `.toolbar {` (regex
-    # cannot match arbitrary brace nesting; 2000 chars is plenty for
-    # realistic toolbar bodies) plus a 200-char trailing lookahead from
-    # `Image(` to the identifier-backed `.frame(...min(Width|Height): id)`
-    # floor — mirrors the existing `missing_min_touch_target` lookahead
-    # style. Tradeoff: prefer false-positives-suppressible-by-floor over
-    # false-negatives, per WI-29-4 directive.
-    #
-    # ADR reference: ADR-0002 iOS 26.4 toolbar hit-target requirement
-    # (documented separately by WI-29-6).
-    regex: '\.toolbar\s*\{[\s\S]{0,2000}?\bImage\s*\((?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
-    message: "HIG: toolbar Image labels need @ScaledMetric-backed minWidth/minHeight floors. Iris loop-29 WI-29-4 / ADR-0002 iOS 26.4 toolbar hit-target requirement."
-    severity: error
+  # The `toolbar_image_needs_scaled_frame` regex rule lived here through
+  # loops 29–30 (Iris GAP-4 / WI-29-4). WI-loop30-AST-LY-retire-regex
+  # (2026-05-22) retired it: the SwiftSyntax AST gate at
+  # `tools/swiftlint-rules/Sources/SwiftLintASTRules/ToolbarImageNeedsScaledFrameRule.swift`,
+  # wired into `./build.sh` and `./build.sh lint`, is now the sole
+  # source of truth for the iOS 26.4 toolbar-Image @ScaledMetric floor.
+  # ADR-0003 §Rollout WI-30-C; belt-and-braces window opened by PR #99
+  # (regex) and closed by PR #116 (AST wire, merge `1a4eecb`).
 
   no_uppercased_in_code:
     name: "HIG: Don't .uppercased() user-facing strings"
