@@ -130,11 +130,22 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+        // WI-L31-02: gate on the shared toolbar-settled helper so the
+        // EstimateInfoButton hittable check survives the iOS 26 Liquid
+        // Glass settle window before we synthesize the navigation tap.
+        // The previous direct `waitForHittable(infoButton, ...)` would
+        // occasionally race the `.topBarTrailing` Liquid Glass layer
+        // settling under cold-runner CPU pressure or on a hot-simulator
+        // re-use, flaking the suite. Mirrors the gate already in place
+        // in `testToolbarRendersBothSettingsAndEstimateInfoButtons` and
+        // `testEstimateInfoNavigationRoundTripReturnsToMainScreen`.
+        let toolbar = waitForMainToolbarSettled(in: app, timeout: 20)
         XCTAssertTrue(
-            waitForHittable(infoButton, timeout: 10),
-            "Toolbar info button (EstimateInfoButton) must be hittable on the main screen"
+            toolbar.infoHittable,
+            "EstimateInfoButton must be hittable on the main screen toolbar"
         )
+
+        let infoButton = toolbar.infoButton
 
         // NavigationLink inside ToolbarItem can intermittently swallow the
         // first synthesized tap on iOS 26 simulator — use tapUntilAppears
@@ -143,8 +154,17 @@ final class UVBurnTimerUITests: XCTestCase {
         // deep-link test prior to K-1..K-9 cleanup.
         tapUntilAppears(infoButton, app.navigationBars["About & Citations"])
 
-        XCTAssertTrue(
-            app.navigationBars["About & Citations"].waitForExistence(timeout: 10),
+        // Use a predicate expectation for the About nav bar arrival so a
+        // late-binding navigation push still satisfies the assertion
+        // within the 5s budget called for in WI-L31-02 §Acceptance.
+        let aboutNavBar = app.navigationBars["About & Citations"]
+        let aboutAppeared = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true"),
+            object: aboutNavBar
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [aboutAppeared], timeout: 5),
+            .completed,
             "EstimateInfoButton must navigate to the About screen"
         )
 
