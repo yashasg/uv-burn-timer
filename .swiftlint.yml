@@ -77,8 +77,8 @@ custom_rules:
 
   hardcoded_frame_dimensions:
     name: "HIG: Avoid hardcoded live-content frames"
-    regex: '\.frame\(\s*(?:width|height):\s*\d'
-    message: "HIG: prefer flexible layout, max-width alignment, or @ScaledMetric-backed sizing for live content. Reserve minWidth/minHeight for @ScaledMetric-backed touch-target floors."
+    regex: '\.frame\(\s*(?:width|height|minWidth|minHeight|maxWidth|maxHeight):\s*\d'
+    message: "HIG: prefer flexible layout, max-width alignment, or @ScaledMetric-backed sizing for live content. Touch-target and banner floors must use @ScaledMetric tokens (minTap, dayRowMinHeight, rowMinHeight, …). Iris loop-29 GAP-1."
     severity: error
 
   literal_system_font_size:

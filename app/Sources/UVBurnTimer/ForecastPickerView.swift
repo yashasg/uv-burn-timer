@@ -83,6 +83,13 @@ public struct ForecastPickerView: View {
     @ScaledMetric private var skeletonDayLabelHeight: CGFloat = 14
     @ScaledMetric private var skeletonBadgeWidth: CGFloat = 36
     @ScaledMetric private var skeletonBadgeHeight: CGFloat = 20
+    // Loop-29 WI-3: identifiers backing previously-literal `minHeight:`
+    // floors that the SwiftLint `hardcoded_frame_dimensions` regex could
+    // not catch (axis was `minHeight:` rather than `height:`). The token
+    // values match the visual spec; @ScaledMetric promotes them to
+    // Dynamic-Type-scaled floors so AX5 on iPhone SE doesn't clip.
+    @ScaledMetric private var dayRowMinHeight: CGFloat = 52
+    @ScaledMetric private var staleBannerMinHeight: CGFloat = 28
 
     public init(
         selectedDate: Binding<Date>,
@@ -156,7 +163,7 @@ public struct ForecastPickerView: View {
             .accessibilityLabel("Is this estimate for me?")
             .accessibilityHint("Opens photosensitization, medication, and sunscreen assumption caveats.")
             .accessibilityIdentifier("ForecastPickerEstimateInfoButton")
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)
             .padding(.horizontal, 16)
 
             Link(destination: ProductCopy.weatherAttributionLegalURL) {
@@ -170,7 +177,8 @@ public struct ForecastPickerView: View {
             // WI-bundleQ / Iris L03 (Loop-13) — raise to 44pt HIG tap-target
             // floor. Mirrors the sibling ForecastPickerEstimateInfoButton
             // (line 129) and the L1 / L3 / footer reach-back rows.
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            // Loop-29 WI-3: literal `44` → `minTap` @ScaledMetric token.
+            .frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)
             .contentShape(Rectangle())
             .padding(.horizontal, 16)
             .padding(.bottom, 4)
@@ -214,7 +222,7 @@ public struct ForecastPickerView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
             }
-            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: staleBannerMinHeight, alignment: .leading)
             .padding(.horizontal, 16)
             .background(Color(.systemYellow).opacity(0.12))
         case .error:
@@ -235,7 +243,7 @@ public struct ForecastPickerView: View {
                 .foregroundStyle(.tint)
                 .frame(minHeight: minTap)
             }
-            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: staleBannerMinHeight, alignment: .leading)
             .padding(.horizontal, 16)
             .background(Color(.systemRed).opacity(0.08))
         }
@@ -368,7 +376,7 @@ public struct ForecastPickerView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .frame(minHeight: 52)
+            .frame(minHeight: dayRowMinHeight)
             // Increase Contrast: selected opacity 0.25 (up from 0.12) (Iris §8 item 10).
             .background(isSelected ? Color.accentColor.opacity(selectedRowOpacity) : Color.clear)
             .contentShape(Rectangle())
@@ -433,7 +441,7 @@ public struct ForecastPickerView: View {
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .frame(minHeight: 52)
+            .frame(minHeight: dayRowMinHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -552,7 +560,7 @@ public struct ForecastPickerView: View {
                 Spacer()
             }
             .padding(.horizontal, 16)
-            .frame(minHeight: 44)
+            .frame(minHeight: minTap)
             .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
             .contentShape(Rectangle())
         }

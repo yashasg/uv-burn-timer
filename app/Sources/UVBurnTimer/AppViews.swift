@@ -1621,6 +1621,12 @@ struct SkinTypePickerRow: View {
     let onSelect: () -> Void
     @ScaledMetric private var minTap: CGFloat = 44
     @ScaledMetric private var numeralColWidth: CGFloat = 36
+    // Loop-29 WI-3: outer Button hit-target floor previously a literal `56`.
+    // Skin-type rows render two text lines (title + subhead) so the floor
+    // is intentionally taller than the canonical `minTap = 44`. Promoted
+    // to @ScaledMetric so AX5 on iPhone SE scales the row, not just the
+    // inner HStack.
+    @ScaledMetric private var rowMinHeight: CGFloat = 56
 
     var body: some View {
         // Reason: Button label is a multi-line HStack with VStack/Spacer;
@@ -1656,7 +1662,7 @@ struct SkinTypePickerRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .frame(minHeight: 56)
+        .frame(minHeight: rowMinHeight)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "Type \(skinType.romanNumeral). \(skinType.pickerDescription). \(isSelected ? "Selected." : "Not selected.")"

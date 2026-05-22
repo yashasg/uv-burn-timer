@@ -824,3 +824,138 @@ private func forecastPickerViewSwiftURL(file: StaticString = #filePath) -> URL {
         "AppViews.swift EstimateInfoButton `Image(systemName: \"info.circle\")` must carry `.frame(minWidth: minTap, minHeight: minTap)` so its hit-test geometry meets the HIG 44-pt floor on iOS 26.4 Liquid Glass. Loop-28 WI-0 / AV-20."
     )
 }
+
+// MARK: - Group LV: Loop-29 WI-3 — minWidth/minHeight literal frame guard
+//
+// Iris loop-29 gap analysis GAP-1: the SwiftLint `hardcoded_frame_dimensions`
+// rule regex `\.frame\(\s*(?:width|height):\s*\d` cannot see literal
+// `.frame(minWidth: 44)` or `.frame(minHeight: 56)` calls — only the bare
+// `width:`/`height:` forms. These literal `min*` axes bypass Dynamic Type:
+// at AX5 on iPhone SE they remain at their authored pt value while a
+// `@ScaledMetric`-backed identifier (`minTap`, `dayRowMinHeight`, …) scales
+// to roughly twice the floor. WI-29-3 widens the regex (and mirrors it in
+// unit-test form here) and migrates every remaining literal `min*` site to
+// a `@ScaledMetric` token.
+//
+// Group LV strategy:
+//   LV1 — ForecastPickerView.swift: zero `.frame(...minHeight: <literal>)` /
+//         `.frame(...minWidth: <literal>)` occurrences.
+//   LV2 — AppViews.swift: zero `.frame(...minHeight: <literal>)` /
+//         `.frame(...minWidth: <literal>)` occurrences.
+//   LV3 — `.swiftlint.yml` `hardcoded_frame_dimensions` regex must include
+//         `minWidth`/`minHeight` axes so SwiftLint catches new regressions
+//         independently of the unit-test guard.
+//   LV4 — ForecastPickerView declares the Loop-29 token block
+//         (`dayRowMinHeight`, `staleBannerMinHeight`) so LV1's migrations
+//         have concrete identifiers backing them.
+//   LV5 — `SkinTypePickerRow` (AppViews) declares its own struct-scoped
+//         `@ScaledMetric private var rowMinHeight: CGFloat = 56` — the
+//         outer Button's HIG-tap floor that was previously a literal `56`.
+
+/// Helper — URL of the repo-root `.swiftlint.yml` relative to this test file.
+private func swiftlintYAMLURL(file: StaticString = #filePath) -> URL {
+    let testFile = URL(fileURLWithPath: String(describing: file))
+    // <repo>/app/Tests/UVBurnTimerCoreTests/MainScreenCleanupContractTests.swift
+    return testFile
+        .deletingLastPathComponent()   // UVBurnTimerCoreTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // app
+        .deletingLastPathComponent()   // <repo>
+        .appendingPathComponent(".swiftlint.yml")
+}
+
+/// LV1 — `ForecastPickerView.swift` must contain no
+/// `.frame(...minHeight: <literal>)` or `.frame(...minWidth: <literal>)`.
+/// Every touch-target / banner floor must use a `@ScaledMetric`-backed
+/// identifier so it scales with Dynamic Type. Mirrors WI-29-3's tightened
+/// SwiftLint `hardcoded_frame_dimensions` regex.
+@Test func test_LV1_forecastPickerHasNoLiteralMinFrameAxis() throws {
+    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
+    let pattern = #"\.frame\([^)]*\b(?:minWidth|minHeight)\s*:\s*\d"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    let matches = regex.matches(in: source, range: range)
+    #expect(
+        matches.isEmpty,
+        "ForecastPickerView.swift must not contain `.frame(minWidth: <literal>)` or `.frame(minHeight: <literal>)`. Use `@ScaledMetric`-backed identifiers (minTap, dayRowMinHeight, staleBannerMinHeight) per Iris loop-29 gap analysis GAP-1. Found \(matches.count) literal site(s)."
+    )
+}
+
+/// LV2 — `AppViews.swift` must contain no
+/// `.frame(...minHeight: <literal>)` or `.frame(...minWidth: <literal>)`.
+/// LU5 (loop-28 WI-1) already guards `minHeight: 44`; LV2 widens the guard
+/// to every literal value (e.g. SkinTypePickerRow's outer `minHeight: 56`).
+@Test func test_LV2_appViewsHasNoLiteralMinFrameAxis() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let pattern = #"\.frame\([^)]*\b(?:minWidth|minHeight)\s*:\s*\d"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    let matches = regex.matches(in: source, range: range)
+    #expect(
+        matches.isEmpty,
+        "AppViews.swift must not contain `.frame(minWidth: <literal>)` or `.frame(minHeight: <literal>)`. Use `@ScaledMetric`-backed identifiers (minTap, rowMinHeight, …) per Iris loop-29 gap analysis GAP-1. Found \(matches.count) literal site(s)."
+    )
+}
+
+/// LV3 — `.swiftlint.yml` `hardcoded_frame_dimensions` rule must include
+/// `minWidth`/`minHeight` axes in its regex. Without this, SwiftLint cannot
+/// catch future regressions and LV1/LV2 must carry the load alone.
+@Test func test_LV3_swiftlintHardcodedFrameRuleCoversMinAxes() throws {
+    let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
+    // The rule definition lives inside `custom_rules:` →
+    // `hardcoded_frame_dimensions:` → `regex: '<pattern>'`. We grep the
+    // rule's regex line and assert it mentions both `minWidth` and
+    // `minHeight` (case-sensitive — Swift API uses camelCase).
+    let pattern = #"hardcoded_frame_dimensions:[\s\S]{0,400}regex:\s*'[^']*\bminWidth\b[^']*'[\s\S]{0,200}|hardcoded_frame_dimensions:[\s\S]{0,400}regex:\s*'[^']*\bminHeight\b[^']*'"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    #expect(
+        regex.firstMatch(in: source, range: range) != nil,
+        ".swiftlint.yml `hardcoded_frame_dimensions` regex must include both `minWidth` and `minHeight` axes so SwiftLint catches `.frame(minWidth: 44)` / `.frame(minHeight: 56)` literals. Iris loop-29 gap analysis GAP-1."
+    )
+}
+
+/// LV4 — `ForecastPickerView.swift` must declare the loop-29
+/// `@ScaledMetric` tokens that back LV1's literal migrations.
+@Test func test_LV4_forecastPickerDeclaresLoop29MinFrameTokens() throws {
+    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
+    let requiredDeclarations = [
+        "@ScaledMetric private var dayRowMinHeight",
+        "@ScaledMetric private var staleBannerMinHeight"
+    ]
+    for decl in requiredDeclarations {
+        #expect(
+            source.contains(decl),
+            "ForecastPickerView.swift must declare `\(decl)` per loop-29 WI-3 — backs literal-frame migrations at the day-row Button (52pt) and the stale-data banner HStack (28pt)."
+        )
+    }
+}
+
+/// LV5 — `SkinTypePickerRow` (AppViews.swift) must carry its own
+/// `@ScaledMetric private var rowMinHeight: CGFloat = 56`. This struct
+/// hosts a Button whose outer `.frame(minHeight: 56)` was a literal —
+/// the row's intentional taller floor (two text lines) cannot reuse the
+/// canonical `minTap = 44`; it needs a dedicated token. Substring-bounded
+/// to the struct body so neighbouring `ScaledMetric` declarations on
+/// other structs cannot satisfy the contract.
+@Test func test_LV5_skinTypePickerRowDeclaresRowMinHeightScaledMetric() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let opener = "\nstruct SkinTypePickerRow: View {"
+    let closer = "\nstruct "
+    guard let startRange = source.range(of: opener) else {
+        Issue.record("AppViews.swift must declare `struct SkinTypePickerRow: View {`.")
+        return
+    }
+    let afterOpener = startRange.upperBound
+    let restOfFile = source[afterOpener...]
+    let endIndex = restOfFile.range(of: closer)?.lowerBound ?? source.endIndex
+    let body = source[afterOpener..<endIndex]
+    #expect(
+        body.contains("@ScaledMetric private var rowMinHeight"),
+        "SkinTypePickerRow (AppViews.swift) must declare `@ScaledMetric private var rowMinHeight: CGFloat = 56` so its outer Button hit-target floor scales with Dynamic Type. Loop-29 WI-3."
+    )
+    #expect(
+        body.contains(".frame(minHeight: rowMinHeight)"),
+        "SkinTypePickerRow outer Button must apply `.frame(minHeight: rowMinHeight)` (not the literal `56`). Loop-29 WI-3."
+    )
+}
