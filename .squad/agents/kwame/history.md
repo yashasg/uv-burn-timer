@@ -404,3 +404,24 @@ hand-off protocol.
   insurance policy.** Confirmed no rebase needed before pushing;
   prevented a wasted force-push round-trip if the branch had
   drifted. Always do it before `git push -u`.
+
+## 2026-05-22T19:50Z — PR #114 rebase on post-#111 main (mechanical reconciliation)
+
+PR #111 squash-merged to `main` at `c3f2bbc`; PR #114 flipped to `CONFLICTING` on `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`. Pre-rebase HEAD `e7c8ab4` → rebased onto `github/main` → post-rebase HEAD `2074035` → force-with-lease push (`a9dc664...2074035`). PR #114 now `mergeable: MERGEABLE` (mergeStateStatus `UNSTABLE` while CI 26310521349 + 26310522801 run).
+
+### Conflict shape
+
+Both sides added a "wait for both `.topBarTrailing` items to settle" helper at the same file location. Different signatures, complementary uses:
+
+- `waitForMainToolbarSettled` (PR #111) → returns `ToolbarSettleSnapshot` struct; used by tests that interrogate per-button existence/hittability.
+- `waitForToolbarSettled` (PR #114, my 758e784) → returns `Bool`; used as setup-time gate inside `acknowledgeDisclaimerAndChooseTypeIII`.
+
+Resolution: KEPT BOTH. No test logic invented; no tests deleted. Added a doc-comment cross-reference on the Bool variant.
+
+### Learnings
+
+1. **Rebase, not merge, when base is squash-merged.** GitHub's squash collapses N commits into 1 with a new SHA; my branch's old base commits no longer exist in history. A merge would create a 2nd copy of the work on a parallel history line — confusing reviewers and producing a duplicate squash-merge later. Rebase replays the leaf commits onto the new SHA cleanly. The PR's `MERGEABLE` flip after force-push confirms this is what reviewers expect.
+2. **`--force-with-lease` discipline.** Always pair force-push with `--force-with-lease` so a concurrent agent push to the same branch tip aborts the push instead of overwriting their commits. In this session a fresh-fetch + immediate rebase + immediate push made the window small; the lease flag would have caught any racing push.
+3. **Two helpers with overlapping intent are fine if call sites diverge.** Tempting to consolidate `waitForToolbarSettled` (Bool) into `waitForMainToolbarSettled` (struct) — but the Bool gate is what `XCTAssertTrue(...)` wants, and the struct lets per-button assertions pinpoint *which* button missed. Consolidation would either lose per-button blame in error messages or force every caller to read snapshot fields. Mechanical-reconciliation rule: when in doubt during conflict resolution, KEEP BOTH and let a future PR consolidate if it's actually warranted. Don't invent design in a rebase.
+4. **Build-for-testing is the right smoke for a test-file-only rebase.** Full sim suite is ~5 min × N flakes; `xcodebuild build-for-testing` is ~30s and proves the merged Swift compiles in the UI test target. CI runs the real thing — don't double-spend the local box.
+5. **Stash-list discipline.** This repo has 40+ accumulated stashes from agents that didn't drop after recovery. None of mine added this session, but the inventory is becoming a hazard — a future cleanup pass should `git stash drop` everything older than 7 days.
