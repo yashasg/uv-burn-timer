@@ -200,3 +200,54 @@ per the established convention (see Loop-27 closure).
 
 
 ### 2026-05-22T17:35:00Z: Loop-29 Iteration-2 spawned — parallel agents on WI-29-4/WI-29-6; WI-29-7 closed via PR #106
+
+### 2026-05-22T18:00:00Z: Loop-29 WI-29-4 — no-op closure (already merged by parallel agent)
+
+**Outcome:** WI-29-4 (`toolbar_image_needs_scaled_frame` SwiftLint
+custom rule + Group LY contract tests) was already shipped to main as
+PR #108 (merged 2026-05-22T18:06:01Z) on branch
+`squad/wi-loop29-4-toolbar-image-scaled-frame-rule` by a parallel
+Kwame agent instance that spawned slightly earlier in iter-2. My
+spawn raced and lost. Current main HEAD `ec5a3f2` already contains:
+- `.swiftlint.yml` rule entry at severity: error, regex pattern
+  `\.toolbar\s*\{[\s\S]{0,2000}?\bImage\s*\((?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)`
+- Group LY tests (LY1/LY2/LY3) in `MainScreenCleanupContractTests.swift`
+- All four `.toolbar { ... }` blocks in AppViews.swift audited:
+  RootView gear+info-circle already floored by PR #99; the other
+  three toolbars contain Button "Done"/"Save" labels (no Image) so
+  the rule is vacuously satisfied for them.
+- `swiftlint --strict` → 0 violations on main.
+
+**Branch hygiene:** Deleted the stale local + remote
+`squad/wi-loop29-4-toolbar-image-scaled-frame` (no `-rule` suffix)
+branch that Scribe had pre-created as an iter-2 placeholder
+holding only inbox merges — it carried no rule content and only
+risked confusion vs the actually-merged `-rule`-suffixed branch.
+
+**Coordination note for Coordinator/Iris:** PR #107 (Iris WI-29-6
+ADR-0002 extension) has `baseRefOid` = current main HEAD and its
+LY1 test will now PASS against the merged rule. The PR is
+MERGEABLE; checks were re-pending at the time of this writing and
+should land green now that the rule exists upstream.
+
+### Learnings
+
+- **Race-loss is silent — fetch+rebase BEFORE branching.** My
+  initial `git status` reported "up to date with github/main" but
+  `github/main` was stale; the true upstream main had advanced
+  through #106 → #108 while my session was being spawned. A
+  defensive `git fetch github main && git log github/main..HEAD`
+  before `git checkout -b` would have surfaced the in-flight PR
+  #108 and let me abort cleanly without doing duplicate
+  uncommitted edits.
+- **Parallel-agent branch naming collisions cost minutes.** The
+  rule shipped under `…-toolbar-image-scaled-frame-rule` while
+  Scribe pre-created `…-toolbar-image-scaled-frame` as an empty
+  inbox-merge placeholder. Same WI, same intent, two branch names
+  — the Coordinator should standardize on one name per WI before
+  spawn, or Scribe should not pre-create empty branches under
+  predictable WI slugs.
+- **No-op outcome is still a deliverable.** History + decision
+  inbox closure prevent the next Coordinator from re-spawning
+  WI-29-4 a third time.
+
