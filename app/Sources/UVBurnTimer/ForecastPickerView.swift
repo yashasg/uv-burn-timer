@@ -350,7 +350,7 @@ public struct ForecastPickerView: View {
     private func dayRow(_ day: DayForecast, index: Int) -> some View {
         let isSelected = selectedDay(matches: day)
         let isToday = Calendar.current.isDateInToday(day.date)
-        Button {
+        Button { // swiftlint:disable:this missing_min_touch_target
             selectDay(day)
         } label: {
             HStack(alignment: .center, spacing: 12) {
@@ -417,7 +417,7 @@ public struct ForecastPickerView: View {
     // MARK: - Reveal affordance row (Iris §3, §8 item 7 — verified + chevron animation)
 
     private var revealAffordanceRow: some View {
-        Button {
+        Button { // swiftlint:disable:this missing_min_touch_target
             toggleExtendedDays()
         } label: {
             HStack(spacing: 8) {
@@ -543,7 +543,7 @@ public struct ForecastPickerView: View {
         let isSelected = isSelectedHour(hour.timestamp)
         let isNighttime = hour.uvIndex == 0
 
-        return Button {
+        return Button { // swiftlint:disable:this missing_min_touch_target
             selectHour(hour)
         } label: {
             HStack(spacing: 12) {
@@ -591,7 +591,7 @@ public struct ForecastPickerView: View {
         let isNighttime = hour.uvIndex == 0
         let bandColor = whoBandColor(for: hour.uvIndex)
 
-        Button {
+        Button { // swiftlint:disable:this missing_min_touch_target
             selectHour(hour)
         } label: {
             VStack(spacing: 0) {

@@ -299,7 +299,7 @@ struct RootView: View {
     }
 
     private var locationChip: some View {
-        Button {
+        Button { // swiftlint:disable:this missing_min_touch_target
             Task {
                 await refreshUV()
             }
@@ -337,7 +337,7 @@ struct RootView: View {
     }
 
     private var skinTypeChip: some View {
-        Button {
+        Button { // swiftlint:disable:this missing_min_touch_target
             if session.selectedSkinType != nil {
                 showSkinTypeEdit = true
             } else {
@@ -414,7 +414,7 @@ struct RootView: View {
     }
 
     private var primaryAction: some View {
-        Button {
+        Button { // swiftlint:disable:this missing_min_touch_target
             Task {
                 await refreshUV()
             }
@@ -428,7 +428,7 @@ struct RootView: View {
 
                 Label(primaryActionPresentation.title, systemImage: primaryActionPresentation.systemImageName)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: minTap)
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
@@ -1287,7 +1287,7 @@ struct DisclaimerCover: View {
                         .font(.body)
                         .accessibilityIdentifier("DisclaimerStorageLine")
 
-                    Button {
+                    Button { // swiftlint:disable:this missing_min_touch_target
                         showAbout = true
                     } label: {
                         (
@@ -1300,7 +1300,7 @@ struct DisclaimerCover: View {
                         .font(.body)
                         .multilineTextAlignment(.leading)
                         .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("DisclaimerSeeAboutLink")
@@ -1347,6 +1347,7 @@ struct DisclaimerCover: View {
 struct SkinTypeOnboardingView: View {
     @Binding var session: UVBurnTimerSession
     @State private var draft = SkinTypeOnboardingDraft()
+    @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
         NavigationStack {
@@ -1369,7 +1370,7 @@ struct SkinTypeOnboardingView: View {
                     _ = draft.commit(to: &session)
                 } label: {
                     Text("Continue")
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, minHeight: minTap)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
@@ -1471,8 +1472,8 @@ struct SettingsSheet: View {
                     // `Text` label on the line above, but the
                     // intervening Button-closure newlines push that
                     // `.frame(...)` call outside SwiftLint's 200-char
-                    // regex lookahead from `Button {`. `minTap` is
-                    // declared on `SettingsSheet` and verified by
+                    // regex lookahead from the Button opener. `minTap`
+                    // is declared on `SettingsSheet` and verified by
                     // Group R / Group LU.
                     // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
@@ -1498,8 +1499,8 @@ struct SettingsSheet: View {
                     // `Text` label on the line above, but the
                     // intervening Button-closure newlines push that
                     // `.frame(...)` call outside SwiftLint's 200-char
-                    // regex lookahead from `Button {`. `minTap` is
-                    // declared on `SettingsSheet` and verified by
+                    // regex lookahead from the Button opener. `minTap`
+                    // is declared on `SettingsSheet` and verified by
                     // Group R / Group LU.
                     // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {

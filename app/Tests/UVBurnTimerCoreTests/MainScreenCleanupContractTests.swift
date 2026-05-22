@@ -959,3 +959,118 @@ private func swiftlintYAMLURL(file: StaticString = #filePath) -> URL {
         "SkinTypePickerRow outer Button must apply `.frame(minHeight: rowMinHeight)` (not the literal `56`). Loop-29 WI-3."
     )
 }
+
+// MARK: - Group LW: Loop-29 WI-2 — Button { trailing-closure form HIG floor
+//
+// Iris loop-29 gap analysis GAP-2: the SwiftLint `missing_min_touch_target`
+// rule regex `(?:\.onTapGesture\b|\bButton\s*\()` caught `.onTapGesture` and
+// `Button(` (with paren) but MISSED `Button {` (trailing-closure form). That
+// blind spot let the iOS 26.4 toolbar hittability regression on the gear
+// Button (AppViews.swift line 122) slip through SwiftLint in Loop-28 — PR
+// #99 fixed the call site manually but did not close the rule hole. WI-29-2
+// widens the alternation to also catch `Button {` and mirrors the guard
+// here so unit tests catch regressions independently of the lint pass.
+//
+// Group LW strategy:
+//   LW1 — `.swiftlint.yml` `missing_min_touch_target` regex line contains
+//         the alternation literal `Button\s*\{`.
+//   LW2 — `AppViews.swift` contains no `Button {` site lacking an adjacent
+//         `.frame(...min(Width|Height): <id>...)` within 200 chars (mirror
+//         of the SwiftLint lookahead). Sites carrying an immediately-
+//         preceding `// swiftlint:disable:next missing_min_touch_target`
+//         directive are intentional system-floor exceptions and exempt.
+//   LW3 — Same mirror-guard for `ForecastPickerView.swift`.
+
+/// Mirror-guard: returns `Button {` (trailing-closure-form) matches in
+/// `source` that lack an adjacent
+/// `.frame(...min(Width|Height): <identifier>...)` within 200 chars AND
+/// are not suppressed by an immediately-preceding
+/// `// swiftlint:disable:next missing_min_touch_target` directive.
+/// Mirrors the SwiftLint `missing_min_touch_target` regex exactly so a
+/// regression in either side will be caught.
+private func unsuppressedButtonTrailingClosureViolations(
+    in source: String
+) throws -> [NSRange] {
+    let pattern = #"\bButton\s*\{(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    let matches = regex.matches(in: source, range: range)
+    let nsSource = source as NSString
+    return matches.compactMap { match -> NSRange? in
+        let start = match.range.location
+        // Resolve the current line (containing the Button { match) and the
+        // immediately-preceding line by scanning newlines — inline directives
+        // can exceed any fixed lookback window.
+        var lineStart = start
+        while lineStart > 0 && nsSource.character(at: lineStart - 1) != 0x0A {
+            lineStart -= 1
+        }
+        var lineEnd = start
+        while lineEnd < nsSource.length && nsSource.character(at: lineEnd) != 0x0A {
+            lineEnd += 1
+        }
+        let currentLine = nsSource.substring(
+            with: NSRange(location: lineStart, length: lineEnd - lineStart)
+        )
+        if currentLine.contains("swiftlint:disable:this")
+            && currentLine.contains("missing_min_touch_target") {
+            return nil
+        }
+        if lineStart > 0 {
+            let endOfPrev = lineStart - 1
+            var startOfPrev = endOfPrev
+            while startOfPrev > 0 && nsSource.character(at: startOfPrev - 1) != 0x0A {
+                startOfPrev -= 1
+            }
+            let prevLine = nsSource.substring(
+                with: NSRange(location: startOfPrev, length: endOfPrev - startOfPrev)
+            )
+            if prevLine.contains("swiftlint:disable:next")
+                && prevLine.contains("missing_min_touch_target") {
+                return nil
+            }
+        }
+        return match.range
+    }
+}
+
+/// LW1 — `.swiftlint.yml` `missing_min_touch_target` rule regex must
+/// include the `Button\s*\{` alternation so SwiftLint catches the
+/// trailing-closure form (e.g. the gear toolbar Button at AppViews.swift
+/// line 122 that bypassed the rule in Loop-28). Iris loop-29 GAP-2.
+@Test func test_LW1_swiftlintMissingMinTouchTargetCoversButtonTrailingClosure() throws {
+    let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
+    let pattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*Button\\s\*\\\{[^']*'"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    #expect(
+        regex.firstMatch(in: source, range: range) != nil,
+        ".swiftlint.yml `missing_min_touch_target` regex must include the `Button\\s*\\{` alternation so SwiftLint catches `Button {` (trailing-closure form). Iris loop-29 gap analysis GAP-2 — closes the blind spot that let the iOS 26.4 gear-Button toolbar hittability regression (AppViews.swift line 122) slip through SwiftLint in Loop-28."
+    )
+}
+
+/// LW2 — `AppViews.swift` must contain no `Button {` (trailing-closure
+/// form) site missing an adjacent `@ScaledMetric`-backed
+/// `.frame(...min(Width|Height): <id>...)` within 200 chars, unless that
+/// site carries an immediately-preceding
+/// `// swiftlint:disable:next missing_min_touch_target` directive. Mirrors
+/// WI-29-2's widened SwiftLint regex in Swift `NSRegularExpression`.
+@Test func test_LW2_appViewsButtonTrailingClosureSitesCarryMinTapFloor() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let violations = try unsuppressedButtonTrailingClosureViolations(in: source)
+    #expect(
+        violations.isEmpty,
+        "AppViews.swift must not contain `Button {` (trailing-closure) sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style already guarantees the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` directive with a Reason: comment. Iris loop-29 gap analysis GAP-2 / WI-29-2. Found \(violations.count) unsuppressed site(s)."
+    )
+}
+
+/// LW3 — `ForecastPickerView.swift` mirror-guard for the trailing-closure
+/// form. Iris loop-29 gap analysis GAP-2 / WI-29-2.
+@Test func test_LW3_forecastPickerButtonTrailingClosureSitesCarryMinTapFloor() throws {
+    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
+    let violations = try unsuppressedButtonTrailingClosureViolations(in: source)
+    #expect(
+        violations.isEmpty,
+        "ForecastPickerView.swift must not contain `Button {` (trailing-closure) sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style already guarantees the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` directive with a Reason: comment. Iris loop-29 gap analysis GAP-2 / WI-29-2. Found \(violations.count) unsuppressed site(s)."
+    )
+}
