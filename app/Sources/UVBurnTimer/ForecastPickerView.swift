@@ -225,6 +225,8 @@ public struct ForecastPickerView: View {
             .frame(maxWidth: .infinity, minHeight: staleBannerMinHeight, alignment: .leading)
             .padding(.horizontal, 16)
             .background(Color(.systemYellow).opacity(0.12))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Updating forecast")
         case .error:
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.icloud")
@@ -246,6 +248,8 @@ public struct ForecastPickerView: View {
             .frame(maxWidth: .infinity, minHeight: staleBannerMinHeight, alignment: .leading)
             .padding(.horizontal, 16)
             .background(Color(.systemRed).opacity(0.08))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Could not update forecast")
         }
     }
 
