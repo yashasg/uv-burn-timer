@@ -298,3 +298,5 @@ should land green now that the rule exists upstream.
   inbox closure prevent the next Coordinator from re-spawning
   WI-29-4 a third time.
 
+
+**2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.

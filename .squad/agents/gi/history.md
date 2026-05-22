@@ -20,3 +20,5 @@ Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always
 ## 2026-05-22: Loop-28 closure — No data-model changes; UV flow intact
 
 **Gi (WeatherKit integration) perspective:** Loop-28 shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper). All HIG-only changes; no changes to FitzpatrickSkinType, ForecastSnapshot, BurnTimeCalculator, UV formula, or WeatherKit data flow. Nothing in data model touched. All integration paths remain stable. No regressions.
+
+**2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.

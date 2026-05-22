@@ -10,6 +10,12 @@ SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 
 
 ---
 
+## Learnings — 2026-05-22T18:15:00Z (Loop-30 cycle-start gap analysis)
+
+- **Gap-analysis cadence reaffirmed:** Per `loop.md` §4, the design-vs-implementation pass should run at the START of each cycle, not only at close. This pass (post-PR #107 / commit `fcdb196`) found zero net-new design gaps across all 5 surveyed Iris designs + the canonical Excalidraw canvas — meaning Loop-29 closes design-clean and Loop-30 inherits an empty UI/UX/HIG backlog from this lens. The only carry-forwards are WI-21 (physical-device sign-offs, owner-blocked), GAP-iter2-F (manual AX5 visual verification of `DisclaimerSeeAboutLink` — checklist item, not a code WI), and GAP-iter2-E (cosmetic `.foregroundColor` → `.foregroundStyle(.link)` API drift, opportunistic). Pointer: `.squad/decisions/inbox/iris-loop30-gap-analysis.md`. **Reusable rule:** when a cycle-start analysis returns zero gaps, say so explicitly with the rationale — an empty backlog is itself a signal, not silence.
+
+---
+
 ## Learnings — 2026-05-22T17:35:00Z (Loop-29 WI-6 close: ADR-0002 iOS 26.4 extension)
 
 **Context:** WI-loop29-6 closed via PR #107 (squash-merged as `fcdb196` to main). ADR-0002 at `.squad/decisions/adr/ADR-0002-toolbar-topbartrailing-ios26.md` now carries a new `## Extension — iOS 26.4 toolbar Image floor (PR #99 / loop-29 WI-29-4)` subsection (+55 lines).
@@ -70,3 +76,5 @@ The base HIG ≥44pt tap-target rule is itself untestable as a single guard — 
 
 
 ### 2026-05-22T17:35:00Z: Loop-29 Iteration-2 spawned — parallel agents on WI-29-4/WI-29-6; WI-29-7 closed via PR #106
+
+**2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.

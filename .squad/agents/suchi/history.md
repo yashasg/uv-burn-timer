@@ -73,3 +73,5 @@ Loop-27 shipped HIG-only token cleanup — `@ScaledMetric` wiring so the ≥44×
 ## 2026-05-22: Loop-28 closure — No new persona gaps; LANE 4 overlays intact
 
 **Suchi (persona research) perspective:** Loop-28 shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper). All HIG-only changes; no user-flow spec, persona copy, or accessibility persona touch-point logic modified. LANE 4 personas (Greta / Maya / Devon / Asha / Tomás) remain unchanged and on-canvas. No new persona-keyed gaps surfaced. Standing P6 Priya / P7 Vee gaps (forecast surface, pre-Loop-28) remain live work item. Carry-forward: WI-2-flake investigation (UI cold-start timing race).
+
+**2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.

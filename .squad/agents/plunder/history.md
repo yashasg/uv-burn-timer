@@ -46,3 +46,5 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
 
 **Plunder execution:** 4 Kwame WIs reviewed for copy/claim/citation regressions. None found. HIG-only changes (scaled metrics, container modality, Dynamic Type frames) do not touch L1–L4 disclosure surfaces, disclaimer wording, safety-action copy, or attribution. SwiftLint strict: 0 violations post-merge. WI-plunder-m1 (hosted Privacy Policy URL) remains the silent Goal-4 blocker and carries forward unchanged. Carry-forward hardware-gated sign-offs (WI-loop-28-B: iris-contrast-qa-checklist.md, iris-launch-readiness-checklist.md remain blank).
 
+
+**2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
