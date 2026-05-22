@@ -6228,3 +6228,288 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
     )
 }
 
+// MARK: - Group ZZ: WI-bundleZ — Loop-19 Wheeler L13-H2 + Ma-Ti L08 re-scoping closure
+//
+// Closes two of the remaining HIGH-priority gaps surfaced by the
+// Loop-13 gap-analysis pass (claude-opus-4.7-xhigh) and carried
+// forward through Loops 14–18. The Loop-18 closure log §"Backlog
+// state (entering Loop-19)" enumerates the remaining items as
+// "Wheeler L13-H2/H3 (MED defaults + SPF model disclosure beyond
+// aboutHowThisWorks)" + "Ma-Ti L08 (eighth — undefined scope, needs
+// original definition lookup or re-scoping)". Bundle Z closes
+// Wheeler L13-H2 (per-row MED-defaults uncertainty disclosure
+// source-text guard) and explicitly re-scopes Ma-Ti L08 as the
+// "SPF 70+ conservative-cap copy-mirrors-constant" parity guard
+// (the canonical bookkeeping interpretation of the L01-L08 tally
+// in the Loop-13 enumeration, where the original list named only
+// seven distinct findings).
+//
+// Test names use the ZZ1/ZZ2 suffix (not Z1/Z2 — that namespace
+// was already claimed by the WI-r hero-VoiceOver-summary tests at
+// line 2185/2199/2217). The doubled-letter convention follows the
+// existing pattern used by Groups RR/SS/TT/EE/FF/GG/HH/JJ/LL/QQ
+// when a single-letter group name was already taken.
+//
+//   ZZ1 — Wheeler L13-H2 (per-row MED-defaults uncertainty disclosure):
+//        Each Fitzpatrick MED row in `FitzpatrickSkinType.swift`
+//        carries a Wheeler-ratified AUDIT-ONLY classification of
+//        the value's empirical certainty:
+//          • Types I/II/III — "Established" (modal mid of a tight
+//            published range; Fitzpatrick 1988 p.870 Table 1 +
+//            Sayre 1981 p.441 + Harrison & Young 2002 p.16 anchor).
+//          • Types IV/V/VI — "Reasonable approximation" (wider
+//            range; Type VI explicitly references
+//            ProductCopy.aboutEstimateApplicability "Fitzpatrick
+//            IV–VI estimates carry wider uncertainty because
+//            published MED values are commonly represented as
+//            ranges" prose).
+//        EE2 (line 2459) already pins the per-row AUDIT-ONLY
+//        citation comments + value + source paper. EE1 (line 2429)
+//        pins the 2-hour reapplication interval copy-to-constant
+//        parity. Neither test pins the **uncertainty classification**
+//        word ("Established" vs "Reasonable approximation"), which
+//        is the Wheeler-L13-H2 contract surface. A future maintainer
+//        who reformats the per-row comments (e.g., dropping the
+//        qualifier when shortening to fit a line-length linter)
+//        would silently regress the disclosed uncertainty discipline
+//        — Wheeler L13-H2 is explicit that the per-row qualifier
+//        must remain literal. ZZ1 anchors the per-row qualifier set
+//        as a source-text invariant.
+//
+//   ZZ2 — Ma-Ti L08 (re-scoped as the SPF 70+ conservative-cap
+//        copy-mirrors-constant parity guard):
+//        The original Loop-13 gap-analysis output enumerated Ma-Ti
+//        findings as "L01-L08 — `.nighttime` mapping, stale
+//        snapshot, persist coercion, picker retry, DST gap, SPF on
+//        forecast, override guard" (Loop-13 closure log line 37).
+//        Counting the listed names yields seven items, not eight;
+//        the "L08" reference was an unenumerated bookkeeping slot
+//        that has remained undefined through Loops 14–18 (the
+//        Loop-18 closure log §"What did not ship and why" explicitly
+//        invites Loop-19 to either retire L08 or re-scope it).
+//        ZZ2 re-scopes L08 as the SPF 70+ conservative-cap
+//        copy-mirrors-constant parity guard — the same "copy
+//        mirrors constant" pattern EE1 (line 2429) uses for the
+//        2-hour reapplication interval, applied to the SPF cap
+//        (`SPFLevel.spf70Plus.modelMultiplier == 50` mirrors the
+//        `ProductCopy.aboutHowThisWorks` phrase "modeled as SPF 50").
+//        The individual halves are already pinned (line 318 pins
+//        `modelMultiplier == 50`; line 628 pins the copy phrase),
+//        but no test BINDS the two so that if either side drifts
+//        independently the other must move with it. ZZ2 derives the
+//        expected copy phrase from the constant so a future
+//        maintainer who, e.g., adjusts the cap to "modeled as SPF
+//        70" (i.e., removes the conservative cap) without updating
+//        the copy, OR rewords the copy to "modeled as SPF 45"
+//        without updating the multiplier, gets a deterministic
+//        test failure. This closes the symmetric copy-implementation
+//        parity gap that Wheeler L13-H3 (SPF model disclosure)
+//        surfaced but which EE1 only covered for the reapplication
+//        interval, not the cap itself.
+//
+// Both tests are pure-function tests with no UserDefaults / SwiftUI /
+// network dependencies, matching the post-Loop-18 pattern.
+
+/// ZZ1 — Wheeler L13-H2: every Fitzpatrick MED row in
+/// `FitzpatrickSkinType.swift` carries a Wheeler-ratified
+/// uncertainty classification (either "Established" for the
+/// tight-range Types I/II/III or "Reasonable approximation" for
+/// the wider-range Types IV/V/VI).
+///
+/// **Why this guard matters:** Wheeler L13-H2 (Loop-13 parallel
+/// gap analysis, claude-opus-4.7-xhigh) flagged that the
+/// FitzpatrickSkinType.minimalErythemalDoseJoules block needs
+/// per-row uncertainty disclosure because the published MED ranges
+/// differ markedly between rows: Types I/II/III have tight
+/// published ranges (~50 J/m² variance) while Types IV/V/VI have
+/// wider ranges (200–700 J/m² variance). The current source already
+/// carries this discipline in the per-row AUDIT-ONLY comments
+/// (Types I/II/III say "Established"; Types IV/V/VI say "Reasonable
+/// approximation"), and the global "wider uncertainty" prose for
+/// IV–VI is mirrored in
+/// `ProductCopy.aboutEstimateApplicability`. EE2 (line 2459) pins
+/// the per-row value + citation source but does NOT pin the
+/// uncertainty-qualifier word. A future maintainer reformatting
+/// the comments (e.g., a "shorten comments to fit 100-char line
+/// budget" change) could silently drop the qualifier and the
+/// disclosed uncertainty discipline would regress without a CI
+/// signal. ZZ1 anchors the per-row qualifier as a source-text
+/// invariant.
+///
+/// **Anchor:** the `Minimal Erythemal Dose (J/m², erythemally
+/// weighted per CIE S 007/E:1998)` MARK header in
+/// `FitzpatrickSkinType.swift` (uniquely names the MED block).
+/// The slice reads the file directly so the assertions track the
+/// live source rather than a frozen snapshot.
+@Test func test_ZZ1_fitzpatrickMEDRowsAllCarryPerRowUncertaintyClassification() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let fitzpatrickURL = testFileURL
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Sources/UVBurnTimerCore/FitzpatrickSkinType.swift")
+    let source = try String(contentsOf: fitzpatrickURL, encoding: .utf8)
+
+    // Wheeler L13-H2 contract — Types I/II/III tight published range,
+    // qualifier MUST read "Established".
+    let establishedRows: [(value: String, label: String)] = [
+        ("200 J/m²", "Type I"),
+        ("250 J/m²", "Type II"),
+        ("300 J/m²", "Type III"),
+    ]
+    for (value, label) in establishedRows {
+        // The qualifier MUST appear on the same comment block as the
+        // value (within 200 chars). FitzpatrickSkinType.swift currently
+        // places the qualifier ~30–80 chars after the value on the
+        // single-line comment.
+        guard let valueRange = source.range(of: "AUDIT-ONLY: \(value)") else {
+            Issue.record(
+                "FitzpatrickSkinType.swift must carry an AUDIT-ONLY comment naming \(value) for \(label). Pinned by EE2 (line 2459) already; this ZZ1 sub-assertion is a precondition check before the qualifier scan."
+            )
+            continue
+        }
+        let scanEnd = source.index(valueRange.upperBound, offsetBy: 200, limitedBy: source.endIndex)
+            ?? source.endIndex
+        let scanSlice = source[valueRange.upperBound..<scanEnd]
+        #expect(
+            scanSlice.contains("Established"),
+            "FitzpatrickSkinType.swift \(label) (\(value)) AUDIT-ONLY comment MUST carry the qualifier \"Established\" — Wheeler L13-H2 (Loop-13 parallel gap analysis) requires per-row uncertainty disclosure, and Types I/II/III have tight published ranges (~50 J/m² variance, Fitzpatrick 1988 p.870 Table 1 modal mid + Sayre 1981 p.441 confirmation) that warrant the \"Established\" classification. If this assertion fires the qualifier has been reformatted or dropped — restore the literal substring `Established` on the row, or re-ratify the change with Wheeler before changing the test contract. (Wheeler L13-H2 — Loop-13 deferred / Loop-19)"
+        )
+    }
+
+    // Wheeler L13-H2 contract — Types IV/V/VI wider published range,
+    // qualifier MUST read "Reasonable approximation". This is the
+    // class that the global ProductCopy.aboutEstimateApplicability
+    // prose ("Fitzpatrick IV–VI estimates carry wider uncertainty
+    // because published MED values are commonly represented as ranges")
+    // explicitly calls out as the wider-uncertainty cohort.
+    let approximationRows: [(value: String, label: String)] = [
+        ("450 J/m²", "Type IV"),
+        ("600 J/m²", "Type V"),
+        ("1_000 J/m²", "Type VI"),
+    ]
+    for (value, label) in approximationRows {
+        guard let valueRange = source.range(of: "AUDIT-ONLY: \(value)") else {
+            Issue.record(
+                "FitzpatrickSkinType.swift must carry an AUDIT-ONLY comment naming \(value) for \(label). Pinned by EE2 (line 2459) already; this ZZ1 sub-assertion is a precondition check before the qualifier scan."
+            )
+            continue
+        }
+        let scanEnd = source.index(valueRange.upperBound, offsetBy: 200, limitedBy: source.endIndex)
+            ?? source.endIndex
+        let scanSlice = source[valueRange.upperBound..<scanEnd]
+        #expect(
+            scanSlice.contains("Reasonable approximation"),
+            "FitzpatrickSkinType.swift \(label) (\(value)) AUDIT-ONLY comment MUST carry the qualifier \"Reasonable approximation\" — Wheeler L13-H2 (Loop-13 parallel gap analysis) requires per-row uncertainty disclosure, and Types IV/V/VI have wider published ranges (200–700 J/m² variance, Sayre 1981 p.441 range 350–600 / Harrison & Young 2002 p.16 ranges 600–800 and 800–1500) that warrant the \"Reasonable approximation\" classification rather than \"Established\". The wider-uncertainty cohort is also disclosed globally in ProductCopy.aboutEstimateApplicability — the per-row qualifier must remain to keep the source-of-truth singular. If this assertion fires the qualifier has been reformatted or dropped — restore the literal substring `Reasonable approximation` on the row, or re-ratify the change with Wheeler before changing the test contract. (Wheeler L13-H2 — Loop-13 deferred / Loop-19)"
+        )
+    }
+
+    // Cross-class symmetry: the source MUST NOT carry the
+    // "Established" qualifier on a Type IV/V/VI row (would imply
+    // tight published range for the wider-uncertainty cohort) and
+    // MUST NOT carry "Reasonable approximation" on a Type I/II/III
+    // row (would imply wider uncertainty for the established cohort).
+    // Both directions would silently misrepresent the empirical
+    // basis of the MED ladder.
+    for (value, label) in approximationRows {
+        if let valueRange = source.range(of: "AUDIT-ONLY: \(value)") {
+            let scanEnd = source.index(valueRange.upperBound, offsetBy: 200, limitedBy: source.endIndex)
+                ?? source.endIndex
+            let scanSlice = source[valueRange.upperBound..<scanEnd]
+            #expect(
+                !scanSlice.contains("Established"),
+                "FitzpatrickSkinType.swift \(label) (\(value)) AUDIT-ONLY comment MUST NOT carry the qualifier \"Established\" — that classification is reserved for Types I/II/III with tight published ranges. Applying it to a wider-uncertainty row (Sayre 1981 p.441 range 350–600 / Harrison & Young 2002 p.16 ranges 600–800 and 800–1500) would misrepresent the empirical basis and conflict with the global wider-uncertainty disclosure in ProductCopy.aboutEstimateApplicability. (Wheeler L13-H2 — Loop-13 deferred / Loop-19)"
+            )
+        }
+    }
+    for (value, label) in establishedRows {
+        if let valueRange = source.range(of: "AUDIT-ONLY: \(value)") {
+            let scanEnd = source.index(valueRange.upperBound, offsetBy: 200, limitedBy: source.endIndex)
+                ?? source.endIndex
+            let scanSlice = source[valueRange.upperBound..<scanEnd]
+            #expect(
+                !scanSlice.contains("Reasonable approximation"),
+                "FitzpatrickSkinType.swift \(label) (\(value)) AUDIT-ONLY comment MUST NOT carry the qualifier \"Reasonable approximation\" — that classification is reserved for Types IV/V/VI with wider published ranges. Applying it to a tight-range row (Fitzpatrick 1988 p.870 Table 1 modal mid + Sayre 1981 p.441 confirmation) would overstate the empirical uncertainty for the established cohort. (Wheeler L13-H2 — Loop-13 deferred / Loop-19)"
+            )
+        }
+    }
+}
+
+/// ZZ2 — Ma-Ti L08 (re-scoped): the SPF 70+ conservative-cap
+/// copy-mirrors-constant parity guard. Mirrors
+/// `SPFLevel.spf70Plus.modelMultiplier` (the implementation cap)
+/// against the literal phrase "modeled as SPF \(cap)" in
+/// `ProductCopy.aboutHowThisWorks` (the disclosed cap). If either
+/// side drifts independently of the other, this test fires.
+///
+/// **Why this guard matters:** The disclosure phrase "SPF 70+ is
+/// conservatively modeled as SPF 50" in
+/// `ProductCopy.aboutHowThisWorks` (line 244 of ProductCopy.swift)
+/// is a Wheeler-ratified safety claim — the app does NOT credit
+/// SPF 70 sunscreen with 70× MED protection because real-world
+/// application thickness rarely reaches the laboratory 2 mg/cm²
+/// required for the labeled SPF (Wheeler L12-H1 archived in
+/// `.squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md`
+/// §3.4). The implementation enforces the cap via
+/// `SPFLevel.spf70Plus.modelMultiplier == 50` (SPFLevel.swift line
+/// 37–38), and `BurnTimeCalculator.estimate` consumes the
+/// `modelMultiplier` rather than the rawValue (BurnTimeCalculator.swift).
+/// EE1 (line 2429) pins the copy-mirrors-constant pattern for the
+/// 2-hour reapplication interval. The SPF cap has TWO independent
+/// pins already — line 318 pins the constant; line 628 pins the
+/// copy — but no test BINDS the two so that a future maintainer
+/// who changes one cannot do so without updating the other. ZZ2
+/// closes that parity gap.
+///
+/// **Failure modes ZZ2 catches:**
+///   • A future tune that removes the conservative cap (e.g., sets
+///     `modelMultiplier` to `rawValue` for all cases, exposing
+///     SPF 70+ as 70× protection) WITHOUT updating the disclosure
+///     copy → users continue to read "modeled as SPF 50" while the
+///     model applies SPF 70 → silent disclosure regression.
+///   • A future copy edit that reads "modeled as SPF 45" / "as SPF
+///     40" / "as SPF 30" WITHOUT updating the constant → the
+///     disclosed cap diverges from the applied cap → users believe
+///     a tighter cap than the model enforces.
+///   • A future case addition (e.g., `.spf100Plus`) that introduces
+///     a new conservative cap WITHOUT updating either side → ZZ2
+///     catches the original (`.spf70Plus`) cap regression but a
+///     companion test would be needed for the new case; ZZ2 is
+///     scoped to the existing single conservative-cap pairing.
+@Test func test_ZZ2_spfConservativeCapCopyMirrorsModelMultiplierConstant() throws {
+    // The Wheeler-ratified conservative cap value applied by the model.
+    let cap = SPFLevel.spf70Plus.modelMultiplier
+    #expect(
+        cap == 50,
+        "SPFLevel.spf70Plus.modelMultiplier MUST equal 50 — the Wheeler-ratified conservative cap (see .squad/decisions/archive/wheeler-fitzpatrick-and-med-anchor.md §3.4) for SPF 70+ sunscreens. A change to this value re-defines the disclosed model behavior and requires a synchronized update to ProductCopy.aboutHowThisWorks AND a re-ratification with Wheeler. If this assertion fires, the cap was changed without a Wheeler re-ratification check; the copy-parity sub-assertion below also re-runs the same drift check from the other side. (Ma-Ti L08 — Loop-13 deferred / Loop-19; original bookkeeping interpretation: re-scoped from undefined L08 slot to the SPF 70+ copy-implementation parity guard, the symmetric closure to EE1's 2-hour reapplication interval parity guard.)"
+    )
+
+    // The disclosed phrase derived from the constant. The literal
+    // "modeled as SPF \(cap)" form keeps the copy expectation bound
+    // to the runtime cap value rather than to a frozen literal.
+    let expectedPhrase = "modeled as SPF \(cap)"
+    #expect(
+        expectedPhrase == "modeled as SPF 50",
+        "Derived phrase \"\(expectedPhrase)\" MUST equal the literal \"modeled as SPF 50\" when the cap is the Wheeler-ratified 50. If this assertion fires, the cap drifted before the copy-parity sub-assertion ran. (Ma-Ti L08 — Loop-13 deferred / Loop-19)"
+    )
+
+    #expect(
+        ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains(expectedPhrase),
+        "ProductCopy.aboutHowThisWorks MUST contain the literal phrase \"\(expectedPhrase)\" — derived from the runtime cap `SPFLevel.spf70Plus.modelMultiplier`. If this assertion fires, EITHER (a) the implementation cap was changed without updating the disclosed copy (e.g., modelMultiplier raised to 70 or lowered to 30 without a copy edit), OR (b) the disclosed copy was edited away from \"modeled as SPF 50\" without updating the constant (e.g., \"modeled as SPF 30\" or \"capped at SPF 50\"). Either drift is a silent disclosure regression that breaks the Wheeler-ratified conservative cap contract — restore the binding by aligning both sides or re-ratify with Wheeler. (Ma-Ti L08 — Loop-13 deferred / Loop-19; symmetric to EE1's 2-hour reapplication interval parity guard at line 2429.)"
+    )
+
+    // Negative-side guards: the copy MUST NOT carry a phrase that
+    // disagrees with the cap. If the copy reads BOTH "modeled as
+    // SPF 50" AND "modeled as SPF 70" (e.g., a half-completed edit
+    // that landed both phrases) the contract is still broken — ZZ2
+    // pins the singular cap statement.
+    let alternateCaps = [15, 30, 70, 100]
+    for alternate in alternateCaps where alternate != cap {
+        let alternatePhrase = "modeled as SPF \(alternate)"
+        #expect(
+            !ProductCopy.aboutHowThisWorks.localizedCaseInsensitiveContains(alternatePhrase),
+            "ProductCopy.aboutHowThisWorks MUST NOT contain a conflicting cap phrase \"\(alternatePhrase)\" when the Wheeler-ratified cap is \"modeled as SPF \(cap)\". If this assertion fires, the copy carries both the canonical cap AND a stale or experimental alternate cap — restore singular-cap discipline by removing the stale phrase. (Ma-Ti L08 — Loop-13 deferred / Loop-19)"
+        )
+    }
+}
+
