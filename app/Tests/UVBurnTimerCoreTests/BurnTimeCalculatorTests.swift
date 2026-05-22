@@ -7896,3 +7896,223 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
         "SPFLevel.allCases[1] MUST be .spf30 — the README §3 default, and the value UserPreferenceStorage.restoredSPF coerces invalid inputs to (line 1303 pin). If this fires, allCases was reordered in a way that desynchronizes the picker's default-selection index from the storage-coercion default. (WI-bundleEE Loop-24, PP6)"
     )
 }
+
+// MARK: - Group UU: Loop-25 Bundle FF — ancillary helper densification
+//
+// UU was free at cycle-start on main (verified 2026-05-22 by
+// `grep -cE "test_UU[0-9]" app/Tests/UVBurnTimerCoreTests/*.swift`
+// returning 0). PP..QQ..RR were consumed by prior cycles; UU is the
+// doubled-letter selection for Loop-25 Bundle FF. These tests extend the
+// densification cadence established by Bundles AA (ZZ Loop-19) →
+// BB (KK Loop-21) → CC (MM Loop-22) → DD (NN Loop-23) → EE (OO Loop-24)
+// to the ancillary pure-function helpers that sit beneath the picker
+// leaves (defaultSelectedDate, uvResult, snapToNearest all achieved
+// matrix-density in Loops 22-24; this bundle densifies the helper layer).
+//
+// Reference: Loop-24 closure log §"Backlog state (entering Loop-25)"
+// natural-target note.
+
+/// UU1 — Kwame L13-5 (ancillary layer, pure-function clamp) boundary
+/// regime matrix density for `ForecastPickerLogic.clamp(_:firstHour:lastHour:)`.
+///
+/// The clamp function implements min(max(date, firstHour), lastHour) —
+/// a standard three-case boundary clamp. KK1/MM1/NN1/OO1 exercised it
+/// transitively via snapToNearest, but only ONE cell (clamp-high on probeplus6h).
+/// UU1 densifies to a 5×3 matrix (5 boundary regimes × 3 window spans)
+/// to catch silent regressions in the min/max logic itself.
+///
+/// The five regimes:
+/// (a) date < firstHour → must return firstHour (lower clamp)
+/// (b) date == firstHour → must return firstHour (lower identity)
+/// (c) firstHour < date < lastHour → must return date (pass-through)
+/// (d) date == lastHour → must return lastHour (upper identity)
+/// (e) date > lastHour → must return lastHour (upper clamp)
+///
+/// The three window spans test on narrow/medium/wide windows:
+/// (1) 1-hour window (adjacent hours)
+/// (2) 24-hour window (typical forecast day)
+/// (3) 240-hour window (10-day span)
+@Test func test_UU1_clampMatrixDensityAcrossBoundaryRegimes() {
+    let baseEpoch: TimeInterval = 1_779_368_400  // 2026-05-22T13:00:00Z
+    let baseDate = Date(timeIntervalSince1970: baseEpoch)
+    
+    // Three window configurations: (span, label)
+    let windowSpans: [(span: TimeInterval, label: String)] = [
+        (3600, "1-hour window"),
+        (86400, "24-hour window"),
+        (864000, "240-hour window")
+    ]
+    
+    for (span, spanLabel) in windowSpans {
+        let firstHour = baseDate
+        let lastHour = Date(timeIntervalSince1970: baseEpoch + span)
+        
+        // Regime (a): date < firstHour → returns firstHour
+        let dateBefore = Date(timeIntervalSince1970: baseEpoch - 3600)
+        let resultBefore = ForecastPickerLogic.clamp(dateBefore, firstHour: firstHour, lastHour: lastHour)
+        #expect(
+            resultBefore == firstHour,
+            "Regime (a) \(spanLabel): clamp(date < firstHour) MUST return firstHour. Got \(resultBefore), expected \(firstHour). (WI-bundleFF Loop-25, UU1-regime-a)"
+        )
+        
+        // Regime (b): date == firstHour → returns firstHour
+        let resultAtFirst = ForecastPickerLogic.clamp(firstHour, firstHour: firstHour, lastHour: lastHour)
+        #expect(
+            resultAtFirst == firstHour,
+            "Regime (b) \(spanLabel): clamp(date == firstHour) MUST return firstHour. Got \(resultAtFirst), expected \(firstHour). (WI-bundleFF Loop-25, UU1-regime-b)"
+        )
+        
+        // Regime (c): firstHour < date < lastHour → returns date unchanged
+        let dateInside = Date(timeIntervalSince1970: baseEpoch + span / 2)
+        let resultInside = ForecastPickerLogic.clamp(dateInside, firstHour: firstHour, lastHour: lastHour)
+        #expect(
+            resultInside == dateInside,
+            "Regime (c) \(spanLabel): clamp(firstHour < date < lastHour) MUST return date unchanged. Got \(resultInside), expected \(dateInside). (WI-bundleFF Loop-25, UU1-regime-c)"
+        )
+        
+        // Regime (d): date == lastHour → returns lastHour
+        let resultAtLast = ForecastPickerLogic.clamp(lastHour, firstHour: firstHour, lastHour: lastHour)
+        #expect(
+            resultAtLast == lastHour,
+            "Regime (d) \(spanLabel): clamp(date == lastHour) MUST return lastHour. Got \(resultAtLast), expected \(lastHour). (WI-bundleFF Loop-25, UU1-regime-d)"
+        )
+        
+        // Regime (e): date > lastHour → returns lastHour
+        let dateAfter = Date(timeIntervalSince1970: baseEpoch + span + 3600)
+        let resultAfter = ForecastPickerLogic.clamp(dateAfter, firstHour: firstHour, lastHour: lastHour)
+        #expect(
+            resultAfter == lastHour,
+            "Regime (e) \(spanLabel): clamp(date > lastHour) MUST return lastHour. Got \(resultAfter), expected \(lastHour). (WI-bundleFF Loop-25, UU1-regime-e)"
+        )
+    }
+    
+    // Idempotence check: clamp(clamp(x)) == clamp(x) on representative inputs
+    let firstHour = Date(timeIntervalSince1970: baseEpoch)
+    let lastHour = Date(timeIntervalSince1970: baseEpoch + 86400)
+    let belowFirst = Date(timeIntervalSince1970: baseEpoch - 7200)
+    let aboveLast = Date(timeIntervalSince1970: baseEpoch + 86400 + 7200)
+    
+    let clampBelowOnce = ForecastPickerLogic.clamp(belowFirst, firstHour: firstHour, lastHour: lastHour)
+    let clampBelowTwice = ForecastPickerLogic.clamp(clampBelowOnce, firstHour: firstHour, lastHour: lastHour)
+    #expect(
+        clampBelowOnce == clampBelowTwice,
+        "Idempotence (below): clamp(clamp(belowFirst)) MUST equal clamp(belowFirst). First clamp gave \(clampBelowOnce), second gave \(clampBelowTwice). (WI-bundleFF Loop-25, UU1-idempotent)"
+    )
+    
+    let clampAboveOnce = ForecastPickerLogic.clamp(aboveLast, firstHour: firstHour, lastHour: lastHour)
+    let clampAboveTwice = ForecastPickerLogic.clamp(clampAboveOnce, firstHour: firstHour, lastHour: lastHour)
+    #expect(
+        clampAboveOnce == clampAboveTwice,
+        "Idempotence (above): clamp(clamp(aboveLast)) MUST equal clamp(aboveLast). First clamp gave \(clampAboveOnce), second gave \(clampAboveTwice). (WI-bundleFF Loop-25, UU1-idempotent)"
+    )
+}
+
+/// UU2 — Kwame L13-5 (ancillary layer, pure-function hours filter) day-span
+/// regime matrix density for `ForecastPickerLogic.hours(for:in:)`.
+///
+/// The hours(for:in:) function filters a flat [HourForecast] array by
+/// UTC calendar day boundaries. The filter contract is half-open:
+/// [day.date, day.date+1day) — midnight-of-day INCLUDED, midnight-of-next-day EXCLUDED.
+/// KK/MM/NN/OO leaves (defaultSelectedDate, uvResult, snapToNearest) call this
+/// transitively but exercise only mixed-hours regimes. UU2 densifies to a 4×3
+/// matrix (4 hour-array regimes × 3 day anchors) to cover all filtering branches:
+/// (a) empty hours array → empty result
+/// (b) hours all before day → empty result
+/// (c) hours all after day+1 → empty result
+/// (d) mixed hours, in-day UTC subset returned in original order
+///
+/// Three day anchors for calendar-boundary testing:
+/// (1) 2024-02-29 (leap day — February in leap year)
+/// (2) 2025-03-09 (DST transition day — day clocks spring forward)
+/// (3) 2026-05-22 (normal day — arbitrary date mid-year)
+@Test func test_UU2_hoursForDayDensityAcrossDaySpanRegimes() {
+    // Define three day anchors (all UTC midnight).
+    // (1) Leap day 2024-02-29T00:00:00Z = 1709251200
+    let leapDayEpoch: TimeInterval = 1_709_251_200
+    let leapDay = DayForecast(date: Date(timeIntervalSince1970: leapDayEpoch), dailyMinUVI: 0, dailyMaxUVI: 8, sunrise: nil, sunset: nil)
+    
+    // (2) DST transition day 2025-03-09T00:00:00Z = 1741564800
+    let dstTransitionEpoch: TimeInterval = 1_741_564_800
+    let dstDay = DayForecast(date: Date(timeIntervalSince1970: dstTransitionEpoch), dailyMinUVI: 0, dailyMaxUVI: 7, sunrise: nil, sunset: nil)
+    
+    // (3) Normal day 2026-05-22T00:00:00Z = 1779052800
+    let normalDayEpoch: TimeInterval = 1_779_052_800
+    let normalDay = DayForecast(date: Date(timeIntervalSince1970: normalDayEpoch), dailyMinUVI: 0, dailyMaxUVI: 9, sunrise: nil, sunset: nil)
+    
+    let dayAnchors: [(label: String, day: DayForecast, epoch: TimeInterval)] = [
+        ("leap day 2024-02-29", leapDay, leapDayEpoch),
+        ("DST-transition 2025-03-09", dstDay, dstTransitionEpoch),
+        ("normal day 2026-05-22", normalDay, normalDayEpoch)
+    ]
+    
+    for (dayLabel, day, dayEpoch) in dayAnchors {
+        // Regime (a): empty hours array → empty result
+        let emptyResult = ForecastPickerLogic.hours(for: day, in: [])
+        #expect(
+            emptyResult.isEmpty,
+            "Regime (a) on \(dayLabel): hours(for:in: []) MUST return empty array. Got \(emptyResult.count) items. (WI-bundleFF Loop-25, UU2-regime-a)"
+        )
+        
+        // Regime (b): hours all before day → empty result
+        let hoursBefore = [
+            HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch - 7200), uvIndex: 5),
+            HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch - 3600), uvIndex: 6)
+        ]
+        let resultBefore = ForecastPickerLogic.hours(for: day, in: hoursBefore)
+        #expect(
+            resultBefore.isEmpty,
+            "Regime (b) on \(dayLabel): hours(for:in: [all before]) MUST return empty. Got \(resultBefore.count) items. (WI-bundleFF Loop-25, UU2-regime-b)"
+        )
+        
+        // Regime (c): hours all after day+1 → empty result
+        let nextDayStart = dayEpoch + 86400  // exactly midnight of next day
+        let hoursAfter = [
+            HourForecast(timestamp: Date(timeIntervalSince1970: nextDayStart), uvIndex: 7),
+            HourForecast(timestamp: Date(timeIntervalSince1970: nextDayStart + 3600), uvIndex: 8)
+        ]
+        let resultAfter = ForecastPickerLogic.hours(for: day, in: hoursAfter)
+        #expect(
+            resultAfter.isEmpty,
+            "Regime (c) on \(dayLabel): hours(for:in: [all after]) MUST return empty. Got \(resultAfter.count) items. (WI-bundleFF Loop-25, UU2-regime-c)"
+        )
+        
+        // Regime (d): mixed hours → only in-day UTC subset returned in original order
+        let hour00 = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch), uvIndex: 3)
+        let hour06 = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch + 6 * 3600), uvIndex: 4)
+        let hour12 = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch + 12 * 3600), uvIndex: 8)
+        let hour18 = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch + 18 * 3600), uvIndex: 6)
+        let hour23 = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch + 23 * 3600), uvIndex: 2)
+        let beforeDay = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch - 3600), uvIndex: 1)
+        let nextDayHour = HourForecast(timestamp: Date(timeIntervalSince1970: dayEpoch + 86400), uvIndex: 0)
+        
+        let mixedHours = [beforeDay, hour00, hour06, hour12, hour18, hour23, nextDayHour]
+        let resultMixed = ForecastPickerLogic.hours(for: day, in: mixedHours)
+        
+        #expect(
+            resultMixed.count == 5,
+            "Regime (d) on \(dayLabel): mixed hours MUST filter to exactly 5 in-day entries. Got \(resultMixed.count). (WI-bundleFF Loop-25, UU2-regime-d-count)"
+        )
+        
+        // Half-open interval check: [day.date, day.date+1day)
+        // The exact midnight-of-day MUST be INCLUDED, the exact midnight-after MUST be EXCLUDED.
+        #expect(
+            resultMixed.contains(where: { $0.timestamp == hour00.timestamp }),
+            "Regime (d) on \(dayLabel): hour at exactly midnight-of-day MUST be INCLUDED (closed lower bound). (WI-bundleFF Loop-25, UU2-regime-d-include-midnight)"
+        )
+        
+        #expect(
+            !resultMixed.contains(where: { $0.timestamp == nextDayHour.timestamp }),
+            "Regime (d) on \(dayLabel): hour at exactly midnight-after MUST be EXCLUDED (open upper bound). (WI-bundleFF Loop-25, UU2-regime-d-exclude-midnight-after)"
+        )
+        
+        // Order preservation check: original order maintained
+        let expectedOrder = [hour00, hour06, hour12, hour18, hour23]
+        let orderMatches = resultMixed.count == expectedOrder.count &&
+                          zip(resultMixed, expectedOrder).allSatisfy { $0.timestamp == $1.timestamp }
+        let resultHourOffsets = resultMixed.map { Int(($0.timestamp.timeIntervalSince1970 - dayEpoch) / 3600) }
+        #expect(
+            orderMatches,
+            "Regime (d) on \(dayLabel): filtered hours MUST preserve original order. Expected: [00, 06, 12, 18, 23], got: \(resultHourOffsets). (WI-bundleFF Loop-25, UU2-regime-d-order)"
+        )
+    }
+}
