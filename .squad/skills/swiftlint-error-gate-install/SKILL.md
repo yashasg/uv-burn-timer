@@ -13,6 +13,8 @@ Use this skill when you need Apple HIG or other shipped UX rules to block CI wit
 - Prefer `SimplyDanny/SwiftLintPlugins` as the SwiftPM dependency when you only need the plugins. It mirrors the official SwiftLint plugin releases but avoids pulling the full SwiftLint source tree and SwiftSyntax dependency graph into the consumer package.
 - Keep the repo-root `.swiftlint.yml` scoped to source directories only, excluding generated output, tests, and squad metadata.
 - Promote HIG rules through `custom_rules` with `severity: error`.
+- Default HIG layout/touch/typography rules to strict day-1 errors — no grace period and no warning tier.
+- For regex-only touch-target enforcement, fail literal `minHeight: 44` / `56` floors; require a nearby `.frame(...minWidth|minHeight: someIdentifier)` and document that the bare-identifier check is only a heuristic stand-in for true `@ScaledMetric` validation.
 - If the repo already has unrelated SwiftLint debt, disable or defer those non-HIG rules so `--strict` stays focused on HIG regressions instead of historical style noise.
 - In the canonical build script, run `swiftlint --strict --config .swiftlint.yml --reporter xcode` before build/test. If `swiftlint` is missing locally, emit a `warning:` and continue so local builds still work.
 - Add a fast local hook such as `./build.sh lint` with the emoji reporter.
@@ -21,7 +23,7 @@ Use this skill when you need Apple HIG or other shipped UX rules to block CI wit
 
 ## Example
 - `app/Package.swift` exact-pins `SimplyDanny/SwiftLintPlugins`.
-- `.swiftlint.yml` includes HIG custom rules for semantic colors, `NavigationStack` inside `.sheet`, minimum 44pt touch targets, user-facing `.uppercased()`, literal live-content frames, and literal `.font(.system(size:))`.
+- `.swiftlint.yml` includes HIG custom rules for semantic colors, `NavigationStack` inside `.sheet`, touch-target checks that require identifier-backed `minWidth` / `minHeight` floors instead of literal `44` / `56`, user-facing `.uppercased()`, literal live-content frames, and literal `.font(.system(size:))`.
 - `build.sh` provides two paths:
   - default mode: strict Xcode-reporter gate before `xcodebuild`
   - `lint` mode: emoji-reporter local feedback

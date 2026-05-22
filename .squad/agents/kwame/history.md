@@ -425,3 +425,9 @@ This third attempt keeps the visual cleanup the user originally asked for (no `B
 - Baseline sanity check: **16 HIG violations** on the current tree (`11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`). Those fixes stay with issues `#95` / `#96`, not the harness branch.
 - Validation: `swift package resolve --package-path app` resolved the plugin at `0.63.2`; Debug + Release builds still succeed when SwiftLint is intentionally absent locally; `xcodebuild test` remains non-green because of the repo’s existing two Swift Testing known-issue records in `ForecastPickerLogicTests`.
 
+### 2026-05-22T03:32:09-07:00 — SwiftLint strict day-1 HIG tightening
+- User directive superseded Iris’s softer bucket: all HIG layout/touch/typography rules in this harness stay at `severity: error` from day 1. No grace period and no warning ramp.
+- `missing_min_touch_target` no longer treats literal `minHeight: 44` / `56` as green. The regex now only passes Button / `.onTapGesture` sites when a nearby `.frame(...minWidth|minHeight: someIdentifier)` uses a bare identifier; that is a pragmatic heuristic for `@ScaledMetric`, not proof.
+- Sanity-check baseline is now **31 HIG violations** on the current tree: `15` `missing_min_touch_target`, `11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`. This branch stays config-only; cleanup belongs to issues `#95` / `#96`.
+- Remember why this is strict: Iris previously allowed an error-after-grace-period bucket and a literal `44` / `56` touch-target exception, but the user overruled both because iPhone SE/mini + AX5 makes fixed 44pt targets too cramped.
+
