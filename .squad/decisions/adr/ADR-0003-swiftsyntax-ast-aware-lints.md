@@ -1,6 +1,6 @@
 # ADR-0003: Replace regex-based custom SwiftLint rules with SwiftSyntax/AST-aware lints
 
-- **Status:** Proposed (2026-05-22) — accepted only after WI-loop30-2 spike lands
+- **Status:** Accepted (2026-05-22, Loop-30 iter-2) — flipped from `Proposed` after Ma-Ti's WI-loop30-2 spike landed; see `## Spike Result` below.
 - **Author:** Gaia (Loop-30)
 - **Work item:** WI-loop30-2
 - **Supersedes:** _none_ (additive; regex rules remain in place until per-rule ports land)
@@ -288,5 +288,14 @@ tool for those and they have not shown the brittleness pattern.
   - [ADR-0002](./ADR-0002-toolbar-topbartrailing-ios26.md) — iOS 26+ `.topBarTrailing` placement + iOS 26.4 toolbar Image-frame floor; the iOS 26.4 extension subsection is the design-rationale document this ADR's first spike-port target enforces.
 - Loop-30 backlog entry:
   - `.squad/decisions/inbox/gaia-loop30-open-backlog-seed.md` → WI-loop30-2.
+
+## Spike Result
+
+**Date flipped:** 2026-05-22 (Loop-30 iter-2). **Spike author:** Ma-Ti. **Verdict:** all three §Spike-scope acceptance criteria pass with executed evidence. The SwiftSyntax port of `toolbar_image_needs_scaled_frame` (Group LY) ships as a self-contained Swift package at `tools/swiftlint-rules/`, exercised by **14/14 XCTest cases passing** (`swift test` in 0.168 s after a 23.5 s cold build that pulls and compiles `swift-syntax` 601.0.1). The parity gate — `test_appViewsSwift_zeroViolations_parity`, which opens the live `app/Sources/UVBurnTimer/AppViews.swift` — agrees with the existing regex LY at **0 violations on both sides**, so the port is verdict-identical on the production toolbar. The §Context bullet-1 "structural guarantee" claim is now falsified-by-experiment: a 3 065-char nested-toolbar fixture (`Menu { …60 padding rows… } Image(systemName:"gear")`) exceeds the regex's 2 000-char outer window and is caught by the AST visitor (1 violation) while a literal Python re-encoding of the live `.swiftlint.yml` regex reports 0 matches — empirical proof the regex blind spot exists exactly where the ADR predicted. CI cost is bounded well under the ADR's +15 s budget: incremental warm-cache test runs measure **0.17 s**; the only material delta is the one-time SPM cold-resolve of `swift-syntax`, mitigated by the existing runner SPM cache. With the spike accepted, the §Rollout chain WI-30-A → WI-30-B → WI-30-C is dispatchable and **WI-loop30-4 (next HIG-rule cluster) is unblocked** to ship AST-first.
+
+**Evidence pointers:**
+
+- **Verdict file (full evidence, parity table, test corpus listing, CI-cost math):** Ma-Ti's spike verdict at `.squad/decisions/inbox/ma-ti-adr-0003-spike-verdict.md` (now merged by Scribe into `.squad/decisions.md` under the Loop-30 iter-2 inbox-merge section).
+- **Implementation:** `tools/swiftlint-rules/Sources/SwiftLintASTRules/ToolbarImageNeedsScaledFrameRule.swift` — the `SyntaxVisitor` subclass that walks the parent chain to detect `Image(...)` lexically inside `.toolbar { ... }` and verifies an adjacent `.frame(minWidth:minHeight:)` with identifier (not literal) arguments. Companion CLI under `tools/swiftlint-rules/Sources/swiftlint-ast/main.swift`; test corpus under `tools/swiftlint-rules/Tests/SwiftLintASTRulesTests/ToolbarImageNeedsScaledFrameRuleTests.swift`.
 
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
