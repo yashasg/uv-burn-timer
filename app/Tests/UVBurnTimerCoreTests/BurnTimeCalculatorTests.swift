@@ -6763,3 +6763,296 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
     )
 }
 
+
+// MARK: - Group KK: Loop-21 deferred-HIGH partial closures (Bundle BB — Group KK test prefix)
+//
+// Note on the KK doubled-letter name: the natural next-cycle name
+// after Loop-20's Group DD (which itself was renamed from the
+// natural Bundle-AA → AA/BB cascade) would be Group BB for
+// Loop-21's "Bundle BB", but per the Loop-20 closure log
+// §"Group name convention note" the BB / CC / DD / EE / FF / GG /
+// HH / II / JJ doubled-letter prefixes are ALL already taken
+// elsewhere in the suite (BB1/BB2 at MainScreenCleanupContractTests.swift
+// lines 265/306; CC1..CC9 at BurnTimeCalculatorTests.swift line
+// 4000+; DD1/DD2 at this file's line 6656/6716 from Loop-20;
+// EE1..EE6, FF1..FF6, GG1..GG3 in earlier bundles; HH1..HH3,
+// II1..II3, JJ1..JJ6 in earlier bundles still). The next free
+// doubled letter is KK (zero collisions in app/Tests/ at
+// cycle-start), so Bundle BB in Loop-21 uses Group KK as the test
+// function prefix following the same doubled-letter
+// collision-avoidance convention the Loop-19 closure log
+// documented for ZZ and the Loop-20 closure log documented for
+// DD. The PR / branch / closure-log references continue to call
+// this "Bundle BB" — only the test function prefix is KK to keep
+// the suite namespace collision-free.
+//
+// Group KK bundles two pure-function guards that progress the
+// deferred-HIGH backlog carried forward from Loops 13–20 without
+// requiring multi-file Swift refactors or convergent design
+// ratification. Per the Loop-20 closure log §"Backlog state
+// (entering Loop-21)", the remaining deferred HIGH items beyond
+// DD1/DD2 are blocked by either (a) hardware (WI-21 sign-offs,
+// Plunder L02 EU-rep designation), (b) reviewer input not
+// authorable solo (Suchi L02/L03 persona-coverage updates beyond
+// source-text guards), (c) larger code refactors (Kwame L13-2
+// cold-start race + L13-4 picker state on clear — each touches
+// the ForecastPickerLogic + UVBurnTimerSession state machines
+// across multiple files), or (d) convergent design (Plunder L05
+// additional hero-card-region L3 reach-back link — Iris+Plunder
+// ratification needed for the WHERE decision on the hero card
+// region). Group KK picks the two items in that backlog whose
+// closure can be expressed as a pure-function pin against the
+// EXISTING live production code, without changing implementation:
+//
+//   KK1  Kwame L13-2 (partial) — cold-start race contract.
+//        During the cold-start window between app launch and the
+//        first forecast snapshot landing in
+//        `RootView.forecastSnapshot`, ANY call into
+//        `ForecastPickerLogic.defaultSelectedDate(in:now:)` or
+//        `ForecastPickerLogic.snapToNearest(_:in:)` receives a
+//        `nil` snapshot. There is also a millisecond-wide window
+//        immediately after the snapshot value type lands but
+//        before its `.hours` array is populated by the forecast
+//        actor's update (e.g. partial decode, schema-migration
+//        path, or a future caching layer that hands back a
+//        skeleton snapshot before the hours array hydrates). In
+//        BOTH cases the picker logic MUST resolve to a
+//        deterministic, stable Date derived ONLY from the
+//        caller-supplied `now` (rounded to the UTC hour) so that
+//        (i) the UI does not flash an arbitrary or uninitialised
+//        Date, (ii) the cold-start ordering between "snapshot
+//        load callback" and "user opens picker" cannot leak a
+//        stale or hidden-default Date, and (iii) two cold-start
+//        calls with the same `now` are byte-identical (no global
+//        state involved). KK1 pins all four cold-start race
+//        cells:
+//          (a) defaultSelectedDate(in: nil, now:)              → roundedDownToHour(now)
+//          (b) defaultSelectedDate(in: <hours: []>, now:)      → roundedDownToHour(now)
+//          (c) snapToNearest(date, in: nil)                    → roundedDownToHour(date)
+//          (d) snapToNearest(date, in: <hours: []>)            → roundedDownToHour(date)
+//        These four contracts together close the silent-regression
+//        channel where a future refactor of the
+//        `guard let snap = snapshot, !snap.hours.isEmpty` early
+//        guards at ForecastPickerLogic.swift lines 68–70 (snap)
+//        and 124–126 (default) could silently substitute
+//        Date()/Date.distantFuture/.distantPast and corrupt the
+//        cold-start race resolution. The full multi-file
+//        cold-start race fix (re-shaping the call sites in
+//        ForecastPickerView.swift + UVBurnTimerSession.swift so
+//        the snapshot-load callback observes a deterministic
+//        transition) is still deferred to a future loop; KK1
+//        guarantees the leaf-level contract those call sites
+//        rely on cannot drift in the meantime.
+//
+//   KK2  Kwame L13-4 (partial) — picker state on clear contract.
+//        When a user invokes `UserPreferenceStorage.clearStoredPreferences(...)`
+//        (Settings → Clear everything, a future "Reset app"
+//        Shortcut, the UI-test reset harness, etc.) the picker
+//        selection MUST NOT silently change for an unchanged
+//        (snapshot, now) input. The leaf-level invariant that
+//        makes this hold is referential transparency:
+//        `defaultSelectedDate(in:now:)` and `snapToNearest(_:in:)`
+//        depend ONLY on their explicit arguments — NEVER on
+//        `UserDefaults`, `Locale.current`, `TimeZone.current`,
+//        or any other ambient state. If that invariant breaks,
+//        a "clear preferences" action could silently corrupt the
+//        next-rendered picker default Date (the L13-4 finding).
+//        KK2 pins this by computing the picker outputs, mutating
+//        `UserDefaults` heavily (write skinType + SPF + rationale
+//        + policyVersion + coordinate + legacy snapshot keys, then
+//        invoke `clearStoredPreferences`), recomputing the picker
+//        outputs against the SAME (snapshot, now) inputs, and
+//        asserting byte-identical equality. The
+//        `UserPreferenceStorage` mutations are wrapped against an
+//        ISOLATED `UserDefaults(suiteName:)` so the test cannot
+//        leak into the host process's standard defaults and is
+//        idempotent across runs. The full multi-file picker-state
+//        refactor (re-shaping the `@AppStorage`-backed pickerDate
+//        path in ForecastPickerView.swift so post-clear
+//        observers re-evaluate the default Date through the
+//        `defaultSelectedDate` leaf rather than caching a stale
+//        Date in SwiftUI @State) is still deferred to a future
+//        loop; KK2 guarantees the leaf-level purity those call
+//        sites rely on cannot drift in the meantime.
+//
+// Cross-reference: ForecastPickerLogic.swift early-guard lines
+// 68–70 (`snapToNearest` nil/empty fallback) and 124–126
+// (`defaultSelectedDate` nil/empty fallback);
+// UVBurnTimerSession.swift `clearStoredPreferences` body at
+// lines 100–116; Loop-20 closure log §"Backlog state (entering
+// Loop-21)" Kwame L13-2/L13-4 row.
+
+/// KK1 — Kwame L13-2 (partial) cold-start race contract.
+///
+/// All four cold-start-race leaf contracts that
+/// `ForecastPickerLogic.defaultSelectedDate(in:now:)` and
+/// `ForecastPickerLogic.snapToNearest(_:in:)` MUST satisfy when
+/// the snapshot is `nil` (pre-load) OR present-but-empty
+/// (partial-decode / skeleton-then-hydrate races):
+///   (a) defaultSelectedDate(in: nil)               → roundedDownToHour(now)
+///   (b) defaultSelectedDate(in: emptyHoursSnap)    → roundedDownToHour(now)
+///   (c) snapToNearest(date, in: nil)               → roundedDownToHour(date)
+///   (d) snapToNearest(date, in: emptyHoursSnap)    → roundedDownToHour(date)
+///
+/// Without these four pins, a future refactor could silently
+/// substitute `Date()`, `.distantFuture`, `.distantPast`, or a
+/// SwiftUI-cached Date for either fallback and the cold-start
+/// race would resolve to whatever leaked through — invisible to
+/// the happy-path tests because those use populated snapshots.
+@Test func test_KK1_pickerLogicColdStartFallbackContracts() throws {
+    // Stable mid-day UTC `now` (matches the BurnTimeCalculatorTests
+    // epoch convention used by DD2 at line 6719).
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+    let now = Date(timeIntervalSince1970: nowEpoch)
+    let expectedRoundedNow = ForecastPickerLogic.roundedDownToHour(now)
+
+    // Empty-hours snapshot (structurally present, no hour entries).
+    let emptyHoursSnap = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: now,
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: []
+    )
+
+    // (a) defaultSelectedDate(in: nil, now:) — pre-load cold-start path.
+    let resultA = ForecastPickerLogic.defaultSelectedDate(in: nil, now: now)
+    #expect(
+        resultA == expectedRoundedNow,
+        "ForecastPickerLogic.defaultSelectedDate(in: nil, now:) MUST return roundedDownToHour(now) (\(expectedRoundedNow)) — this is the cold-start nil-snapshot fallback at ForecastPickerLogic.swift lines 124–126 that the picker UI relies on during the window between app launch and the first ForecastSnapshot landing in RootView.forecastSnapshot. If this assertion fires, the early guard was changed to return Date()/.distantFuture/.distantPast or to fall through to the upcoming-hour branch (which crashes on nil snap.hours.first!). Restore the explicit `return roundedDownToHour(now)` early fallback. (Kwame L13-2 partial closure — cold-start race — Loop-13 deferred / Loop-21)"
+    )
+
+    // (b) defaultSelectedDate(in: emptyHoursSnap, now:) — skeleton-then-hydrate race path.
+    let resultB = ForecastPickerLogic.defaultSelectedDate(in: emptyHoursSnap, now: now)
+    #expect(
+        resultB == expectedRoundedNow,
+        "ForecastPickerLogic.defaultSelectedDate(in: <snapshot with empty hours>, now:) MUST return roundedDownToHour(now) (\(expectedRoundedNow)) — this is the second branch of the early guard at ForecastPickerLogic.swift lines 124–126 (`snap.hours.isEmpty`) that catches the millisecond-wide skeleton-then-hydrate race where a snapshot value type has landed but its .hours array is still empty (partial decode, schema-migration, or a future caching layer handing back a skeleton). If this assertion fires, the `!snap.hours.isEmpty` part of the guard was dropped and the function would later crash on `snap.hours.last!` at line 133 or `snap.hours.first(where:)` at line 129 returning nil → forcing the past-only fallback at line 133 → crashing on `snap.hours.last!`. Restore the `!snap.hours.isEmpty` guard. (Kwame L13-2 partial closure — cold-start race — Loop-13 deferred / Loop-21)"
+    )
+
+    // (c) snapToNearest(date, in: nil) — symmetric pre-load cold-start path on the snap function.
+    let probeDate = Date(timeIntervalSince1970: nowEpoch + 6 * 3600)  // 2026-05-21T19:00Z
+    let expectedRoundedProbe = ForecastPickerLogic.roundedDownToHour(probeDate)
+    let resultC = ForecastPickerLogic.snapToNearest(probeDate, in: nil)
+    #expect(
+        resultC == expectedRoundedProbe,
+        "ForecastPickerLogic.snapToNearest(date, in: nil) MUST return roundedDownToHour(date) (\(expectedRoundedProbe)) — this is the nil-snapshot fallback at ForecastPickerLogic.swift lines 67–70 (mirrors the defaultSelectedDate nil path so both leaf entry points behave identically during the cold-start window). If this assertion fires, the early guard was changed to return the raw date (without UTC-hour rounding) or to fall through to the snapshot-bounded clamp (which crashes on `snap.hours.first!`/`snap.hours.last!`). Restore the explicit `return roundedDownToHour(date)` early fallback. (Kwame L13-2 partial closure — cold-start race — Loop-13 deferred / Loop-21)"
+    )
+
+    // (d) snapToNearest(date, in: emptyHoursSnap) — symmetric skeleton-then-hydrate race path.
+    let resultD = ForecastPickerLogic.snapToNearest(probeDate, in: emptyHoursSnap)
+    #expect(
+        resultD == expectedRoundedProbe,
+        "ForecastPickerLogic.snapToNearest(date, in: <snapshot with empty hours>) MUST return roundedDownToHour(date) (\(expectedRoundedProbe)) — this is the `!snap.hours.isEmpty` branch of the early guard at ForecastPickerLogic.swift lines 67–70 (mirrors the defaultSelectedDate empty-hours path so both leaf entry points behave identically during the skeleton-then-hydrate race). If this assertion fires, the `!snap.hours.isEmpty` part of the guard was dropped and the function would crash on `snap.hours.first!` at line 73 or `snap.hours.last!` at line 74. Restore the `!snap.hours.isEmpty` guard. (Kwame L13-2 partial closure — cold-start race — Loop-13 deferred / Loop-21)"
+    )
+}
+
+/// KK2 — Kwame L13-4 (partial) picker state on clear contract.
+///
+/// `defaultSelectedDate(in:now:)` and `snapToNearest(_:in:)` MUST
+/// be referentially transparent — their outputs depend ONLY on
+/// the explicit arguments, NEVER on UserDefaults state. This
+/// pins the invariant that a user invoking
+/// `UserPreferenceStorage.clearStoredPreferences(...)` cannot
+/// silently corrupt the next-rendered picker selection for an
+/// unchanged (snapshot, now) input.
+///
+/// Methodology: build a populated snapshot, compute baseline
+/// picker outputs, mutate an isolated `UserDefaults(suiteName:)`
+/// heavily (write skinType + SPF + rationale + policyVersion +
+/// coordinate + legacy snapshot keys), invoke
+/// `clearStoredPreferences(from: defaults)`, and recompute the
+/// picker outputs against the SAME (snapshot, now) inputs.
+/// Assert byte-identical equality on both outputs.
+@Test func test_KK2_pickerLogicReferentialTransparencyAcrossPreferencesClear() throws {
+    // Isolated suite — guarantees no leakage into / from .standard.
+    let suiteName = "test_KK2_pickerLogicRefTransparency_\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer {
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    // Stable mid-day UTC `now` (matches DD2 / KK1 convention).
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+    let now = Date(timeIntervalSince1970: nowEpoch)
+
+    // Populated snapshot — a single hour 2 hours in the future so
+    // the upcoming-hour branch (line 129–130) fires, exercising
+    // the most-trafficked branch of `defaultSelectedDate` (NOT
+    // the nil/empty/past-only edge cases that KK1 + DD2 cover).
+    let futureHourEpoch: TimeInterval = nowEpoch + 2 * 3600
+    let futureHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: futureHourEpoch),
+        uvIndex: 7
+    )
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: now,
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: [futureHour]
+    )
+    let probeDate = Date(timeIntervalSince1970: nowEpoch + 1 * 3600)  // 2026-05-21T14:00Z
+
+    // Baseline computation — with isolated defaults entirely empty.
+    let baselineDefault = ForecastPickerLogic.defaultSelectedDate(in: snapshot, now: now)
+    let baselineSnap    = ForecastPickerLogic.snapToNearest(probeDate, in: snapshot)
+
+    // Heavy mutation of isolated defaults — every persisted key that
+    // `clearStoredPreferences` is responsible for, plus the two
+    // GDPR-Art.17 keys lifted into UserPreferenceStorage by
+    // Bundle R / Kwame L13-3 (lastRoundedCoordinateKey,
+    // legacyUVSnapshotKey). If the picker functions secretly
+    // consulted any of these, the post-clear recomputation would
+    // diverge from baseline.
+    UserPreferenceStorage.persist(skinType: .typeIII, to: defaults)
+    UserPreferenceStorage.persist(spf: .spf50, to: defaults)
+    defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+    defaults.set(
+        UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+    )
+    defaults.set("37.77,-122.42", forKey: UserPreferenceStorage.lastRoundedCoordinateKey)
+    defaults.set(Data([0xDE, 0xAD, 0xBE, 0xEF]), forKey: UserPreferenceStorage.legacyUVSnapshotKey)
+
+    // Sanity: confirm the mutations actually landed (catches a future
+    // accidental refactor of `persist(skinType:)` to a no-op silently
+    // making the rest of the test pass for the wrong reason).
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) != nil,
+        "KK2 setup invariant: selectedSkinTypeKey must be present in the isolated defaults before clearStoredPreferences runs — otherwise the post-clear equality check is vacuous. If this fires, `UserPreferenceStorage.persist(skinType:to:)` was refactored to a no-op for non-nil values; restore the `defaults.set(skinType.rawValue, forKey:)` branch."
+    )
+
+    // Invoke the clear path under test.
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+
+    // Recompute against identical (snapshot, now) inputs.
+    let postClearDefault = ForecastPickerLogic.defaultSelectedDate(in: snapshot, now: now)
+    let postClearSnap    = ForecastPickerLogic.snapToNearest(probeDate, in: snapshot)
+
+    // The picker functions are pure — outputs MUST be byte-identical.
+    #expect(
+        postClearDefault == baselineDefault,
+        "ForecastPickerLogic.defaultSelectedDate(in:now:) MUST be referentially transparent — it must return the same Date for the same (snapshot, now) input regardless of any UserDefaults mutations or clear operations performed between calls. Baseline was \(baselineDefault); post-clear was \(postClearDefault). If this assertion fires, the function gained a hidden dependency on UserDefaults (or another piece of ambient state) — most likely via a default-parameter-evaluated singleton or a global cache layer. Remove the hidden dependency; the only inputs allowed are the explicit (snapshot, now) parameters. (Kwame L13-4 partial closure — picker state on clear — Loop-13 deferred / Loop-21)"
+    )
+    #expect(
+        postClearSnap == baselineSnap,
+        "ForecastPickerLogic.snapToNearest(_:in:) MUST be referentially transparent — it must return the same Date for the same (date, snapshot) input regardless of any UserDefaults mutations or clear operations performed between calls. Baseline was \(baselineSnap); post-clear was \(postClearSnap). If this assertion fires, the function gained a hidden dependency on UserDefaults (or another piece of ambient state). Remove the hidden dependency; the only inputs allowed are the explicit (date, snapshot) parameters. (Kwame L13-4 partial closure — picker state on clear — Loop-13 deferred / Loop-21)"
+    )
+
+    // Additionally pin that `clearStoredPreferences` did its job —
+    // catches a future regression where the body silently no-ops
+    // and the "no divergence" assertion above passes for the wrong
+    // reason (because nothing was ever cleared).
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) == nil,
+        "KK2 post-clear invariant: selectedSkinTypeKey MUST be removed by clearStoredPreferences (UVBurnTimerSession.swift lines 100–116). If this fires, the `defaults.removeObject(forKey: selectedSkinTypeKey)` line was dropped — restore it. Without this, the picker-purity assertions above would pass vacuously after a regression in clearStoredPreferences itself. (Kwame L13-4 partial closure — Loop-21)"
+    )
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.lastRoundedCoordinateKey) == nil,
+        "KK2 post-clear invariant: lastRoundedCoordinateKey MUST be removed by clearStoredPreferences — this is the GDPR Art.17 erasure key lifted into UserPreferenceStorage by Bundle R / Kwame L13-3. If this fires, the GDPR Art.17 erasure-path completeness regressed; restore the `defaults.removeObject(forKey: lastRoundedCoordinateKey)` line at UVBurnTimerSession.swift line 114. (Kwame L13-4 partial closure — Loop-21)"
+    )
+}
