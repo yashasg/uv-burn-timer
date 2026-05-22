@@ -90,3 +90,11 @@ SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 
 - **Planning implication for Loop-30:** When concrete WIs are filed, expect parallel pickup. Plan Loop-30 with WIs that are *either* (a) intentionally cohort-shippable (sliced for parallelism) *or* (b) explicitly serialised behind a named owner (e.g., the UI-runner flake stabilisation, which needs single-author bisection). Do not file ambiguous WIs that look concrete but actually require single-owner judgment — they invite duplicate work whose diagnoses don't converge cleanly.
 
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
+
+## 2026-05-22T19:00:00Z — Loop-30 WI-loop30-2: ADR-0003 SwiftSyntax/AST-aware lints filed
+
+PR **#112** merged (squash) at `42c97e9`. Docs-only ADR proposing replacement of regex-based custom SwiftLint rules with SwiftSyntax/AST-aware lints, motivated by the Loop-29 brittleness cascade (LW → LX → LX' → LY across PRs #104, #106, #108 — each cycle's regex revealed a new false-negative in the prior cycle's pattern). Status filed as **Proposed**; flips to **Accepted** only after the WI-loop30-2 follow-up spike ports `toolbar_image_needs_scaled_frame` (Group LY) and meets three acceptance criteria: (1) verdict-parity on the existing LY contract corpus, (2) catches ≥1 synthetic case the regex misses (toolbar body > 2000-char window), (3) CI cost ≤ +15 s on the SwiftLint leg.
+
+**Decision-shape lesson:** The right moment to make a regex-vs-AST decision is *before* the next batch of rules ships, not after. If WI-loop30-4 (next HIG-rule cluster) had landed first with five more regex rules, we would have locked in the brittleness tax for another cycle. Filed WI-loop30-4 as dependency-gated on this ADR's spike outcome in the Loop-30 backlog seed.
+
+**Recommendation 1-liner:** Adopt SwiftSyntax-based custom lints for net-new structural HIG rules (Option A); keep regex only for single-token rules where no syntactic context is needed. Spike scope = port Group LY (most fragile / most recent regex). Major-decision note filed to `.squad/decisions/inbox/gaia-wi-loop30-2-ast-lints.md`.
