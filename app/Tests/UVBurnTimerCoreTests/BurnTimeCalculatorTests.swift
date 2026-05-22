@@ -4983,3 +4983,163 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
         "RootView.activeEstimate must read `skinType:` from `session.selectedSkinType` (Ma-Ti L06)."
     )
 }
+
+// MARK: - Group T: WI-bundleT — Loop-14 follow-on HIGH closure
+//
+// T1 — Iris L02 (Loop-13) — WCAG 2.1 SC 1.4.3 contrast on the L1 cover
+// photosensitizer disclaimer text.
+//
+// The pre-Loop-14 render shape was:
+//
+//     Label(ProductCopy.photosensitizerDisclaimerLine,
+//           systemImage: "exclamationmark.triangle")
+//         .font(.callout.weight(.semibold))
+//         .foregroundStyle(.orange)
+//
+// `.foregroundStyle(.orange)` applied to a Label tints both the icon
+// AND the text. SwiftUI's `.orange` maps to `UIColor.systemOrange`,
+// which against the `.regularMaterial` cover background measures
+// roughly 2.3–2.5:1 in Light Mode + Standard Contrast — a WCAG 2.1
+// SC 1.4.3 (Contrast Minimum, 4.5:1) failure for the *text* path.
+// The text is health-critical for Asha (P4 Accutane / photosensitizer
+// cohort): she must be able to read "Photosensitizing medications,
+// conditions, recent skin treatments, and pregnancy can make this
+// estimate overstate your burn window." at every contrast mode.
+//
+// Bundle T's fix is to decompose the Label into separate text and
+// icon closures so the *text* inherits `.primary` (system-adaptive
+// label color that meets ≥ 7:1 against any system background in both
+// Standard and Increased contrast) while the *icon* keeps the orange
+// warning hue as a decorative visual signal. The icon's accessibility
+// remains masked by the outer `.accessibilityLabel(ProductCopy
+// .photosensitizerDisclaimerLine)` + `.accessibilityElement(children:
+// .combine)` (pinned by Group JJ5), so the rendered VoiceOver string
+// is unchanged.
+//
+// The pre-existing decorative 48pt `exclamationmark.triangle.fill`
+// glyph above the title block (DisclaimerCover line ~1190) remains
+// `.foregroundStyle(.orange)` because it is `.accessibilityHidden(
+// true)` AND it is a pure-icon surface (no text payload), so WCAG
+// SC 1.4.3 does not apply to it. The 4.5:1 floor only governs *text*
+// and *images of text*.
+
+/// T1 — DisclaimerCover photosens disclaimer Label renders the text
+/// in `.primary` (not `.orange`) for WCAG 2.1 SC 1.4.3 compliance.
+///
+/// **Why this guard matters:** SwiftUI's `.orange` against the
+/// `.regularMaterial` L1 cover background measures ~2.3–2.5:1 in
+/// Light Mode + Standard Contrast — a WCAG 2.1 SC 1.4.3 (4.5:1)
+/// failure for text content. The photosens disclaimer line is the
+/// load-bearing surface for the Asha (P4 Accutane / photosensitizer)
+/// cohort and must be legible at every contrast mode. Pinning the
+/// `.foregroundStyle(.primary)` modifier on the text closure ensures
+/// the system-adaptive label color is used (≥ 7:1 against any system
+/// background). A future "tighten styling" refactor that re-applies
+/// `.foregroundStyle(.orange)` to the Label as a whole would silently
+/// regress contrast for Asha and fail Iris L02 again.
+///
+/// **Decorative icon retention:** the `exclamationmark.triangle`
+/// SF Symbol inside the Label is preserved with `.foregroundStyle(
+/// .orange)` because it is a pure-icon surface (no text payload) and
+/// the outer `.accessibilityLabel(photosensitizerDisclaimerLine)` +
+/// `.accessibilityElement(children: .combine)` keeps VoiceOver output
+/// identical to the pre-T1 shape. SC 1.4.3 does not apply to pure
+/// icons; SC 1.4.11 (3:1 for non-text contrast) is met by `.orange`
+/// against `.regularMaterial`.
+@Test func test_T1_photosensitizerLineLabelOnL1CoverUsesPrimaryTextColor() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    // Anchor on the DisclaimerCover declaration so we scope the
+    // assertions to the L1 cover render site and not, e.g., the
+    // Settings sheet or About sheet.
+    guard let coverStart = source.range(of: "struct DisclaimerCover: View")?.lowerBound else {
+        Issue.record("DisclaimerCover struct declaration not found in AppViews.swift")
+        return
+    }
+
+    // Scan ~6000 chars into the body — DisclaimerCover's body is
+    // approximately 100 LOC (~4500 chars) including the comment block,
+    // so 6000 chars is a comfortable upper bound that stops well
+    // before the next top-level struct.
+    let coverScanEnd = source.index(coverStart, offsetBy: 6000, limitedBy: source.endIndex) ?? source.endIndex
+    let coverRegion = String(source[coverStart..<coverScanEnd])
+
+    // (a) The text render must use `.foregroundStyle(.primary)` —
+    // this is the WCAG-compliant rendering. Look for the Text node
+    // and assert its immediate modifier chain contains `.primary`.
+    guard let textHit = coverRegion.range(of: "Text(ProductCopy.photosensitizerDisclaimerLine)") else {
+        Issue.record(
+            "DisclaimerCover must render `Text(ProductCopy.photosensitizerDisclaimerLine)` inside a decomposed Label so the text color can be controlled independently of the icon hue. The pre-Loop-14 shape `Label(ProductCopy.photosensitizerDisclaimerLine, systemImage: ...).foregroundStyle(.orange)` failed WCAG 2.1 SC 1.4.3 (~2.4:1 in Light Mode Std). (WI-bundleT / Iris L02 — Loop-14)"
+        )
+        return
+    }
+
+    // Look at the next 300 chars after the Text node for the modifier
+    // chain. The fix attaches `.foregroundStyle(.primary)` directly to
+    // the Text inside the Label's content closure.
+    let modifierScanEnd = coverRegion.index(textHit.upperBound, offsetBy: 300, limitedBy: coverRegion.endIndex) ?? coverRegion.endIndex
+    let modifierRegion = String(coverRegion[textHit.upperBound..<modifierScanEnd])
+    #expect(
+        modifierRegion.contains(".foregroundStyle(.primary)"),
+        "L1 cover photosens text must use `.foregroundStyle(.primary)` for WCAG 2.1 SC 1.4.3 (4.5:1) — SwiftUI `.orange` against `.regularMaterial` measures ~2.4:1 in Light Mode Std Contrast (FAIL AA). The photosens text is health-critical for Asha (P4 Accutane / photosensitizer cohort). (WI-bundleT / Iris L02 — Loop-14)"
+    )
+
+    // (b) The decorative `exclamationmark.triangle` icon inside the
+    // Label may still use `.foregroundStyle(.orange)` because it is a
+    // pure-icon surface (no text payload). Verify the icon is still
+    // present somewhere in the cover — the orange warning hue must
+    // remain as a visual signal.
+    #expect(
+        coverRegion.contains("Image(systemName: \"exclamationmark.triangle\")"),
+        "L1 cover must still render an inline `exclamationmark.triangle` SF Symbol inside the photosens Label as the decorative warning glyph (WI-bundleT / Iris L02)."
+    )
+    #expect(
+        coverRegion.contains(".foregroundStyle(.orange)"),
+        "L1 cover must retain `.foregroundStyle(.orange)` on a decorative surface — at minimum the 48pt `exclamationmark.triangle.fill` glyph and/or the inline icon — so the warning-hue visual signal remains (WI-bundleT / Iris L02)."
+    )
+
+    // (c) The old failing shape must not return — the Label initializer
+    // that takes a title + systemImage applies the foreground style
+    // uniformly to both the icon and the text, which is exactly the
+    // pattern that failed WCAG. Pin its absence so a future refactor
+    // cannot regress.
+    #expect(
+        !coverRegion.contains("Label(ProductCopy.photosensitizerDisclaimerLine, systemImage:"),
+        "L1 cover photosens Label must not use the title-string + systemImage Label initializer — that shape applies `.foregroundStyle(...)` uniformly to icon + text and was the source of the Iris L02 contrast failure. Use the decomposed `Label { Text(... ).foregroundStyle(.primary) } icon: { Image(... ).foregroundStyle(.orange) }` shape instead. (WI-bundleT / Iris L02 — Loop-14)"
+    )
+}
+
+/// T2 — Iris contrast-QA checklist tracks the new L1 cover photosens
+/// disclaimer row so the next physical-device contrast pass
+/// re-measures it after the Bundle T fix.
+///
+/// **Why this guard matters:** the contrast-QA checklist is the
+/// hardware-gated manual sign-off surface (per WI-21). When a render
+/// surface changes color tokens, the checklist must reflect the new
+/// surface so the next TestFlight gate doesn't accidentally skip it.
+/// Bundle T introduces a new color-token boundary (orange icon +
+/// primary text on `.regularMaterial`) that needs to be measured on
+/// device. This guard pins the checklist row title until the
+/// hardware-equipped owner records the actual ratio.
+@Test func test_T2_irisContrastChecklistTracksL1CoverPhotosensRow() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let checklistURL = testFileURL
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .deletingLastPathComponent()  // repo root
+        .appendingPathComponent(".squad/files/iris-contrast-qa-checklist.md")
+    let contents = try String(contentsOf: checklistURL, encoding: .utf8)
+
+    // The new row title — kept stable so the manual sign-off block
+    // and the post-fix re-measurement are both traceable to WI-bundleT.
+    #expect(
+        contents.contains("L1 cover photosens disclaimer Label text"),
+        "iris-contrast-qa-checklist.md must list a row for the L1 cover photosens disclaimer Label text — Bundle T (Iris L02 — Loop-14) decomposed the Label so the text now uses `.primary` and the icon keeps `.orange`. The next hardware-gated contrast pass must re-measure this row."
+    )
+    #expect(
+        contents.contains("WI-bundleT") || contents.contains("Iris L02"),
+        "iris-contrast-qa-checklist.md row for the L1 cover photosens disclaimer must reference Bundle T / Iris L02 so the hardware-equipped reviewer knows which fix introduced the new color-token boundary."
+    )
+}
+
