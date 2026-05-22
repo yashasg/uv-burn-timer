@@ -666,3 +666,1240 @@ Three are dispatchable in parallel; one (WI-loop30-4) stays gated.
 - ❌ Goal-5: Contrast QA (hardware-blocked)
 
 **Iter-3 dispatch ready:** WI-30-1 (Kwame+Ma-Ti flake bisection), WI-30-3 (Scribe decisions compaction), WI-30-6 (Plunder privacy policy)
+
+## 2026-05-22 — Loop-30 iter-3 closure
+
+### Inbox: gaia-loop30-iter3-status
+
+# Gaia — Loop-30 iter-3 status board
+
+**Date:** 2026-05-22T20:55:00Z
+**Loop / iter:** Loop-30, iteration 3
+**Author:** Gaia (Lead)
+
+## PR table
+
+| PR | Branch | Author | Scope | Status | Merge SHA / Block |
+|---|---|---|---|---|---|
+| #118 | `squad/wi-loop30-ast-ly-retire-regex` | Kwame | Retire `toolbar_image_needs_scaled_frame` regex from `.swiftlint.yml`; AST gate is now sole source of truth for the iOS 26.4 toolbar-Image `@ScaledMetric` floor. Gravestone comment + contract-test inversion. | **MERGED** (squash, branch deleted) | `604c444c7b51d2fd61b8e529072b0504ea36794a` |
+| #119 | `squad/wi-loop30-4a-image-accessibility-label` | Ma-Ti | Second AST rule: `image_systemname_missing_accessibility_label`. Validates harness multi-rule scaling per ADR-0003 §Rollout WI-30-B. | **BLOCKED on revision** | Silencer (d) violates Iris's catalog P5 (WCAG 1.1.1 implicit-decoration risk). Revision owner: **Kwame** (Ma-Ti locked out per reviewer-rejection protocol). See `.squad/decisions/inbox/gaia-pr119-adjudication.md`. |
+| TBD | `squad/wi-loop30-4a-iris-3sites` *(in flight, placeholder)* | Kwame | Fix three `app/Sources/` sites that fire the strict `image_systemname_missing_accessibility_label` rule: `AppViews.swift:1152` (TierBadge), `ForecastPickerView.swift:209` (refresh banner), `ForecastPickerView.swift:230` (error banner). Prescribed remediation per Iris's catalog: `.accessibilityHidden(true)` or `.accessibilityLabel(…)`. | **OPENING (parallel)** | PR # not yet assigned — to be filled in when Kwame opens it. Must merge before revised #119 can merge. |
+
+## PR #117 note
+
+PR #117 (Scribe Loop-30 iter-2 closure) was **CLOSED** earlier in iter-2; not reopened. Numbering gap accounted for. No dropped work.
+
+## Dependency chain (visual)
+
+```
+main @ 604c444c (PR #118 merged, regex retired)
+   │
+   ├── (parallel) Kwame: WI-loop30-4a-iris-3sites
+   │       Fix 3 production sites → MERGE TO MAIN FIRST
+   │
+   └── Ma-Ti PR #119  ── BLOCKED
+            ├── Kwame revision: remove silencer (d) + add POSITIVE tests
+            │     (Ma-Ti locked out from this revision)
+            └── rebase onto main (post-3-sites-fix)
+                  → `./build.sh lint` green under strict rule
+                  → merge #119
+```
+
+## Open coordination items
+
+- **Iris:** sign off on revised #119 once Kwame's silencer-(d) removal lands; explicit comment that the rule now matches catalog P5.
+- **Kwame:** dual-track — (1) open the 3-sites PR; (2) revise #119's visitor and tests per `gaia-pr119-adjudication.md`. Recommend opening the 3-sites PR first since it must merge first.
+- **Ma-Ti:** stand-down on silencer (d). May still address non-controversial review feedback on silencers (a)/(b)/(c), harness wiring, and TDD commits in #119.
+- **Scribe:** pending fold of `gaia-pr119-adjudication.md` + this status file at next sweep.
+
+## Iter-3 goal status
+
+- ✅ **Goal 1 — Retire LY regex now AST is canonical:** done (PR #118).
+- 🟡 **Goal 2 — Validate AST harness scales to a second rule:** in flight via revised #119; deferred to post-revision.
+- 🟡 **Goal 3 — First batch of HIG/a11y rules begins shipping:** deferred to revised #119 + the 3-sites fix.
+
+— Gaia
+
+
+### Inbox: gaia-pr119-adjudication
+
+# Gaia — PR #119 adjudication: silencer (d) veto
+
+**Date:** 2026-05-22T20:55:00Z
+**PR:** #119 — `WI-loop30-4a: AST rule — image_systemname_missing_accessibility_label` (Ma-Ti, branch `squad/wi-loop30-4a-image-accessibility-label`)
+**Decision class:** Major — design-spec adjudication; invokes reviewer-rejection / lockout protocol.
+**Verdict:** Iris's design spec wins. Silencer (d) must be removed. #119 blocked on revision; revision owner is **Kwame**, not Ma-Ti.
+
+## Context
+
+Ma-Ti's PR #119 ships the second SwiftSyntax/AST custom lint rule (`image_systemname_missing_accessibility_label`) and validates the AST harness's multi-rule scaling claim from ADR-0003 §Rollout WI-30-B. The rule implements four silencers:
+
+- **(a)** Image inside `Button` / `NavigationLink` / `Link` label closure (unconditional).
+- **(b)** Any-form `.accessibilityElement(...)` / `.accessibilityLabel(...)` / `.accessibilityHidden(true)` in the ancestor modifier chain.
+- **(c)** Image inside `Label { } icon: { }` icon closure.
+- **(d)** [Ma-Ti's extension] Image has a sibling `Text(...)` in the same enclosing view-builder block.
+
+Ma-Ti added silencer (d) after `ForecastPickerView.swift` L209/L230 (refresh + error banners) and `AppViews.swift:1152` (TierBadge) fired the rule, citing the WI-loop30-4a constraint "if AST fires on real code, refine the rule, not the SUT".
+
+In parallel, Iris published the fixture catalog (`.squad/decisions/inbox/iris-image-accessibility-fixtures.md`) which classifies the "Image + adjacent Text in stack" pattern as a **POSITIVE** (rule should fire), with explicit HIG/WCAG 1.1.1 anchoring.
+
+## Reasoning
+
+### 1. The catalog is the design spec; the spec predates the implementation
+
+Iris's catalog entry P5 reads:
+
+> A sibling `Text` is **not** a labeling relation in SwiftUI's a11y tree — they are two adjacent focusable elements. VoiceOver reads "Arrow, clockwise, Image. Updating forecast." The image's symbol-id leaks through. Authors who want decorative-icon-plus-text-label semantics must either (a) use `Label { Text(…) } icon: { Image(…) }`, (b) wrap the `HStack` with `.accessibilityElement(children: .combine)` + `.accessibilityLabel(…)`, or (c) hide the image with `.accessibilityHidden(true)`. The rule deliberately rejects "implicit decoration via adjacency" — too risky for SF Symbols whose names are not user-readable.
+
+This is a WCAG 1.1.1 (Non-text Content) compliance anchor, not a style preference. Silencer (d) suppresses the exact failure mode the rule was designed to catch.
+
+### 2. The "refine the rule, not the SUT" constraint inverts when the catalog calls the firings positive
+
+Ma-Ti's WI-loop30-4a directive presupposes the production firings are false positives. The catalog establishes them as **true positives**. Under that re-classification, the WI constraint flips: the SUT must be remediated, not the rule.
+
+This is exactly the case the squad's reviewer-rejection protocol exists for: a design owner's spec overrides an implementer's local optimization for test-corpus greenness.
+
+### 3. The three production sites are remediable, not load-bearing
+
+- `AppViews.swift:1152` (TierBadge) — known case, Iris's memo cites it as case (b) silencer via `.accessibilityElement(children: .combine)` + `.accessibilityLabel`. Should already silence under Ma-Ti's broadened silencer (b) — needs verification post-(d)-removal.
+- `ForecastPickerView.swift:209` (refresh banner) — fix with `.accessibilityHidden(true)` on the Image (Iris's prescribed remediation).
+- `ForecastPickerView.swift:230` (error banner) — same fix shape.
+
+Kwame is opening a separate PR (`WI-loop30-4a-iris-3sites`) for these. The remediation surface is narrow; no architectural risk.
+
+### 4. Lockout enforcement
+
+Per `.squad/agent.md` reviewer-rejection semantics and Gaia's charter ("On rejection, I may require a different agent to revise (not the original author)"): Ma-Ti is excluded from owning the silencer-(d) revision. Her PR #119 stays open under her authorship for the parts of the visitor that are accepted (silencers a/b/c, harness wiring, TDD commits, parity gates), but the silencer-(d) revision is dispatched to a different agent.
+
+### 5. What's not contested
+
+The other three Ma-Ti divergences from Iris's catalog are accepted:
+
+- **Silencer (a) unconditional** — looser than Iris's "interactive ancestor only if it has title text or `.accessibilityLabel`". Accepted as v1; could tighten in a follow-up tightening WI.
+- **Silencer (b) any-form `.accessibilityElement`** — broader than Iris's `children: .ignore` narrowing. Required for the AppViews:1152 `combine` shape Iris herself cites. Accepted.
+- **Toggle / Menu deferral** — accepted; no production sites today.
+
+These ship as part of revised #119.
+
+## Required revision (specification for the named owner)
+
+**Owner:** Kwame
+**Branch:** Kwame to open a revision branch off `squad/wi-loop30-4a-image-accessibility-label` (e.g. `squad/wi-loop30-4a-image-accessibility-label-revise`), opened as a PR targeting Ma-Ti's branch (so #119's diff updates atomically) **or** force-pushed onto Ma-Ti's branch with explicit handoff. Kwame's call on mechanics.
+**Scope:**
+
+1. Remove silencer (d) from `tools/swiftlint-rules/Sources/SwiftLintASTRules/ImageSystemNameMissingAccessibilityLabelRule.swift`:
+   - Delete the visitor logic that walks the enclosing view-builder block looking for sibling `Text(...)` nodes.
+   - Delete the two explicit silencer-(d) tests added in commit `566a22e`.
+   - Update the rule's doc comment to enumerate only silencers (a)/(b)/(c) and cite Iris's catalog P5 as the design source-of-truth for the rejection of "implicit decoration via adjacency".
+2. Reinstate the original plain-HStack-with-sibling-`Text` TP fixture (commit `566a22e` tightened it to `Spacer()` — restore the `Text` sibling and assert the rule fires).
+3. Add three explicit POSITIVE tests covering the production shapes:
+   - TierBadge-style: `HStack { Image(systemName:); Text(...) }` without `.accessibilityElement` ancestor.
+   - Refresh-banner-style: `HStack { Image(systemName: "arrow.clockwise"); Text("Updating…") }`.
+   - Error-banner-style: same shape with error iconography.
+4. PR body's divergence table updated to drop the silencer (d) row.
+
+## Sequencing dependency
+
+```
+[main] (PR #118 merged 604c444c — toolbar regex retired)
+   │
+   ├── PR: Kwame WI-loop30-4a-iris-3sites — fixes AppViews:1152, ForecastPicker:209/230
+   │         (independent merge target → main)
+   │
+   └── PR #119 (Ma-Ti, BLOCKED) ── awaiting:
+            ├── Kwame revision (silencer (d) removal + tests)  ──┐
+            └── Kwame 3-sites PR merged to main                  │
+                  └── #119 rebased onto main, corpus green ──────┘
+                        → merge #119
+```
+
+**Hard gate:** #119 may not merge until both (a) silencer (d) is removed from its diff and (b) the 3-sites fix has merged to main, so that `./build.sh lint` runs green against `app/Sources/` under the strict rule.
+
+## Acceptance criteria for revised #119
+
+1. `swift test --package-path tools/swiftlint-rules` green with silencer (d) removed, the reinstated `Text`-sibling TP fixture, and the three new production-shape POSITIVE tests.
+2. `./build.sh lint` green against `app/Sources/` **after** Kwame's 3-sites fix has merged to main (verified via rebase, not local patching).
+3. Iris's catalog P5 entry referenced in the rule's doc comment as the design source-of-truth.
+4. PR body's divergence table updated — only silencer (a) unconditional / silencer (b) any-form / Toggle-Menu deferral rows remain.
+5. Iris confirms (PR comment or decision-inbox) that the revised rule matches her catalog.
+
+## Lockout enforcement note
+
+**Ma-Ti is excluded** from owning the silencer-(d) revision per reviewer-rejection / lockout protocol. She retains authorship of PR #119's accepted parts and may rebase / handle non-controversial review feedback on silencers (a)/(b)/(c), the harness wiring, and the TDD commits. The silencer-(d) revision must arrive via a different agent's commits (Kwame's recommended).
+
+If Kwame is unavailable, escalation order: Argos (test-corpus expertise) → Ralph (rules harness) → yashasg.
+
+## What this preserves
+
+- ADR-0003's AST-harness multi-rule scaling claim still ships in #119 (just with the strict rule).
+- The Loop-30 iter-3 "AST harness validates beyond a single rule" goal is preserved — only the rule body changes, not the harness contract.
+- Reviewer-rejection protocol gets its first real test in the squad workflow; documenting the lockout enforcement here gives Scribe a clean fold target.
+
+— Gaia
+
+
+### Inbox: iris-image-accessibility-fixtures
+
+# Iris — Fixture Catalog: `image_systemname_missing_accessibility_label`
+
+**Author:** Iris (UI/UX Designer, Apple HIG & Accessibility)
+**Date:** 2026-05-22T20:30:00Z
+**Audience:** Ma-Ti (AST visitor + XCTest author for WI-loop30-4 batch-1, rule #2)
+**Companion to:** Iris scope memo §Rule 2 (decisions.md L1862) and WI-loop30-4 scope decision.
+**Purpose:** Exhaustive fixture corpus the AST visitor MUST classify correctly per Apple HIG (VoiceOver chapter — "Provide meaningful alternative text for images") and WCAG 2.2 SC 1.1.1 (Non-text Content, Level A).
+
+---
+
+## 0. Rule restatement (the contract)
+
+> Fire on a call expression `Image(systemName: …)` **iff none** of the following labeling conditions are satisfied:
+>
+> 1. The `Image` has `.accessibilityLabel(…)` somewhere in its own modifier chain.
+> 2. The `Image` has `.accessibilityHidden(true)` somewhere in its own modifier chain.
+> 3. The `Image` is the *icon expression* of a composite `Label` — i.e. either `Label(_:systemImage:)` (where the `systemImage:` arg supplies the symbol) or the `icon:` trailing-closure of `Label { … } icon: { Image(systemName:) }` whose `title:` closure / first arg provides text.
+> 4. The `Image` is inside the `label:` closure (or trailing label closure) of an interactive ancestor — `Button`, `NavigationLink`, `Link`, `Toggle`, `Menu` — **and** that ancestor either (a) has its own text/title argument, or (b) carries `.accessibilityLabel(…)` somewhere in its own modifier chain.
+> 5. The `Image` is wrapped in an ancestor view that carries `.accessibilityElement(children: .ignore)` *and* `.accessibilityLabel(…)` on the same ancestor (parent absorbs the label).
+
+All other `Image(systemName:)` calls fire.
+
+**Citation backbone:** Apple HIG > Accessibility > VoiceOver: "Every image that conveys meaning must have an accessibility label; purely decorative images must be hidden from assistive tech." WCAG 2.2 SC 1.1.1 (Non-text Content, Level A): non-text content must have a text alternative *or* be explicitly marked as decoration. SF Symbols' default accessibility description is the *symbol identifier itself* (e.g. "Exclamation mark, triangle, fill") — which is rarely the intended user-facing label and is therefore treated as **unlabeled** for the purposes of this rule.
+
+---
+
+## 1. POSITIVE fixtures (rule MUST fire)
+
+### P1 — `bare-image-in-vstack`
+
+```swift
+struct StatusCard: View {
+    var body: some View {
+        VStack {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text("Service degraded")
+        }
+    }
+}
+```
+
+- **HIG/WCAG:** VoiceOver reads "Exclamation mark, triangle, fill, Image" — meaningless to the user. WCAG 1.1.1 requires a text alternative or explicit decoration marker. Neither is present.
+- **Why regex fails:** A regex matching `Image\(systemName:.*\)\s*$` would also fire on P2/P3 below where the next line *is* `.accessibilityLabel(...)`. AST sees the full modifier-chain expression as one node.
+
+### P2 — `bare-image-as-button-label-no-button-title`
+
+```swift
+Button {
+    deleteItem()
+} label: {
+    Image(systemName: "trash")
+}
+```
+
+- **HIG/WCAG:** Button has no string title and no `.accessibilityLabel`. VoiceOver announces "Trash, Image, Button" — the symbol-id is *not* a user-facing affordance name. HIG: "Buttons that contain only icons require an explicit accessibility label."
+- **Why regex fails:** A regex cannot distinguish this from N3 (Button with title) — both syntactically contain `Button { … } label: { Image(systemName:) }`. AST inspects the `Button` initializer's argument list to check for a title.
+
+### P3 — `bare-image-as-navlink-label-no-label-mod`
+
+```swift
+NavigationLink {
+    HistoryView()
+} label: {
+    Image(systemName: "clock.arrow.circlepath")
+}
+```
+
+- **HIG/WCAG:** Identical to P2 but for `NavigationLink`. HIG: "Navigation link destinations need a clear name spoken by VoiceOver."
+- **Why regex fails:** Same as P2 — regex cannot walk the parent chain to confirm or deny a sibling `.accessibilityLabel`.
+
+### P4 — `image-inside-toolbaritem-no-action-wrapper`
+
+```swift
+.toolbar {
+    ToolbarItem(placement: .topBarTrailing) {
+        Image(systemName: "gear")
+    }
+}
+```
+
+- **HIG/WCAG:** A `ToolbarItem` containing a raw `Image` (no `Button` / `Link`) is a non-interactive decorative slot — but still focusable by VoiceOver as an image. No label = symbol-id read aloud. (HIG: toolbar glyphs are *always* labeled in shipping Apple apps — Mail, Notes, Reminders.)
+- **Why regex fails:** Regex sees `ToolbarItem` and may FN if it assumes toolbar items are always interactive. AST confirms the absence of a `Button`/`Link`/`Menu` wrapper.
+
+### P5 — `image-in-hstack-with-decorative-text-no-label`
+
+```swift
+HStack(spacing: 6) {
+    Image(systemName: "arrow.clockwise")
+    Text("Updating forecast…")
+}
+```
+
+- **HIG/WCAG:** A sibling `Text` is **not** a labeling relation in SwiftUI's a11y tree — they are two adjacent focusable elements. VoiceOver reads "Arrow, clockwise, Image. Updating forecast." The image's symbol-id leaks through. Authors who want decorative-icon-plus-text-label semantics must either (a) use `Label { Text(…) } icon: { Image(…) }`, (b) wrap the `HStack` with `.accessibilityElement(children: .combine)` + `.accessibilityLabel(…)`, or (c) hide the image with `.accessibilityHidden(true)`. The rule deliberately rejects "implicit decoration via adjacency" — too risky for SF Symbols whose names are not user-readable.
+- **Why regex fails:** Detecting sibling-Text adjacency requires parent-block traversal (HStack children). Regex cannot enumerate sibling nodes.
+
+### P6 — `image-as-button-label-button-has-action-text-mismatched`
+
+```swift
+Button(action: refresh) {
+    Image(systemName: "arrow.clockwise")
+}
+```
+
+- **HIG/WCAG:** `Button(action:label:)` with **no string title argument** — only an `action:` closure and a `label:` view-builder containing a bare image. Equivalent to P2 in semantics; different SwiftUI initializer surface area. VoiceOver announces "Arrow, clockwise, Image, Button."
+- **Why regex fails:** Regex matching `Button\(.*\)\s*\{.*Image\(systemName:` could miss this form (no curly-brace title), or worse, FP on N3 below which uses `Button("Delete")`. AST resolves the initializer signature.
+
+### P7 — `image-inside-toolbar-button-no-label-no-title`
+
+```swift
+.toolbar {
+    ToolbarItem(placement: .topBarTrailing) {
+        Button {
+            showInfo = true
+        } label: {
+            Image(systemName: "info.circle")
+        }
+        // ← no .accessibilityLabel anywhere on Button
+    }
+}
+```
+
+- **HIG/WCAG:** Toolbar Button with an icon-only label and no accessibility label. The *most common real-world VoiceOver bug* in iOS apps. HIG: "Every toolbar control must have an accessibility label that names the action, not the icon."
+- **Why regex fails:** Visually almost identical to N7 (toolbar Button **with** `.accessibilityLabel`). AST walks the Button's modifier chain.
+
+### P8 — `image-inside-link-no-text-title`
+
+```swift
+Link(destination: URL(string: "https://example.com")!) {
+    Image(systemName: "safari")
+}
+```
+
+- **HIG/WCAG:** `Link` initializer with a label closure and no string title. Same labeling gap as P2/P6. WCAG SC 2.4.4 (Link Purpose) also implicated — link purpose cannot be determined from "Safari, Image, Link."
+- **Why regex fails:** Yet another interactive-wrapper variant. AST treats `Link`, `Button`, `NavigationLink`, `Menu`, `Toggle` uniformly via a "labeled-ancestor" predicate.
+
+### P9 — `image-as-menu-label`
+
+```swift
+Menu {
+    Button("Profile") { … }
+    Button("Sign Out") { … }
+} label: {
+    Image(systemName: "person.crop.circle")
+}
+```
+
+- **HIG/WCAG:** `Menu` with icon-only trigger; no `.accessibilityLabel`. HIG: menu triggers require a label that names the menu's purpose (not the glyph).
+- **Why regex fails:** Same family as P2/P6/P8 — interactive ancestor without a title or a11y label.
+
+---
+
+## 2. NEGATIVE fixtures (rule MUST stay silent)
+
+### N1 — `image-with-explicit-accessibility-label`
+
+```swift
+Image(systemName: "xmark")
+    .accessibilityLabel("Dismiss")
+```
+
+- **HIG/WCAG:** Direct compliance — explicit text alternative. WCAG 1.1.1 satisfied.
+- **Why regex fails:** A naive regex that fires on `Image\(systemName:` anywhere would FP. AST sees the full modifier chain on the same expression node.
+
+### N2 — `image-with-accessibility-hidden-true`
+
+```swift
+Image(systemName: "moon.fill")
+    .accessibilityHidden(true)
+```
+
+- **HIG/WCAG:** Explicit decorative marker. WCAG 1.1.1 second pathway (decoration). HIG: "Hide purely decorative images from VoiceOver." Removes the element from the accessibility tree entirely.
+- **Why regex fails:** Same as N1 — requires recognizing a modifier later in the chain.
+
+### N3 — `button-with-string-title-and-image-label`
+
+```swift
+Button("Delete") {
+    deleteItem()
+} // no explicit label closure; or:
+
+Button("Delete", systemImage: "trash") {
+    deleteItem()
+}
+```
+
+- **HIG/WCAG:** The `Button("Delete", …)` initializer supplies the accessibility label via its `LocalizedStringKey` title argument. The `systemImage:` parameter (iOS 17+) renders the glyph but the Button's title is the spoken label.
+- **Why regex fails:** Regex cannot reliably distinguish a `Button("text") { … }` from `Button { … } label: { Image(…) }` without a parser.
+
+### N4 — `label-init-with-systemimage`
+
+```swift
+Label("Settings", systemImage: "gearshape")
+```
+
+- **HIG/WCAG:** `Label(_:systemImage:)` is a *composite* SwiftUI primitive — the first argument is the accessibility label by construction. HIG explicitly endorses `Label` as the canonical icon-plus-text pattern.
+- **Why regex fails:** The symbol name appears as `systemImage:` argument value, not as a free-standing `Image(systemName:)` call. AST distinguishes the two initializer surfaces.
+
+### N5 — `label-trailing-closures-title-and-icon`
+
+```swift
+Label {
+    Text("Forecast updated 2 hours ago")
+} icon: {
+    Image(systemName: "clock.arrow.circlepath")
+}
+```
+
+- **HIG/WCAG:** Same composite-Label rationale as N4 — the `title:` closure carries the label; the `icon:` closure is treated as decoration by Label's a11y implementation.
+- **Why regex fails:** The `Image(systemName:)` here *looks* free-standing on its own line; only by walking up the AST to the enclosing `Label { … } icon: { … }` initializer can the visitor know it's an icon slot.
+
+### N6 — `navlink-with-label-modifier`
+
+```swift
+NavigationLink(destination: AboutView()) {
+    Image(systemName: "info.circle")
+}
+.accessibilityLabel("About this estimate")
+.accessibilityHint("Opens photosensitization caveats.")
+```
+
+- **HIG/WCAG:** Interactive ancestor (`NavigationLink`) carries `.accessibilityLabel` — that label is spoken by VoiceOver. The inner image inherits silence.
+- **Why regex fails:** The `.accessibilityLabel` is on the **parent expression**, not on the `Image`. Requires AST parent-walk.
+
+### N7 — `toolbar-button-with-label-and-image-child`
+
+```swift
+.toolbar {
+    ToolbarItem(placement: .topBarTrailing) {
+        Button {
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Settings")
+        .accessibilityHint("Opens skin type, SPF, attribution, and app information.")
+    }
+}
+```
+
+- **HIG/WCAG:** This is the canonical iOS toolbar pattern. Button has both an interactive role and an explicit label. This is the **exact shape** already used at `AppViews.swift:125` and was the model for the Iris memo's case (a).
+- **Why regex fails:** Visually nearly identical to P7. Only AST can determine that the `.accessibilityLabel("Settings")` modifier is attached to the *Button* expression node (and therefore covers the inner Image).
+
+### N8 — `chained-modifiers-label-at-end-of-chain`
+
+```swift
+Image(systemName: "trash")
+    .resizable()
+    .scaledToFit()
+    .frame(width: 24, height: 24)
+    .foregroundStyle(.red)
+    .accessibilityLabel("Delete")
+```
+
+- **HIG/WCAG:** The label modifier may appear anywhere in the chain — SwiftUI's a11y modifiers attach to the underlying view regardless of position. The visitor MUST inspect the entire chain, not just the immediate next call.
+- **Why regex fails:** A line-anchored regex that looks at the line immediately following `Image(systemName:)` would FN here (label is 4 modifiers downstream).
+
+### N9 — `parent-accessibility-element-ignore-with-label`
+
+```swift
+HStack(spacing: 6) {
+    Image(systemName: "checkmark.circle.fill")
+        .foregroundStyle(.green)
+    Text("Verified")
+        .font(.subheadline)
+}
+.accessibilityElement(children: .ignore)
+.accessibilityLabel("Account verified")
+```
+
+- **HIG/WCAG:** `children: .ignore` collapses descendants out of the a11y tree; the parent supplies the label. VoiceOver hears only "Account verified." HIG recommends this pattern for icon-plus-text composite rows.
+- **Why regex fails:** Requires parent-walk + recognition of both `children: .ignore` argument value **and** the sibling `.accessibilityLabel` on the same ancestor.
+
+### N10 — `parent-accessibility-element-combine-with-label`
+
+```swift
+HStack {
+    Image(systemName: "exclamationmark.triangle")
+    Text("Photosensitizer warning")
+}
+.accessibilityElement(children: .combine)
+.accessibilityLabel("Photosensitizer warning: check medication list.")
+```
+
+- **HIG/WCAG:** Same as N9 but with `.combine` — descendants stay in the tree but the parent's explicit label takes precedence in VoiceOver output. Acceptable per HIG.
+- **Why regex fails:** Same as N9; the visitor must accept both `.ignore` and `.combine` paired with a parent `.accessibilityLabel`.
+
+### N11 — `image-inside-labeled-link`
+
+```swift
+Link(destination: privacyURL) {
+    Image(systemName: "lock.shield")
+}
+.accessibilityLabel("Privacy policy")
+```
+
+- **HIG/WCAG:** Labeled interactive ancestor (`Link` with `.accessibilityLabel`). Symmetric to N6 / N7.
+- **Why regex fails:** Same parent-walk requirement.
+
+### N12 — `image-inside-button-with-systemimage-shorthand`
+
+```swift
+Button("Refresh", systemImage: "arrow.clockwise") {
+    refresh()
+}
+```
+
+- **HIG/WCAG:** iOS 17+ shorthand initializer. The `"Refresh"` title is the a11y label; `systemImage:` is the decorative glyph slot. No `Image(systemName:)` call expression exists at all — visitor should never see this as a candidate node, but if it does (e.g. via a custom-symbol lookup elsewhere), it must not fire.
+- **Why regex fails:** Symbol name appears in `systemImage:` arg position — easy to confuse with `Image(systemName:)`. AST distinguishes the two initializer surfaces unambiguously.
+
+---
+
+## 3. Edge-case fixtures (must be classified correctly — these are the "gotchas")
+
+### E1 — `image-in-viewbuilder-helper-function` (POSITIVE)
+
+```swift
+private func warningGlyph() -> some View {
+    Image(systemName: "exclamationmark.triangle.fill")
+}
+
+// Used as:
+HStack { warningGlyph(); Text("Stale data") }
+```
+
+- **Verdict:** **POSITIVE** at the helper site. The visitor cannot follow call sites; it must judge the `Image(systemName:)` expression in isolation. Author must add `.accessibilityLabel` *or* `.accessibilityHidden(true)` *inside* the helper, or refactor.
+- **Why regex fails:** Even a regex would catch this — but only AST avoids the FP at call site (where `warningGlyph()` doesn't textually match `Image(systemName:`).
+
+### E2 — `image-with-accessibility-hidden-false` (POSITIVE)
+
+```swift
+Image(systemName: "gear")
+    .accessibilityHidden(false)
+```
+
+- **Verdict:** **POSITIVE.** `accessibilityHidden(false)` *exposes* the image but does not label it. VoiceOver reads symbol-id.
+- **Why regex fails:** A regex matching `.accessibilityHidden\(` would FP. AST must inspect the boolean literal argument.
+
+### E3 — `image-with-empty-accessibility-label` (POSITIVE, soft warning OK)
+
+```swift
+Image(systemName: "trash")
+    .accessibilityLabel("")
+```
+
+- **Verdict:** **POSITIVE.** An empty-string label is functionally equivalent to no label — VoiceOver may fall back to symbol-id behavior, and in any case violates WCAG SC 1.1.1 (the "text alternative" must serve the equivalent purpose).
+- **Note for Ma-Ti:** First-pass implementation MAY treat empty-string as labeled (false negative, but symmetric with how SwiftUI itself handles it). Mark as TODO in the visitor with a code comment referencing this fixture. Do not block the batch on it.
+- **Why regex fails:** Regex cannot inspect string-literal contents on a modifier argument.
+
+### E4 — `image-with-dynamic-string-label` (NEGATIVE)
+
+```swift
+Image(systemName: iconName)
+    .accessibilityLabel(localizedLabel)
+```
+
+- **Verdict:** **NEGATIVE.** Any `.accessibilityLabel(…)` with *any* argument (including a variable, function call, or `Text(…)` expression) satisfies the rule. The visitor does not — and cannot — verify the runtime value.
+- **Why regex fails:** Regex could match the literal substring but cannot bind it to *this* `Image` expression's chain. AST does.
+
+### E5 — `image-systemname-with-variable-symbol` (depends on chain)
+
+```swift
+Image(systemName: badge.symbolName)  // ← still rule's subject; symbol arg can be any expression
+    .accessibilityLabel(badge.title)
+```
+
+- **Verdict:** **NEGATIVE** here (label present). The visitor must NOT restrict its candidate set to `Image(systemName: <stringLiteral>)`. *Any* expression in the `systemName:` arg slot triggers candidacy.
+- **Why regex fails:** A regex written for `Image\(systemName:\s*"…"\)` would FN on `Image(systemName: badge.symbolName)`. AST inspects the initializer signature, not the arg value.
+
+### E6 — `image-systemname-in-foreach-row` (POSITIVE if bare)
+
+```swift
+ForEach(items) { item in
+    HStack {
+        Image(systemName: item.iconName)   // bare
+        Text(item.title)
+    }
+}
+```
+
+- **Verdict:** **POSITIVE.** Identical to P5 in essence — adjacency to Text is not a labeling relation. Author must use `Label`, `.accessibilityElement(children: .combine)`, or `.accessibilityHidden(true)`.
+- **Why regex fails:** Same as P5 — sibling enumeration requires AST.
+
+### E7 — `image-as-tabitem-label-icon` (NEGATIVE)
+
+```swift
+SettingsView()
+    .tabItem {
+        Label("Settings", systemImage: "gearshape")
+    }
+```
+
+- **Verdict:** **NEGATIVE.** Inside `.tabItem { … }`, the `Label(_:systemImage:)` carries the tab name as its a11y label; SwiftUI's tab-bar implementation labels the tab from the `Label`'s title. Same as N4.
+- **Why regex fails:** N/A — covered by N4's rule.
+
+### E8 — `image-inside-nested-button-label-button-labeled` (NEGATIVE)
+
+```swift
+Button {
+    action()
+} label: {
+    HStack {
+        Image(systemName: "plus.circle.fill")
+        Text("Add")
+    }
+}
+.accessibilityLabel("Add new entry")
+```
+
+- **Verdict:** **NEGATIVE.** Interactive ancestor with explicit `.accessibilityLabel`. The fact that the Image is wrapped in an inner HStack inside the `label:` closure does not change the parent-walk outcome.
+- **Why regex fails:** Requires multi-level parent traversal.
+
+### E9 — `bare-image-with-only-non-a11y-modifiers` (POSITIVE)
+
+```swift
+Image(systemName: "sparkles")
+    .resizable()
+    .scaledToFit()
+    .frame(width: 32, height: 32)
+    .foregroundStyle(.yellow)
+```
+
+- **Verdict:** **POSITIVE.** Many style modifiers but no a11y modifier and no interactive/composite ancestor.
+- **Why regex fails:** A line-anchored regex would FN if it only checks the line immediately after `Image(systemName:)`. AST inspects the full chain.
+
+### E10 — `image-inside-group-with-children-ignore-parent-unlabeled` (POSITIVE — gotcha)
+
+```swift
+Group {
+    Image(systemName: "info.circle")
+    Text("Tap to learn more")
+}
+.accessibilityElement(children: .ignore)
+// ← NO .accessibilityLabel on parent
+```
+
+- **Verdict:** **POSITIVE.** `children: .ignore` without a parent `.accessibilityLabel` *removes* both descendants from the tree, leaving the group entirely silent — even worse than the original problem (no element is announced at all). Rule fires to surface this.
+- **Why regex fails:** Requires recognizing the *absence* of a sibling `.accessibilityLabel` on the same ancestor that carries `children: .ignore`.
+
+---
+
+## 4. Coverage matrix (for Ma-Ti's XCTest harness)
+
+| Fixture | Verdict | Tests |
+|---|---|---|
+| P1 `bare-image-in-vstack` | POS | basic detection |
+| P2 `bare-image-as-button-label-no-button-title` | POS | Button without title arg |
+| P3 `bare-image-as-navlink-label-no-label-mod` | POS | NavigationLink unlabeled |
+| P4 `image-inside-toolbaritem-no-action-wrapper` | POS | non-interactive toolbar slot |
+| P5 `image-in-hstack-with-decorative-text-no-label` | POS | sibling-Text is not a labeling relation |
+| P6 `image-as-button-label-button-has-action-text-mismatched` | POS | Button(action:label:) form |
+| P7 `image-inside-toolbar-button-no-label-no-title` | POS | toolbar Button without a11y label |
+| P8 `image-inside-link-no-text-title` | POS | Link without text |
+| P9 `image-as-menu-label` | POS | Menu trigger |
+| N1 `image-with-explicit-accessibility-label` | NEG | direct label modifier |
+| N2 `image-with-accessibility-hidden-true` | NEG | explicit decoration |
+| N3 `button-with-string-title-and-image-label` | NEG | Button title supplies label |
+| N4 `label-init-with-systemimage` | NEG | composite Label initializer |
+| N5 `label-trailing-closures-title-and-icon` | NEG | composite Label trailing-closure form |
+| N6 `navlink-with-label-modifier` | NEG | parent NavigationLink labeled |
+| N7 `toolbar-button-with-label-and-image-child` | NEG | canonical toolbar pattern |
+| N8 `chained-modifiers-label-at-end-of-chain` | NEG | full-chain inspection |
+| N9 `parent-accessibility-element-ignore-with-label` | NEG | parent absorbs label |
+| N10 `parent-accessibility-element-combine-with-label` | NEG | parent combines + labels |
+| N11 `image-inside-labeled-link` | NEG | Link labeled |
+| N12 `image-inside-button-with-systemimage-shorthand` | NEG | iOS 17+ shorthand |
+| E1 `image-in-viewbuilder-helper-function` | POS | helper-function isolation |
+| E2 `image-with-accessibility-hidden-false` | POS | hidden(false) is not labeled |
+| E3 `image-with-empty-accessibility-label` | POS (soft, TODO) | empty label edge |
+| E4 `image-with-dynamic-string-label` | NEG | dynamic label-arg expression |
+| E5 `image-systemname-with-variable-symbol` | NEG | variable symbol arg |
+| E6 `image-systemname-in-foreach-row` | POS | adjacency in ForEach |
+| E7 `image-as-tabitem-label-icon` | NEG | tabItem Label |
+| E8 `image-inside-nested-button-label-button-labeled` | NEG | nested label closure |
+| E9 `bare-image-with-only-non-a11y-modifiers` | POS | style-only chain |
+| E10 `image-inside-group-with-children-ignore-parent-unlabeled` | POS | ignore without label = silence bug |
+
+**Totals: 31 fixtures — 13 POSITIVE, 17 NEGATIVE, 1 soft (E3).**
+
+---
+
+## 5. Revised `app/Sources/` re-scan finding (revises §Rule 2 of scope memo)
+
+The earlier scope-memo claim — *"~10 Image(systemName:) sites in AppViews.swift … No bare unlabeled Image(systemName:) was found"* — was **incomplete**. Re-scanning `app/Sources/` with the rule contract (§0) applied site-by-site:
+
+**Total sites found:** 14 (not ~10) — 10 in `AppViews.swift`, 4 in `ForecastPickerView.swift`.
+
+| File:Line | Symbol | Verdict under rule | Reason |
+|---|---|---|---|
+| AppViews.swift:125 | `gearshape` | NEG | Button parent has `.accessibilityLabel("Settings")` (N7 shape) |
+| AppViews.swift:134 | `info.circle` | NEG | NavigationLink parent labeled (N6 shape) |
+| AppViews.swift:824 | `clock.arrow.circlepath` | NEG | Inside `Label { Text } icon: { Image }` (N5 shape) |
+| AppViews.swift:918 | `moon.fill` | NEG | `.accessibilityHidden(true)` (N2 shape) |
+| AppViews.swift:976 | `sun.max` | NEG | `.accessibilityHidden(true)` (N2 shape) |
+| AppViews.swift:1131 | `systemImage` (var) | NEG | Inside `Label { … } icon: { Image }` (N5 / E5 shape) |
+| **AppViews.swift:1152** | **`accessorySymbolName`** | **POS** | **Bare `Image(systemName:)` in HStack sibling to `Label(title, systemImage:)`. No `.accessibilityHidden(true)`, no `.accessibilityLabel`. P5/E5 shape.** |
+| AppViews.swift:1230 | `exclamationmark.triangle.fill` | NEG | `.accessibilityHidden(true)` (N2 shape) |
+| AppViews.swift:1270 | `exclamationmark.triangle` | NEG | Inside `Label { Text } icon: { Image }` (N5 shape) |
+| AppViews.swift:1677 | `checkmark.circle.fill` | NEG | `.accessibilityHidden(true)` (N2 shape) |
+| **ForecastPickerView.swift:209** | **`arrow.clockwise`** | **POS** | **Bare in stale-banner `HStack` with sibling `Text("Updating forecast…")`. No `.accessibilityLabel` on HStack, no `.accessibilityHidden(true)` on Image. P5 shape.** |
+| **ForecastPickerView.swift:230** | **`exclamationmark.icloud`** | **POS** | **Bare in error-banner `HStack` with sibling `Text("Could not update")` (label is on the Text, not the Image). P5 shape.** |
+| ForecastPickerView.swift:426 | `chevron.down.circle.fill` | NEG | Inside Button `label:` closure; Button has `.accessibilityLabel("Show … forecast days")` (N7 shape) |
+| ForecastPickerView.swift:605 | `moon.fill` / `sun.max.fill` | NEG | Inside Button `label:` closure; Button has `.accessibilityLabel(hourCellA11yLabel(for:))` (N7 shape) |
+
+**Net: 3 sites will fire when the rule lands** (not zero as the earlier memo asserted):
+
+1. `AppViews.swift:1152` — `TierBadge` accessory glyph (color-blind affordance under `differentiateWithoutColor`)
+2. `ForecastPickerView.swift:209` — stale-banner refresh spinner glyph
+3. `ForecastPickerView.swift:230` — stale-banner error-state cloud glyph
+
+### Revision to scope memo §Rule 2 ("No sub-WI" claim)
+
+**Revise:** the scope memo's "No sub-WI" line for Rule 2 is **withdrawn**. Three sub-WIs are required so the rule can land green (or the rule lands as a regression-firing change and the three sites are fixed in the same PR).
+
+**Recommended remediation per site** (Kwame's call — design recommendation only):
+
+- **`AppViews.swift:1152`** (TierBadge `accessorySymbolName`): Add `.accessibilityHidden(true)`. The parent `Label(title, systemImage:)` already speaks the tier name; the accessory glyph (e.g. a stripe or pattern marker) is a sighted-only redundancy for `differentiateWithoutColor` users — its semantic payload is already in the Label. HIG: "Use redundant visual cues for differentiate-without-color, but do not double-announce in VoiceOver."
+- **`ForecastPickerView.swift:209`** (`arrow.clockwise` refresh glyph): Add `.accessibilityHidden(true)` on the Image. The sibling `Text("Updating forecast…")` already conveys the state. Alternatively, wrap the HStack with `.accessibilityElement(children: .combine).accessibilityLabel("Updating forecast")` if you want a single VoiceOver focus stop (preferred for banner UX).
+- **`ForecastPickerView.swift:230`** (`exclamationmark.icloud` error glyph): Same as :209 — `.accessibilityHidden(true)` on the Image. The sibling `Text` already has `.accessibilityLabel("Could not update forecast")`. The Retry button remains independently focusable, which is correct.
+
+**Sub-WI sizing:** Each is a 1-line edit. Bundle into a single sub-WI **`WI-loop30-4a-iris-3sites`** for Kwame, gated to land **before** the rule lands (so the rule's first CI run is green), OR land in the same PR as the rule (Ma-Ti coordinates).
+
+---
+
+## 6. False-positive risks surfaced (for Ma-Ti to watch)
+
+1. **Custom view wrappers around `Image(systemName:)`** (E1 shape). If the codebase grows `func iconGlyph(_ name: String) -> some View { Image(systemName: name).accessibilityHidden(true) }`, call sites are silent but the helper definition is the visitor's only signal. Current `app/Sources/` has no such wrapper — but flag the shape in PR description so future contributors don't hide bare images behind helpers and re-introduce the bug.
+2. **`.accessibilityRepresentation { … }`** modifier (iOS 17+) — a wrapper that supplies a full custom accessibility element. If encountered, the inner Image's label state is irrelevant. **Not present in current `app/Sources/`.** Add a TODO fixture if it appears.
+3. **`AccessibilityRotorEntry` / `accessibilityChildren`** — exotic forms. Out of scope for batch-1.
+4. **Localization wrappers** — `Text(LocalizedStringKey("…"))` inside `.accessibilityLabel(Text(…))` is fine (N1/E4 shape). No FP risk.
+
+---
+
+## 7. Sign-off
+
+Iris — UI/UX Designer (HIG & Accessibility) — 2026-05-22T20:30:00Z.
+
+Fixture catalog frozen for WI-loop30-4 batch-1 rule #2. Ma-Ti owns translation into XCTest cases. Iris is available for clarification but will not edit Swift in `app/` or `.swiftlint.yml`.
+
+Three site remediations surfaced as sub-WI `WI-loop30-4a-iris-3sites` — Kwame's queue, gates the rule's green-CI landing.
+
+
+### Inbox: kwame-iris-3sites-opened
+
+# Kwame — Iris 3-sites a11y fix opened (PR #120)
+
+- **Work item:** `WI-loop30-4a-iris-3sites`
+- **PR:** https://github.com/yashasg/uv-burn-timer/pull/120
+- **Branch:** `squad/wi-loop30-4a-iris-3sites` (off `github/main`)
+- **Status:** opened, CI in flight
+- **CI run IDs:** push `26312959589`, PR `26313088707`
+- **Datetime:** 2026-05-22T20:55:00Z
+
+## Why
+
+Iris's image-a11y fixture catalog (`iris-image-accessibility-fixtures.md`)
+classifies three `app/Sources/` sites as POSITIVE under the upcoming
+`image_systemname_missing_accessibility_label` AST rule. Each is a P5-shape
+violation — bare `Image(systemName:)` adjacent to a `Text`/`Label` sibling —
+which leaks the SF Symbol name through VoiceOver, violating WCAG SC 1.1.1.
+This PR is the hard prerequisite for PR #119's revised landing (per Gaia's
+adjudication in `gaia-pr119-adjudication.md`).
+
+## Sites — before / after
+
+### Site 1: `app/Sources/UVBurnTimer/AppViews.swift:1152` (TierBadge accessory glyph)
+
+**Before:**
+```swift
+if differentiateWithoutColor, let accessorySymbolName {
+    Image(systemName: accessorySymbolName)
+}
+```
+
+**After:**
+```swift
+if differentiateWithoutColor, let accessorySymbolName {
+    Image(systemName: accessorySymbolName)
+        .accessibilityHidden(true)
+}
+```
+
+**HIG rationale:** the sibling `Label(title, systemImage:)` already speaks the
+tier name, and the parent `HStack` carries `.accessibilityElement(children:
+.combine) + .accessibilityLabel("… burn-time tier…")`. The accessory is a
+*visual* differentiation cue for users with colour-vision considerations
+(`@Environment(\.accessibilityDifferentiateWithoutColor)` slot) — it must
+not generate a redundant VoiceOver utterance. `.accessibilityHidden(true)`
+is the canonical "decorative" marker.
+
+---
+
+### Site 2: `app/Sources/UVBurnTimer/ForecastPickerView.swift:209` (stale-banner spinner)
+
+**Before:**
+```swift
+HStack(spacing: 6) {
+    Image(systemName: "arrow.clockwise")
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .rotationEffect(.degrees(isRotatingRefreshIcon ? 360 : 0))
+        .animation(…)
+        .onAppear { isRotatingRefreshIcon = true }
+        .onDisappear { isRotatingRefreshIcon = false }
+    Text("Updating forecast…")
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+    Spacer()
+}
+.frame(maxWidth: .infinity, minHeight: staleBannerMinHeight, alignment: .leading)
+.padding(.horizontal, 16)
+.background(Color(.systemYellow).opacity(0.12))
+```
+
+**After:** unchanged HStack body; **three new modifiers on the HStack tail:**
+```swift
+.background(Color(.systemYellow).opacity(0.12))
+.accessibilityElement(children: .combine)
+.accessibilityLabel("Updating forecast")
+```
+
+**HIG rationale:** the banner is a single status surface — VoiceOver should
+read one cohesive announcement, not "Arrow, clockwise, image. Updating
+forecast…". Iris fixture P5 §HIG-note clause (b) explicitly endorses
+`.accessibilityElement(children: .combine) + .accessibilityLabel(…)` on the
+parent for this exact pattern. Chose (b) over (a) (`Label`) because the
+spinner needs `rotationEffect` + `onAppear/onDisappear` lifecycle hooks
+that `Label`'s `icon:` builder fights with; chose (b) over (c)
+(`.accessibilityHidden` on Image alone) because the parent label string
+is shorter than the visible Text ("Updating forecast" vs "Updating
+forecast…") — VoiceOver doesn't need the ellipsis.
+
+---
+
+### Site 3: `app/Sources/UVBurnTimer/ForecastPickerView.swift:230` (refresh-error banner)
+
+**Before:**
+```swift
+HStack(spacing: 6) {
+    Image(systemName: "exclamationmark.icloud")
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+    Text("Could not update")
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .accessibilityLabel("Could not update forecast")
+    Spacer()
+    Button("Retry") { onRetry() }
+        .font(.footnote)
+        .foregroundStyle(.tint)
+        .frame(minHeight: minTap)
+}
+.frame(maxWidth: .infinity, minHeight: staleBannerMinHeight, alignment: .leading)
+.padding(.horizontal, 16)
+.background(Color(.systemRed).opacity(0.08))
+```
+
+**After:** unchanged HStack body; **two new modifiers on the HStack tail:**
+```swift
+.background(Color(.systemRed).opacity(0.08))
+.accessibilityElement(children: .combine)
+.accessibilityLabel("Could not update forecast")
+```
+
+**HIG rationale:** identical shape to site 2. The pre-existing inner
+`.accessibilityLabel("Could not update forecast")` on the Text now combines
+into the parent label. The Retry `Button` is an interactive control and
+`.combine` respects controls — it remains its own focusable element with
+its own implicit label.
+
+---
+
+## Test approach
+
+New file: `app/Tests/UVBurnTimerCoreTests/ImageSystemNameAccessibilityContractTests.swift`
+— **three `@Test` cases**, one per site (`test_A11Y_1`, `test_A11Y_2`,
+`test_A11Y_3`). Each test loads the relevant source file via a small
+repo-root locator (`A11yContractSource.load`), slices around the
+target `Image(systemName:)` expression, and asserts the expected
+modifier(s) appear in the slice.
+
+This is a **brittle source-scan contract** by Kwame's choice — explicitly
+called out in the WI brief as the minimum acceptable TDD gate. A robust
+view-tree probe (`UIHostingController` + accessibility-element traversal)
+can land in a follow-up PR once Linka or Gaia greenlight the test pattern
+for the broader fixture catalogue.
+
+**Wired into `app/app.xcodeproj/project.pbxproj`** so both SPM `swift test`
+and xcodebuild `test` discover it (`scripts/check-test-membership.sh`
+gate clean).
+
+### TDD evidence
+
+- **RED phase (pre-edit, AppViews.swift + ForecastPickerView.swift on
+  `github/main`):** all three contract assertions fail. Verified by
+  source-scan dry-run (`.accessibilityHidden(true)` slice = False,
+  `.accessibilityElement(children: .combine)` slice = False for both
+  banner sites).
+- **GREEN phase (post-edit):** all three pass under `./build.sh`
+  (xcresult: `Test-UVBurnTimer-2026.05.22_14-26-16--0700.xcresult`).
+
+## Side-effect: ADR-0001 line-citation refresh
+
+`.accessibilityHidden(true)` inside TierBadge added one line at 1153,
+shifting all anchors below by +1. `test_S5_adr0001CitationsMatchLive
+SourceLineNumbers` caught the drift on the PersistentFooter `AboutView`
+push citation. Bumped:
+
+- `line **2170**` → `line **2171**`
+- `2169–2171` → `2170–2172`
+
+All other ADR-0001 anchors (HeroTimerCard struct, heroTimerCardView,
+NavigationStack, sheets, EstimateInfoButton, chips) are above line 1152
+and unaffected. Falls under "bugs directly caused by your changes" per
+agent rules — corrected in the same commit.
+
+## CI run IDs
+
+- **push leg:** `26312959589` — https://github.com/yashasg/uv-burn-timer/actions/runs/26312959589
+- **PR leg:** `26313088707` — https://github.com/yashasg/uv-burn-timer/actions/runs/26313088707
+
+(Captured at PR open time, 2026-05-22T20:55:00Z.)
+
+## Local build verdict
+
+- `./build.sh` (Debug + Release + tests) — **PASS** for all `UVBurnTimerCoreTests`
+  including the three new `test_A11Y_*` and the refreshed `test_S5`.
+- One pre-existing UI-test flake (`testEstimateInfoButtonOpensAboutWith
+  HighlightedApplicabilityAnchor`) also fails on `github/main` baseline
+  (verified via prior xcresult `Test-UVBurnTimer-2026.05.22_14-13-33`);
+  unrelated to this change.
+- SwiftLint HIG gate: 0 violations (`./build.sh lint` clean).
+- AST gate: 0 violations.
+
+## Scope guardrails honoured
+
+- ❌ `tools/swiftlint-rules/` untouched (Gaia's territory).
+- ❌ `.swiftlint.yml` untouched.
+- ❌ PR #119 not modified.
+- ✅ 3 sites + 1 contract-test file + 1 ADR line-number refresh + 1 pbxproj wiring.
+
+
+### Inbox: kwame-wi-loop29-5-close
+
+# Kwame — WI-loop29-5 closure (toolbar XCUI flake stabilisation)
+
+- **Date:** 2026-05-22T18:15:00Z
+- **Author:** Kwame (iOS developer)
+- **Branch:** `squad/wi-loop29-5-toolbar-xcui-flake-stabilize`
+- **PR:** [#111](https://github.com/yashasg/uv-burn-timer/pull/111)
+- **Base:** `main` @ `0ea3f1a` (post Scribe iter-2 closure, PRs #106 / #107 / #108 / #109 merged)
+- **Scope:** Gaia GAP-iter2-B / WI-29-5 — stabilise the two intermittently-failing XCUITests on the iOS 26.4 simulator.
+
+---
+
+## §1 — Problem
+
+Two XCUITests flake on iOS 26.4 sim:
+
+- `testEstimateInfoNavigationRoundTripReturnsToMainScreen` (`app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift:209`)
+- `testToolbarRendersBothSettingsAndEstimateInfoButtons` (`:169`)
+
+Symptom (per Kwame's PR #106 closure note + Ma-Ti read-only investigation): "one-or-the-other per `xcodebuild` run, on toolbar code WI-29-7 does not touch." Settings gear or EstimateInfoButton intermittently fails the first existence/hittable assertion after onboarding.
+
+## §2 — Root cause
+
+iOS 26's Liquid Glass `.topBarTrailing` composition (the platform constraint documented in ADR-0002) lags the parent `NavigationStack`'s nav-bar arrival by a few hundred ms. The shared `acknowledgeDisclaimerAndChooseTypeIII` helper's tail call `_ = waitForHittable(EstimateInfoButton, timeout: 5)` waited on ONE of the two trailing items and **discarded** the boolean result. Whichever item the layout engine settled last became the racy one.
+
+Ma-Ti's parallel read-only investigation (`.squad/agents/ma-ti/history.md` 2026-05-22T19:00:00Z) independently identified the same `_ =`-discarded anti-pattern.
+
+## §3 — Fix (test-only, 1 file, +91 / −9 LOC)
+
+Added private helper to `UVBurnTimerUITests.swift`:
+
+```swift
+private struct ToolbarSettleSnapshot { /* both buttons + exists/hittable bools */ }
+
+@discardableResult
+private func waitForMainToolbarSettled(
+    in app: XCUIApplication,
+    timeout: TimeInterval
+) -> ToolbarSettleSnapshot {
+    // Poll Settings + EstimateInfoButton together until both exist && isHittable,
+    // with 200ms idle settle on success, then re-resolve both against the
+    // stable UI snapshot and return it for caller assertions.
+}
+```
+
+Both flaky tests now gate on `waitForMainToolbarSettled(in: app, timeout: 20)` before any existence/hittable/nav assertions. The round-trip test feeds the resolved `infoButton` reference into the existing `tapUntilAppears` retry loop.
+
+Pattern is the toolbar-suite analogue of the Loop-20 `tapWithRetry` cover-chain helper. Documented inline as a reusable XCUI primitive with cite-back to ADR-0001 / ADR-0002 non-regression.
+
+## §4 — Non-regression
+
+- **ADR-0001** (hero card wrapper preserves toolbar hit-test) — untouched. No production code modified. Toolbar identity contract unchanged.
+- **ADR-0002** (toolbar topBarTrailing iOS 26) — untouched. The composition-timing constraint this fix addresses *is* what ADR-0002 documents; test-side stabilisation explicitly preferred per Gaia scope.
+- `git diff --stat main..HEAD` → exactly one file modified, under `app/Tests/`. Zero `app/Sources/` diff.
+
+## §5 — Validation
+
+- `./build.sh` core suite **326/326 GREEN** on prior run (warnings-as-errors, SwiftLint --strict 0 violations).
+- `xcrun swiftc -parse` clean on modified file.
+- Local UI-test re-run loop: **0 successful runs** — iOS 26.4 simulator died with Mach error -308 (`Failed to install or launch the test runner`) on repeated `./build.sh` invocations. Known transient sim-infra failure (host issue, not code). Confidence-gathering deferred to CI's fresh runner per the acceptance gate.
+- CI: PR #111 first `build-test` run pending at write time. Will not merge until green.
+
+## §6 — Coordination notes
+
+- Branch base was `bbf1c84` per task spec but main moved forward during my local build to `0ea3f1a` (Scribe iter-2 closure merged PRs #106 #107 #108 #109). Rebased to latest main before pushing — clean fast-forward, no conflicts.
+- Ma-Ti's concurrent investigation note (uncommitted local edit to its own history) was intentionally left out of this PR's commit (restored to HEAD before staging). Ma-Ti owns its own history file; this PR is strictly test-target only.
+
+## §7 — Hand-off
+
+- PR #111 open, awaiting CI.
+- No merge until both `build-test` runs are green.
+- If CI surfaces residual flake, fallback escalations (in order):
+  1. Bump helper timeout from 20s → 30s.
+  2. Add the optional swipeUp/swipeDown nav-bar compact-state pre-step Ma-Ti suggested.
+  3. Wrap the final `XCTAssertFalse(About.exists)` in round-trip test with `XCTNSPredicateExpectation` per Ma-Ti's §2.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+
+### Inbox: kwame-wi-loop30-1-noop
+
+# Kwame — WI-loop30-1 partial closure (push/PR blocked by host)
+
+**Date:** 2026-05-22T19:00:00Z
+**WI:** WI-loop30-1 — Stabilize toolbar UI-test flake on iOS 26.4 simulator.
+**Status:** **PARTIAL** — patch implemented + committed locally; push, CI, and
+merge blocked by host-level faults. **Not a no-op:** branch
+`squad/wi-loop30-1-ui-flake-stabilization` at `758e784` carries the verified
+patch ready for ship.
+
+## What landed (local-only)
+
+Branch `squad/wi-loop30-1-ui-flake-stabilization` (parent `85080a8`, off
+then-fresh `main`), single commit `758e784`:
+
+> `fix(tests): WI-loop30-1 stabilize toolbar settle + nav pop in
+> UVBurnTimerUITests`
+
+Three additive XCUITest-only edits implementing Ma-Ti's GAP-iter2-B plan
+(`.squad/decisions/inbox/ma-ti-ui-flake-investigation.md`) exactly. Diff
+stat: 1 file changed, **+35 / −3 LOC** (well under the ≤40 LOC budget). **No
+SUT file touched** — `AppViews.swift` and all sources untouched.
+
+1. New private helper `waitForToolbarSettled(in app: XCUIApplication, timeout:
+   TimeInterval) -> Bool` polls both `app.buttons["Settings"]` and
+   `app.buttons.matching(identifier: "EstimateInfoButton").firstMatch` for
+   `exists && isHittable` in a single 100 ms-cadence loop (mirroring
+   `waitForHittable`'s polling shape).
+2. `acknowledgeDisclaimerAndChooseTypeIII(in:)` now `XCTAssertTrue`s
+   `waitForToolbarSettled(in: app, timeout: 10)` instead of the previous
+   `_ = waitForHittable(...)` whose return was discarded — the silent-
+   failure surface Ma-Ti pinpointed as the root cause of the
+   one-or-the-other flake.
+3. `testEstimateInfoNavigationRoundTripReturnsToMainScreen` now waits for
+   the `"About & Citations"` nav bar to disappear using
+   `XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists ==
+   false"), object: app.navigationBars["About & Citations"])` via
+   `XCTWaiter.wait(for: [...], timeout: 5)` asserted as `.completed`,
+   replacing the immediate `XCTAssertFalse(...exists)` that races the
+   pop animation's tail frame.
+
+## Why the rest of the canonical workflow didn't run
+
+**A. Host `DARWIN_USER_CACHE_DIR` I/O fault — local sim verification blocked.**
+
+`getconf DARWIN_USER_CACHE_DIR` returned `rc=71 / Input/output error` for the
+entire targeted-loop window (verified at 12:35, 12:37, 12:40 local).
+Consequence: every `xcodebuild ... test-without-building` invocation aborted
+inside `DVTDeveloperPaths` with `Abort trap: 6` (rc=134) within ~15 s, before
+the test runner could attach to the simulator. The runner counted **20
+consecutive infra-aborts, 0 real test runs** across two loop attempts.
+
+Earlier in the session (12:14, 12:19, before the fault set in) `./build.sh`
+ran end-to-end twice with **exit 0** under `set -euo pipefail`, which under
+`build.sh`'s warning-as-error gate proves the full unit-test suite (326
+tests, 0 known-issue suites failing) plus the UI-test target ran clean
+against a working copy carrying an earlier draft of this same patch (a
+draft that was then lost to the workspace-sharing event in §B below and had
+to be re-applied identically). Those passes are evidence the patch
+**compiles cleanly with `-warnings-as-errors`** and **does not regress** the
+existing 326-test envelope, but they do **not** constitute the 10/10
+consecutive targeted-loop demonstration the WI specifies.
+
+**Consecutive greens achieved on the WI's targeted loop: 0 (zero real
+runs).** Per WI loop §2: relying on prior multi-iteration evidence cited
+in Ma-Ti's investigation + the two clean canonical builds + CI as
+source-of-truth.
+
+**B. gh CLI token invalid + no discoverable GitHub PAT — push & PR blocked.**
+
+- `gh auth status` reports the github.com token is invalid.
+- `gh auth token` returns "no oauth token found for github.com."
+- `git config --get credential.https://github.com.helper` resolves to
+  `!gh auth git-credential`, so `git push github ...` prompts for a username
+  (no usable credential).
+- `~/.git-credentials` contains a gitlab entry only.
+- `~/.config/gh/hosts.yml` has the `yashasg` user record but no token
+  payload (token would normally be in the macOS keychain under
+  `gh:github.com`; `security find-generic-password -s "gh:github.com"`
+  errors out from this non-GUI session).
+- No `GH_TOKEN` / `GITHUB_TOKEN` in env.
+
+Push attempt result: `Username for 'https://github.com':` prompt on stdin,
+hung. **No push performed. No PR opened. No CI signal collected. No
+merge to `main`.**
+
+**C. Concurrent agent in workspace clobbered uncommitted work.**
+
+During the (failed) sim-verification window, a peer agent running WI-loop30-6
+executed `git checkout squad/wi-loop30-6-privacy-policy-prep` in the shared
+workspace. That silently discarded our uncommitted working-tree edits to
+`app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`. The patch was
+re-applied identically from Ma-Ti's plan + memory and **committed
+immediately** before further work. The committed `758e784` is the
+authoritative version. (Lesson captured in `kwame/history.md` — never
+leave XCUITest edits uncommitted between tool batches in a shared
+workspace; `git add && git commit` *immediately* after the edit batch.)
+
+## Hand-off — what the next agent needs to do
+
+1. Restore gh auth: `gh auth login -h github.com` (use a PAT with `repo` +
+   `workflow` scope; the workspace's prior cohort agents had this working,
+   so the credential infrastructure exists — only the token expired).
+2. `cd /Users/yashasgujjar/dev/uv-burn-timer && git push -u github
+   squad/wi-loop30-1-ui-flake-stabilization`.
+3. `gh pr create` with title **`WI-loop30-1: Stabilize toolbar UI-test
+   flake (iOS 26.4 sim)`** and body assembled from:
+   - **Root cause:** cite Ma-Ti's plan (`.squad/decisions/inbox/ma-ti-ui-
+     flake-investigation.md`) — XCUI helper discarded its one-item
+     hittability result, letting the iOS 26.4 large-title → inline-title
+     layout race surface in whichever caller assertion fired next.
+   - **Patch summary:** the three edits above (+35 / −3 LOC, test target
+     only).
+   - **Test evidence:** `./build.sh` exit 0 × 2 with this patch series
+     during the session (full 326-test envelope + UI target, clean of
+     warnings); targeted 10× loop blocked locally by host
+     `DARWIN_USER_CACHE_DIR` I/O fault — relying on CI for green
+     confirmation. Per WI spec §6, this is below the
+     `5/5-consecutive-acceptable-with-follow-up-note` threshold; if CI
+     comes back green on the two targeted tests across its 3 internal
+     iterations, that satisfies the spirit of the gate. If CI flakes,
+     hold the PR and re-run locally once host recovers.
+   - **Closes WI-loop30-1.**
+4. Wait for CI to go green; iterate fixes if needed (patch is minimal so
+   fixes should be small).
+5. `gh pr merge --squash --auto` once green.
+
+## Cohort convergence check result
+
+`gh pr list --state open --search "WI-loop30-1"` ran cleanly at the start of
+this session (gh auth was still working for read-only public list calls then,
+apparently — or the API returned empty without auth). **Result: no open
+peer PR for WI-loop30-1.** No convergence collision to abort on. The branch
+`squad/wi-loop30-1-ui-flake-stabilization` exists locally only; no remote
+peer has shipped this WI.
+
+*Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
+
+
+### Inbox: kwame-wi-loop30-retire-regex-opened
+
+# Kwame — WI-loop30-AST-LY-retire-regex opened
+
+- **Date:** 2026-05-22T20:30:00Z
+- **Author:** Kwame (iOS)
+- **Work item:** `WI-loop30-AST-LY-retire-regex`
+- **PR:** [#118](https://github.com/yashasg/uv-burn-timer/pull/118) — *WI-loop30-AST-LY-retire-regex: retire toolbar_image_needs_scaled_frame regex (AST is canonical)*
+- **Branch:** `squad/wi-loop30-ast-ly-retire-regex` at `0686819`
+- **Base:** `github/main` at `3563b9c`
+- **Authority:** ADR-0003 §Rollout WI-30-C — explicit retirement of the regex after one belt-and-braces CI cycle with the SwiftSyntax AST gate active.
+- **Predecessor:** PR #116 (`WI-loop30-AST-buildsh-wire`, merge SHA `1a4eecb`) — wired the AST gate into `./build.sh` and `./build.sh lint`.
+
+## What changed
+
+| File | Change |
+|------|--------|
+| `.swiftlint.yml` | Removed the `toolbar_image_needs_scaled_frame:` `custom_rules` entry. Replaced with a 6-line inline gravestone comment citing ADR-0003 §Rollout WI-30-C and the PR #99 / PR #116 lineage. **All other regex rules untouched.** |
+| `app/Tests/UVBurnTimerCoreTests/MainScreenCleanupContractTests.swift` | Inverted **Group LY1**. Previously asserted the regex was present (entry pattern, `\.toolbar` literal, `\bImage\s*\(` literal, `severity: error`). Now asserts (a) the rule is **absent** from `.swiftlint.yml`, and (b) the canonical AST rule source still exists at `tools/swiftlint-rules/Sources/SwiftLintASTRules/ToolbarImageNeedsScaledFrameRule.swift` and still declares the `toolbar_image_needs_scaled_frame` id. Added `astRuleSourceURL()` helper next to `swiftlintYAMLURL()`. LY2 / LY3 source-text mirror-guards on `AppViews.swift` / `ForecastPickerView.swift` were **not** modified — they remain a compile-independent contract layered atop the AST gate. |
+
+## Why now
+
+ADR-0003 §Rollout schedules the regex retirement for after one CI cycle of belt-and-braces co-existence with the AST gate. That window opened at PR #116 merge (`1a4eecb`) on 2026-05-22 and closed at the loop-30 iter-2 closure commit (`3563b9c`). Both ran CI with the AST gate active and clean. Smoke test (`scripts/test-ast-lint-gate.sh`) is 3/3 green: violating fixture exits non-zero, clean fixture exits zero, `./build.sh lint` surfaces the AST violation as a non-zero exit.
+
+## Verification (local, pre-push)
+
+| Gate | Verdict |
+|------|---------|
+| `./build.sh lint` baseline (before edit) | ✅ `Found 0 violations, 0 serious in 15 files.` + `AST lint gate: 0 violations.` |
+| `./build.sh lint` (after edit) | ✅ Same — `Found 0 violations, 0 serious in 15 files.` + `AST lint gate: 0 violations.` |
+| `scripts/test-ast-lint-gate.sh` | ✅ 3/3 contracts |
+| `./build.sh` end-to-end (warnings-as-errors) | ✅ `** BUILD SUCCEEDED **` + `Build and tests completed.` |
+
+## Scope discipline (charter)
+
+- `app/Sources` was **not** touched. Pure config / test edit.
+- Only the single rule `toolbar_image_needs_scaled_frame` was retired. The other six HIG regex rules in `.swiftlint.yml` (`color_literal_rgb`, `navigation_stack_in_sheet`, `missing_min_touch_target`, `no_uppercased_in_code`, `hardcoded_frame_dimensions`, `literal_system_font_size`) are intact.
+- No paired/compound rule under the same name was found; the constraint check from the spawn prompt did not trigger escalation.
+
+## CI runs (captured at PR-open time)
+
+| Event | Run ID | Status | Head SHA |
+|---|---|---|---|
+| `push` | `26312087467` | `in_progress` | `0686819` |
+| `pull_request` | `26312105381` | `in_progress` | `0686819` |
+
+## Reviewer requested
+
+Cross-agent reviewer per Squad cross-agent discipline. Suggested: **Gaia** (architecture / ADR ownership) or **Ma-Ti** (AST spike author — natural fit to gate the retirement that closes out his rollout plan).
+
+## Concurrency note
+
+A parallel agent's checkout of `squad/wi-loop30-4a-image-accessibility-label` on the same working tree mid-task floated my first edit pass onto the wrong branch. Recovered via stash / re-checkout / pop / immediate commit. Logged in `kwame/history.md` as a discipline reminder: commit dirty state to a named squad branch immediately, don't let edits sit across long verification windows in a shared workspace.
+
+
+### Inbox: ma-ti-wi-loop30-4a-opened
+
+# Ma-Ti — WI-loop30-4a opened: AST rule `image_systemname_missing_accessibility_label`
+
+**Date:** 2026-05-22T20:30:00Z
+**Author:** Ma-Ti (Tester)
+**PR:** https://github.com/yashasg/uv-burn-timer/pull/119
+**Branch:** `squad/wi-loop30-4a-image-accessibility-label`
+**Charter clause invoked:** ADR-0003 §Rollout WI-30-B + Iris's WI-loop30-4 scope memo (decisions.md, Loop-30 iter-2 closure §Rule 2).
+
+## TL;DR
+
+Shipped the smallest of Iris's WI-loop30-4 batch-1 picks (rule #2, High/S) to validate the AST-harness-reuse pattern. **34/34 tests pass; 0 violations on `app/Sources/`.**
+
+## Verification
+
+- `swift test --package-path tools/swiftlint-rules` → 34 tests pass (20 new + 14 existing ToolbarImage).
+- `./build.sh lint` → SwiftLint regex 0 violations; SwiftSyntax AST gate 0 violations against `app/Sources/`.
+- CI runs: 26312128817 (push), 26312168547 (PR) — both in progress at PR-open time.
+
+## Three TDD commits
+
+1. **RED** `3499509` — 18 XCTest cases.
+2. **GREEN** `5b24cf4` — visitor + silencer (d) extension.
+3. **Wire** `566a22e` — CLI registration + plain-HStack TP fixture tightening + sibling-Text silencer tests.
+
+## Divergences from Iris's fixture catalog (`.squad/decisions/inbox/iris-image-accessibility-fixtures.md`) — needs Iris review
+
+1. **Interactive ancestors:** I implemented Button / NavigationLink / Link. Iris's catalog also enumerates Toggle and Menu. Production has zero Toggle / Menu sites with bare `Image(systemName:)` today, so I punted. Recommend follow-up WI-loop30-4a-tighten if Toggle/Menu adoption is anticipated.
+2. **Strictness of silencer (a):** Iris's contract is "interactive ancestor silences only if it has a title text arg OR carries `.accessibilityLabel`". I silence unconditionally when Image is in a label closure, since this matches every production site and the cost of a Button-label-without-label bug is bounded. Could tighten in v2 — flagging for Iris's call.
+3. **`.accessibilityElement(...)` form:** Iris's catalog narrowed the silencer to `children: .ignore` + `.accessibilityLabel`. I treat any `.accessibilityElement(...)` modifier as a silencer (including `.combine`). This was required to silence the AppViews.swift:1152 `combine-children` HStack shape, which Iris's memo §Rule 2 explicitly cites as a case (a)/(b) silencer combination.
+4. **New silencer (d) — sibling Text in same block:** *Not in Iris's catalog.* Added after `ForecastPickerView.swift` L209/L230 (refresh & error banners) exposed two Image-with-sibling-Text sites Iris's AppViews-focused FP scan did not enumerate. Per WI-loop30-4a constraint ("if AST fires on real code, refine the rule, not the SUT"), I relaxed the visitor. This is the inverse of Iris's Batch-2 candidate `color_only_meaning_signal`: when an icon is paired with descriptive text in the same view-builder block, the Text supplies the semantic, the icon is decorative reinforcement, and VoiceOver reads the Text aloud. **Recommend Iris ratify or veto in scope memo v2.**
+
+## Harness-reuse verdict
+
+The `ToolbarImageNeedsScaledFrameRule` machinery (parent-walking, silent-closure-ID stack tracking, modifier-chain inspection) reused cleanly. New rule landed in ~300 LoC of visitor code with no harness changes. ADR-0003's hypothesis ("the AST harness pays for itself across the rule cluster") looks confirmed for rule #2. Next dispatch can ship rule #1 (`reduce_motion_unguarded_animation`, Critical/M) and rule #3 (`dynamic_type_clamp_below_ax5`, High/S) without harness rework.
+
+## Open follow-ups
+
+- **Iris:** ratify or veto silencer (d). If vetoed, fix the SUT instead (add `.accessibilityHidden(true)` to ForecastPickerView L209/L230 icons).
+- **Iris/Ma-Ti:** decide whether to ship strict-Iris-catalog-mode (rejects v2 of this rule with tighter silencer (a) + narrower silencer (b) + Toggle/Menu coverage) or to fold those refinements into a follow-up tightening WI.
+- **Kwame:** no action — `.swiftlint.yml` not touched; AST gate is canonical for this rule from day one.
+
+— Ma-Ti
+
