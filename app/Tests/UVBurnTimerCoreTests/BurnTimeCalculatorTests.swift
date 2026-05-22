@@ -5143,3 +5143,176 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
     )
 }
 
+// MARK: - Group U: WI-bundleU — Loop-15 Plunder L02 + L07 closure
+//
+// Two HIGH-severity Plunder findings carried forward from the Loop-13
+// parallel gap-analysis pass and re-flagged in the Loop-14 closure log:
+//
+// U1 — Plunder L02 (Loop-13): the hosted privacy-policy stub does NOT
+//      currently disclose an EU representative under GDPR Art.27.
+//      Article 27 of the GDPR requires non-EU controllers/processors
+//      offering goods or services to EU/EEA data subjects to designate
+//      a representative *in writing* in the Union, except for narrow
+//      processing-frequency / risk-level exemptions. The UV Burn Timer
+//      Apple Weather pipeline transmits rounded coordinates each time a
+//      user taps Recalculate, which is not "occasional" under the
+//      EDPB Art.27 Guidelines 03/2021 (§3.1); a designated rep is
+//      therefore required before EU/EEA App Store distribution.
+//
+//      Like the `{LAUNCH_DATE_TBD}` and `{CONTACT_EMAIL_TBD}`
+//      placeholders that Bundle S §S6 enrolled, the EU-rep contact
+//      information is **outside-of-codebase** business data the repo
+//      owner must supply — an automated agent cannot invent a UK/EU
+//      rep on the owner's behalf. Bundle U therefore adds §15 with a
+//      `{EU_REPRESENTATIVE_TBD}` placeholder and extends the
+//      `Automation status` block to enroll the new TBD under the
+//      Plunder L02 manual-completion gate, mirroring §S6's pattern.
+//
+// U2 — Plunder L07 (Loop-13): the Settings sheet does NOT currently
+//      surface the "Informational only — not medical advice."
+//      disclaimer reach-back. The Settings sheet is presented modally
+//      and covers the persistent footer that normally carries
+//      `ProductCopy.disclaimerLinkLabel`, so a user in the Settings
+//      sheet has no in-modal cue that the app is informational and not
+//      medical advice. Plunder's regulatory floor (Loop-12
+//      `.squad/designs/plunder-disclaimer-relocation-floor.md`)
+//      requires the not-medical-advice line to remain reachable from
+//      *every* high-level surface where the user is modifying inputs
+//      that drive the burn-time model. The fix is to add a Disclaimer
+//      Section to the SettingsSheet `Form` that renders the same
+//      `ProductCopy.disclaimerLinkLabel` line that the persistent
+//      footer carries. Identifier `SettingsDisclaimerLine` is added so
+//      XCUI can find it, and the substring guard below pins the
+//      ProductCopy routing.
+
+/// U1 — Privacy-policy stub carries a §15 EU representative section
+/// with a `{EU_REPRESENTATIVE_TBD}` placeholder + automation-status
+/// block (WI-21-style — Plunder L02).
+///
+/// **Why this guard matters:** GDPR Art.27 requires non-EU controllers
+/// offering services to EU/EEA data subjects to designate a
+/// representative in the Union before processing begins. UV Burn
+/// Timer's Apple Weather pipeline transmits rounded coordinates each
+/// time the user taps Recalculate (the EDPB Art.27 Guidelines
+/// 03/2021 §3.1 do not classify this as "occasional" processing,
+/// so the carve-out at Art.27(2)(a) does not apply). Shipping the
+/// hosted policy without a designated rep — or without at least a
+/// visible `{TBD}` placeholder that flags the gap to App Store
+/// reviewers and EU counsel — would violate GDPR Art.12 transparency
+/// AND App Store §5.1.1.4 ("clear and accessible information about
+/// your privacy practices"). The fix mirrors the Bundle S §S6 pattern:
+/// add the section, flag the placeholder as a submission blocker, and
+/// pin it with a contract test so the placeholder stays visible until
+/// the repo owner + Plunder fill it in.
+///
+/// **Manual-completion gate:** the actual representative's name +
+/// EU/EEA address + contact email must come from the repo owner. An
+/// automated agent cannot designate an EU rep on the owner's behalf
+/// (the legal contract is between the controller and the rep firm).
+/// Filling the TBD with a guess would violate the Art.27 written-
+/// designation requirement.
+@Test func test_U1_privacyPolicyDeclaresEURepresentativeSectionWithTBDPlaceholder() throws {
+    let testFileURL = URL(fileURLWithPath: #filePath)
+    let policyURL = testFileURL
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .deletingLastPathComponent()  // repo root
+        .appendingPathComponent(".squad/files/privacy-policy.md")
+    let policy = try String(contentsOf: policyURL, encoding: .utf8)
+
+    // The Art.27 section heading must exist. Wording is locked to the
+    // GDPR Article number so EU counsel can find the section without
+    // ambiguity.
+    #expect(
+        policy.contains("## 15. EU representative") || policy.contains("## 15. EU/EEA representative"),
+        ".squad/files/privacy-policy.md must declare a §15 EU representative section (GDPR Art.27). Non-EU controllers offering services to EU/EEA data subjects must designate a representative under Art.27; shipping the hosted policy without one — or without a visible placeholder — violates Art.12 transparency. (WI-bundleU / Plunder L02 — Loop-15)"
+    )
+    #expect(
+        policy.contains("Art.27") || policy.contains("Article 27"),
+        ".squad/files/privacy-policy.md §15 must cite GDPR Art.27 explicitly so EU counsel can verify the legal basis for the section. (WI-bundleU / Plunder L02 — Loop-15)"
+    )
+
+    // The TBD placeholder must be present until the repo owner
+    // designates an actual representative. Mirrors §S6's
+    // `{LAUNCH_DATE_TBD}` / `{CONTACT_EMAIL_TBD}` pattern.
+    #expect(
+        policy.contains("{EU_REPRESENTATIVE_TBD}"),
+        ".squad/files/privacy-policy.md §15 must carry a `{EU_REPRESENTATIVE_TBD}` placeholder until the repo owner designates an actual Art.27 representative. An automated agent cannot designate a rep on the owner's behalf — the designation is a written legal contract with a EU/EEA-resident party. (WI-bundleU / Plunder L02 — Loop-15)"
+    )
+
+    // The automation-status block must explicitly call out Plunder L02
+    // so the manual-completion gate is traceable. Mirrors the §S6 and
+    // WI-21 conventions.
+    #expect(
+        policy.contains("Plunder L02"),
+        ".squad/files/privacy-policy.md must reference Plunder L02 in the automation-status section so the manual-completion gate is traceable to the Loop-13 finding. (WI-bundleU / Plunder L02 — Loop-15)"
+    )
+
+    // The automation-status block must mark the placeholder as a
+    // submission blocker, mirroring the §S6 pattern. The word
+    // "submission blocker" is the agreed-on Plunder vocabulary across
+    // §S6 + §15.
+    #expect(
+        policy.range(of: "submission blocker", options: .caseInsensitive) != nil,
+        ".squad/files/privacy-policy.md automation-status block must treat the EU-rep TBD as a `submission blocker` — shipping the App Store URL with literal `{EU_REPRESENTATIVE_TBD}` would violate App Store §5.1.1.4 + GDPR Art.12 transparency. (WI-bundleU / Plunder L02 — Loop-15)"
+    )
+}
+
+/// U2 — SettingsSheet renders the `disclaimerLinkLabel` footnote
+/// (`Informational only. Not medical advice.`) so the modal in-Settings
+/// surface keeps the not-medical-advice reach-back visible.
+///
+/// **Why this guard matters:** the Settings sheet is presented modally
+/// and covers the `PersistentFooter` that normally carries the
+/// `ProductCopy.disclaimerLinkLabel` reach-back. A user in Settings —
+/// adjusting skin type, SPF, or any other input that drives the
+/// burn-time model — has no in-modal cue that the app is informational
+/// only and not medical advice. Plunder's regulatory floor
+/// (`.squad/designs/plunder-disclaimer-relocation-floor.md`) requires
+/// the not-medical-advice line to remain reachable from every
+/// high-level surface where the user is modifying model inputs.
+/// Bundle U adds a `Disclaimer` Section to the Settings Form that
+/// renders the same `ProductCopy.disclaimerLinkLabel` line that the
+/// persistent footer carries. The text is routed through `ProductCopy`
+/// so the substring guard (Group EH) keeps the wording aligned with
+/// the hosted privacy policy.
+@Test func test_U2_settingsSheetRendersDisclaimerLineFromProductCopy() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    // Anchor on the SettingsSheet declaration so the assertion is
+    // scoped to the Settings sheet and not, e.g., the AboutView.
+    guard let settingsStart = source.range(of: "struct SettingsSheet: View")?.lowerBound else {
+        Issue.record("SettingsSheet struct declaration not found in AppViews.swift")
+        return
+    }
+
+    // Scan ~7000 chars into the body — SettingsSheet's body is ~130
+    // LOC (~5500 chars after Bundle R's Asha P4 routing additions and
+    // Bundle U's Disclaimer Section), so 7000 chars is a comfortable
+    // upper bound that stops before the next top-level struct
+    // (SkinTypeEditView).
+    let settingsScanEnd = source.index(settingsStart, offsetBy: 7000, limitedBy: source.endIndex) ?? source.endIndex
+    let settingsRegion = String(source[settingsStart..<settingsScanEnd])
+
+    // (a) The Settings sheet must render `Text(ProductCopy
+    // .disclaimerLinkLabel)` — the same line the PersistentFooter
+    // carries. Routing through `ProductCopy` keeps the substring guard
+    // (Group EH) honest and prevents copy drift.
+    #expect(
+        settingsRegion.contains("Text(ProductCopy.disclaimerLinkLabel)"),
+        "SettingsSheet must render `Text(ProductCopy.disclaimerLinkLabel)` so the modal Settings sheet keeps the not-medical-advice reach-back visible — the PersistentFooter that normally carries this line is covered by the Settings modal. (WI-bundleU / Plunder L07 — Loop-15)"
+    )
+
+    // (b) The Settings disclaimer text must carry a stable
+    // `accessibilityIdentifier` so XCUI smoke can find it without
+    // matching against the localized string. The identifier name is
+    // pinned here so a future rename doesn't silently break the XCUI
+    // pickup.
+    #expect(
+        settingsRegion.contains(".accessibilityIdentifier(\"SettingsDisclaimerLine\")"),
+        "SettingsSheet disclaimer line must carry `.accessibilityIdentifier(\"SettingsDisclaimerLine\")` for XCUI pickup. (WI-bundleU / Plunder L07 — Loop-15)"
+    )
+}
+
+

@@ -267,8 +267,8 @@ identity:
   at `AppViews.swift:123` (accessibility identifier `EstimateInfoButton`
   at line 128).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2041` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2040–2042), rendered inside the
+  `AppViews.swift:2063` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2062–2064), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 131–139.
 
 ### Rule (extended)

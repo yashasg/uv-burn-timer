@@ -1442,6 +1442,28 @@ struct SettingsSheet: View {
                     .accessibilityHint("Resets your stored SPF to SPF 30 — the default value. Closes the GDPR Art.17 erasure-path loop on the L1 storage disclosure.")
                     .accessibilityIdentifier("ClearStoredSPFButton")
                 }
+
+                // WI-bundleU / Plunder L07 (Loop-15) — the Settings
+                // sheet is presented modally and covers the
+                // `PersistentFooter` "Informational only. Not medical
+                // advice." reach-back. A user adjusting skin type,
+                // SPF, or any other input that drives the burn-time
+                // model has no in-modal cue that the app is
+                // informational only. Plunder's regulatory floor
+                // (`.squad/designs/plunder-disclaimer-relocation-floor
+                // .md`) requires the not-medical-advice line to
+                // remain reachable from every high-level surface
+                // where the user is modifying model inputs. Routing
+                // the text through `ProductCopy.disclaimerLinkLabel`
+                // keeps the wording aligned with the persistent
+                // footer + the hosted privacy policy via the existing
+                // Group EH substring guard.
+                Section("Disclaimer") {
+                    Text(ProductCopy.disclaimerLinkLabel)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("SettingsDisclaimerLine")
+                }
             }
             .navigationTitle("Settings")
             .toolbar {
