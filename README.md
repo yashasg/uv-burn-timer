@@ -30,7 +30,7 @@ The script builds Debug, runs Swift tests, and validates a Release simulator bui
 
 ## Privacy and product guardrails
 
-- Skin type, SPF, and the `disclaimerPolicyVersion` acknowledgment persist in `UserDefaults` on this device only; they are never transmitted off-device or synced.
+- Skin type, SPF, the `disclaimerPolicyVersion` acknowledgment, and the location-rationale acknowledgment persist in `UserDefaults` on this device only; they are never transmitted off-device or synced.
 - Rounded two-decimal coordinates are sent to Apple Weather for UV lookup; the app may save only the last rounded coordinate on device for location context.
 - UV index values, burn-time estimates, and disclaimer acknowledgments are never persisted between launches.
 - No HealthKit integration.

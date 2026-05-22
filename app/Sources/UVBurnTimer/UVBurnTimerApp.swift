@@ -6,6 +6,8 @@ struct UVBurnTimerApp: App {
     @State private var session: UVBurnTimerSession
     @State private var showDisclaimer: Bool
     @State private var showSkinTypeOnboarding = false
+    @State private var locationPromptGate: LocationPromptGate
+    @State private var showLocationRationale = false
 
     init() {
         let defaults = UserDefaults.standard
@@ -20,6 +22,7 @@ struct UVBurnTimerApp: App {
             from: defaults,
             acknowledgedDisclaimer: !initialShowDisclaimer
         )
+        var initialLocationPromptGate = UserPreferenceStorage.restoredLocationPromptGate(from: defaults)
 
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
@@ -35,6 +38,7 @@ struct UVBurnTimerApp: App {
                 from: defaults,
                 acknowledgedDisclaimer: !initialShowDisclaimer
             )
+            initialLocationPromptGate = UserPreferenceStorage.restoredLocationPromptGate(from: defaults)
         }
         if arguments.contains("-uiTestSavedPreferences") {
             defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
@@ -85,6 +89,7 @@ struct UVBurnTimerApp: App {
 
         _session = State(initialValue: initialSession)
         _showDisclaimer = State(initialValue: initialShowDisclaimer)
+        _locationPromptGate = State(initialValue: initialLocationPromptGate)
     }
 
     var body: some Scene {
@@ -106,15 +111,33 @@ struct UVBurnTimerApp: App {
                 .skinTypePresentation(isPresented: $showSkinTypeOnboarding) {
                     SkinTypeOnboardingView(session: $session)
                 }
-                .onAppear(perform: presentSkinTypeOnboardingIfNeeded)
+                .locationRationalePresentation(isPresented: $showLocationRationale) {
+                    LocationRationaleOnboardingView {
+                        locationPromptGate.acknowledgeRationale()
+                        UserPreferenceStorage.persist(
+                            locationPromptGate: locationPromptGate,
+                            to: UserDefaults.standard
+                        )
+                        showLocationRationale = false
+                    }
+                }
+                .onAppear(perform: presentNextOnboardingStepIfNeeded)
                 .onChange(of: session.selectedSkinType) { _, selectedSkinType in
                     if selectedSkinType == nil {
                         presentSkinTypeOnboardingIfNeeded()
                     } else {
                         showSkinTypeOnboarding = false
+                        // Defer past the skin-type fullScreenCover's dismissal
+                        // animation so the rationale cover can claim the slot.
+                        presentLocationRationaleIfNeeded(deferred: true)
                     }
                 }
         }
+    }
+
+    private func presentNextOnboardingStepIfNeeded() {
+        presentSkinTypeOnboardingIfNeeded()
+        presentLocationRationaleIfNeeded(deferred: false)
     }
 
     private func presentSkinTypeOnboardingIfNeeded() {
@@ -133,6 +156,38 @@ struct UVBurnTimerApp: App {
             }
 
             showSkinTypeOnboarding = true
+        }
+    }
+
+    /// WI-loop31-2 — Presents the location-rationale sheet between the
+    /// skin-type picker and the first iOS location prompt. Suppressed
+    /// once the gate is acknowledged (persisted via
+    /// `UserPreferenceStorage.persist(locationPromptGate:)`) so it
+    /// never re-fires on subsequent cold launches.
+    private func presentLocationRationaleIfNeeded(deferred: Bool) {
+        guard !showDisclaimer,
+              !showSkinTypeOnboarding,
+              session.selectedSkinType != nil,
+              !locationPromptGate.hasAcknowledgedRationale
+        else {
+            return
+        }
+
+        guard deferred else {
+            showLocationRationale = true
+            return
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !showDisclaimer,
+                  !showSkinTypeOnboarding,
+                  session.selectedSkinType != nil,
+                  !locationPromptGate.hasAcknowledgedRationale
+            else {
+                return
+            }
+            showLocationRationale = true
         }
     }
 }
@@ -160,6 +215,18 @@ extension View {
         sheet(isPresented: isPresented, content: content)
         #else
         fullScreenCover(isPresented: isPresented, content: content)
+        #endif
+    }
+
+    @ViewBuilder
+    fileprivate func locationRationalePresentation<Content: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> Content
+    ) -> some View {
+        #if os(macOS)
+        sheet(isPresented: isPresented, content: content)
+        #else
+        sheet(isPresented: isPresented, content: content)
         #endif
     }
 }

@@ -90,6 +90,16 @@ public struct LocationPromptGate: Equatable, Sendable {
 
         return true
     }
+
+    /// WI-loop31-2 — Explicit, idempotent setter used by
+    /// `LocationRationaleOnboardingView` when the user taps the
+    /// Continue CTA. Decoupled from
+    /// `allowSystemPromptOrAcknowledgeRationale()` so the SwiftUI view
+    /// layer does not have to inspect the dual-purpose return value to
+    /// record an acknowledgement.
+    public mutating func acknowledgeRationale() {
+        hasAcknowledgedRationale = true
+    }
 }
 
 public protocol UVDataProviding: Sendable {

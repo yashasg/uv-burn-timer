@@ -240,7 +240,7 @@ toolbar item. Resulting `AppViews.swift` positions on this commit:
 - `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
   (was 138 pre-Loop-28-WI-0)
 - `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
-  push — line **2171**
+  push — line **2172**
 - `skinTypeChip` — line **339**, `locationChip` — line **301**,
   `spfChip` — line **320**
 
@@ -335,7 +335,7 @@ surface area expanded to **four** presentation modifiers and **two**
    `disclaimerPresentation(...)` view extension. Even though the binding
    lives on `UVBurnTimerApp`, the cover anchors to `RootView`'s view tree.
 4. `.fullScreenCover(isPresented: $showSkinTypeOnboarding)` — also
-   attached from the parent at `UVBurnTimerApp.swift:106` via
+   attached from the parent at `UVBurnTimerApp.swift:111` via
    `skinTypePresentation(...)`. Note the deliberate 500 ms
    `Task { @MainActor in }` defer at `UVBurnTimerApp.swift:129–136` —
    iOS swallows a second `fullScreenCover` set while the first is still
@@ -352,7 +352,7 @@ identity:
   at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
   at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2171` (inside the `NavigationLink { AboutView(...) }`
+  `AppViews.swift:2172` (inside the `NavigationLink { AboutView(...) }`
   body at lines 2170–2172), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 143–151.
 

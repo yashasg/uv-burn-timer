@@ -3039,10 +3039,10 @@ private func _heroSummaryCases() throws -> [(name: String, summary: String)] {
 //       was ratified in Loop-9 (`.squad/decisions.md:10–43`) and is now
 //       pinned by `UserPreferenceStorage.shouldShowDisclaimerCover` +
 //       Group GD contract family (BurnTimeCalculatorTests.swift line ~1964).
-// HH2 — Privacy line must not claim `location-rationale acknowledgment`
-//       persists. The `locationRationaleAcknowledgedKey` is declared in
-//       `UVBurnTimerSession.swift` but no production code writes it after
-//       Kwame-8 dropped the LocationRationaleCard. Cross-pinned to source.
+// HH2 — Privacy line must claim `location-rationale acknowledgment`
+//       persists. `UserPreferenceStorage.persist(locationPromptGate:to:)`
+//       writes `locationRationaleAcknowledgedKey` and `clearStoredPreferences`
+//       erases it; README and source are cross-pinned.
 // HH3 — README user-scenarios must list the WI-7 10-day forecast picker —
 //       the largest post-launch feature; omission breaks the
 //       README ↔ loop.md Goal 3 ("User scenarios captured") contract.
@@ -3068,35 +3068,25 @@ private func _readmeContents() throws -> String {
     )
 }
 
-/// HH2 — README must not claim `location-rationale acknowledgment`
-/// persists in UserDefaults: no production code writes that key after
-/// Kwame-8 dropped the LocationRationaleCard.
-@Test func test_HH2_readmePrivacyDoesNotClaimDeadStoragePersistence() throws {
+/// HH2 — README must claim `location-rationale acknowledgment`
+/// persists in UserDefaults: `UserPreferenceStorage.persist(locationPromptGate:to:)`
+/// writes the key (WI-L31-01) and `clearStoredPreferences` erases it
+/// for GDPR Art.17 completeness.
+@Test func test_HH2_readmePrivacyDeclaresRationaleAcknowledgmentPersistence() throws {
     let readme = try _readmeContents()
     #expect(
-        !readme.contains("location-rationale acknowledgment"),
-        "README Privacy line must not claim location-rationale acknowledgment persists — the LocationRationaleCard was retired (Kwame-8) and no production code writes `locationRationaleAcknowledged`."
+        readme.contains("location-rationale acknowledgment"),
+        "README Privacy line must claim location-rationale acknowledgment persists — `UserPreferenceStorage.persist(locationPromptGate:to:)` writes `locationRationaleAcknowledged`."
     )
     let repoRoot = try appRootURL().deletingLastPathComponent()
-    let appSwift = try String(
-        contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimer/AppViews.swift"),
-        encoding: .utf8
-    )
     let coreSwift = try String(
         contentsOf: repoRoot.appendingPathComponent("app/Sources/UVBurnTimerCore/UVBurnTimerSession.swift"),
         encoding: .utf8
     )
-    let writePatterns = [
-        ".set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey",
-        "defaults.set(true, forKey: locationRationaleAcknowledgedKey",
-        "@AppStorage(UserPreferenceStorage.locationRationaleAcknowledgedKey)",
-    ]
-    for pattern in writePatterns {
-        #expect(
-            !appSwift.contains(pattern) && !coreSwift.contains(pattern),
-            "Production code now writes `locationRationaleAcknowledgedKey` — either restore the README claim or this guard is wrong."
-        )
-    }
+    #expect(
+        coreSwift.contains("defaults.set(true, forKey: locationRationaleAcknowledgedKey"),
+        "UVBurnTimerSession.swift must write `locationRationaleAcknowledgedKey` — if not present, update the README claim or restore the write."
+    )
 }
 
 /// HH3 — README must list the WI-7 forecast picker as a shipped user
