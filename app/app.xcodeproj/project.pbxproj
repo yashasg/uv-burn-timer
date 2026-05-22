@@ -24,6 +24,7 @@
 		010101010101010101010137 /* ForecastUVResultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010137 /* ForecastUVResultTests.swift */; };
 		010101010101010101010138 /* MainScreenCleanupContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010138 /* MainScreenCleanupContractTests.swift */; };
 		01010101010101010101013A /* ImageSystemNameAccessibilityContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101013A /* ImageSystemNameAccessibilityContractTests.swift */; };
+		01010101010101010101013B /* LocationRationaleOnboardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101013B /* LocationRationaleOnboardingTests.swift */; };
 		01010101010101010101010A /* UVBurnTimerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010102 /* UVBurnTimerCore.framework */; };
 		01010101010101010101010B /* UVBurnTimerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010102 /* UVBurnTimerCore.framework */; };
 		01010101010101010101010C /* UVBurnTimerCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 030101010101010101010102 /* UVBurnTimerCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -100,6 +101,7 @@
 		020101010101010101010137 /* ForecastUVResultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastUVResultTests.swift; sourceTree = "<group>"; };
 		020101010101010101010138 /* MainScreenCleanupContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenCleanupContractTests.swift; sourceTree = "<group>"; };
 		02010101010101010101013A /* ImageSystemNameAccessibilityContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageSystemNameAccessibilityContractTests.swift; sourceTree = "<group>"; };
+		02010101010101010101013B /* LocationRationaleOnboardingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRationaleOnboardingTests.swift; sourceTree = "<group>"; };
 		020101010101010101010130 /* ForecastSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastSnapshot.swift; sourceTree = "<group>"; };
 		020101010101010101010131 /* ForecastStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastStore.swift; sourceTree = "<group>"; };
 		020101010101010101010132 /* ForecastPickerLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForecastPickerLogic.swift; sourceTree = "<group>"; };
@@ -219,6 +221,7 @@
 				020101010101010101010137 /* ForecastUVResultTests.swift */,
 				020101010101010101010138 /* MainScreenCleanupContractTests.swift */,
 				02010101010101010101013A /* ImageSystemNameAccessibilityContractTests.swift */,
+				02010101010101010101013B /* LocationRationaleOnboardingTests.swift */,
 				020101010101010101010109 /* UVWorkflowTests.swift */,
 			);
 			path = Tests/UVBurnTimerCoreTests;
@@ -424,6 +427,7 @@
 				010101010101010101010137 /* ForecastUVResultTests.swift in Sources */,
 				010101010101010101010138 /* MainScreenCleanupContractTests.swift in Sources */,
 				01010101010101010101013A /* ImageSystemNameAccessibilityContractTests.swift in Sources */,
+				01010101010101010101013B /* LocationRationaleOnboardingTests.swift in Sources */,
 				010101010101010101010109 /* UVWorkflowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

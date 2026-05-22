@@ -34,6 +34,7 @@ final class UVBurnTimerUITests: XCTestCase {
         XCTAssertTrue(waitForEnabled(app.buttons["Continue"], timeout: 10))
 
         app.buttons["Continue"].tap()
+        acknowledgeLocationRationale(app)
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10))
     }
 
@@ -267,6 +268,39 @@ final class UVBurnTimerUITests: XCTestCase {
         )
     }
 
+    // MARK: - Smoke 10: Location Rationale Onboarding appears between skin type and main screen
+
+    /// Cold start → disclaimer → skin type → location rationale → main screen.
+    func testLocationRationaleOnboardingAppearsBetweenSkinTypeAndMain() {
+        let app = launchApp()
+        acknowledgeDisclaimer(in: app)
+
+        XCTAssertTrue(app.navigationBars["Choose skin type"].waitForExistence(timeout: 15))
+        let typeIIIButton = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Type III")).firstMatch
+        XCTAssertTrue(typeIIIButton.waitForExistence(timeout: 5))
+        typeIIIButton.tap()
+        XCTAssertTrue(waitForEnabled(app.buttons["Continue"], timeout: 10))
+        app.buttons["Continue"].tap()
+
+        let rationaleHeader = app.staticTexts.matching(identifier: "LocationRationaleHeader").firstMatch
+        XCTAssertTrue(
+            rationaleHeader.waitForExistence(timeout: 10),
+            "LocationRationaleHeader must appear after skin type picker is dismissed"
+        )
+
+        let rationaleContinue = app.buttons.matching(identifier: "LocationRationaleContinueButton").firstMatch
+        XCTAssertTrue(
+            rationaleContinue.waitForExistence(timeout: 5),
+            "LocationRationaleContinueButton must be present on the rationale screen"
+        )
+        tapWithRetry(rationaleContinue)
+
+        XCTAssertTrue(
+            app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 15),
+            "Main screen must appear after tapping rationale Continue"
+        )
+    }
+
     // MARK: - Helpers
 
     private func launchApp(arguments: [String] = []) -> XCUIApplication {
@@ -292,6 +326,8 @@ final class UVBurnTimerUITests: XCTestCase {
         }
         XCTAssertTrue(waitForEnabled(continueButton, timeout: 10))
         continueButton.tap()
+
+        acknowledgeLocationRationale(app)
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 15))
         XCTAssertTrue(
