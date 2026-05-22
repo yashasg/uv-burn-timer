@@ -169,3 +169,122 @@ Per Loop Instruction §7, this cycle includes a brief in-document parallel pass 
 ## Co-authored-by
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+---
+
+## Addendum: Bundle EE Part 2 (Group PP) — SPFLevel policy invariants (post-initial-close)
+
+**Addendum timestamp:** 2026-05-22T07:35Z
+**Addendum driver:** Coordinator (same session, second feature bundle shipped after the initial closure log committed)
+**Addendum PR:** see merge commit appended to §"Sequence of cycle commits on main" below.
+
+The initial closure log above documented Bundle EE Part 1 (Group OO — `snapToNearest` leaf-purity densification) shipped via PR #89 and merged at `dfb2189`. Within the same Loop-24 coordinator session, a SECOND tightly-scoped TDD partial closure was shipped — Bundle EE Part 2 (Group PP — SPFLevel public-surface policy invariants) — covering a coverage channel orthogonal to the picker-leaf set (KK/MM/NN/OO), targeting the README §3 user-facing contract on the SPF option set + default + multiplier policy. This addendum records that work in the same closure log per the "No duplicate closure logs" hard constraint (one closure-log FILE per cycle; addenda are in-file additions, not new files).
+
+### Why a second bundle landed in the same cycle
+
+The Loop Instructions explicitly authorize "1–2 tightly-scoped TDD partial closures per cycle." Bundle EE Part 1 (OO) consumed the snapToNearest leaf-densification slot. Bundle EE Part 2 (PP) consumed the second slot with a different surface (`SPFLevel`) and a different reviewer (Wheeler + Suchi + Plunder cross-channel coverage rather than Kwame leaf-purity). Both halves carry the "Bundle EE" name to keep the cycle-bundle counter stable; only the test-prefix group letter differs.
+
+### Group-name continuation
+
+- OO consumed by Bundle EE Part 1 (snapToNearest leaf-purity densification — PR #89, merged `dfb2189`).
+- **PP consumed by Bundle EE Part 2 (SPFLevel policy invariants — PR #90, merged `97308af`).**
+- PP was free at cycle-mid (verified 2026-05-22T07:25Z by `grep -cE 'test_PP[0-9]' app/Tests/UVBurnTimerCoreTests/*.swift` returning 0 on the rebased branch).
+- The PP branch originally used the OO prefix; mid-cycle PR #89 (the snapToNearest work) merged into main while PR #90 was awaiting CI, consuming OO on main. PR #90 was rebased onto main and renumbered OO1–OO6 → PP1–PP6 to avoid the collision. The PR title and branch name retain "Bundle EE" but the test prefix is PP.
+- **Updated next-loop prediction:** the next free doubled letter at Loop-25 cycle-start (post Loop-24 OO + PP consumption) is **QQ** — but `QQ` is already TAKEN at lines 3677/3707/3728 (Wheeler citation hygiene from Loop-12). Following the collision-dodge cascade documented above, the next free doubled letter is **UU** (verified free; PP/UU/VV/WW/XX/YY all free at cycle-start; OO + PP consumed this cycle; QQ/RR/SS/TT all taken by earlier loops). Loop-25's natural starting prefix is **UU**.
+
+### Shipped this cycle (updated)
+
+| # | Bundle | PR | Status | Group | Tests |
+|---|---|---|---|---|---|
+| 1 | **EE Part 1** Kwame L13-2 + L13-4 densified partial closure for `snapToNearest` (second picker leaf) | #89 | merged `dfb2189` | OO | +2 |
+| 2 | **EE Part 2** SPFLevel public-surface policy invariants (Wheeler conservatism cap + README §3 option set + Codable shape + Identifiable + storage round-trip) | #90 | merged `97308af` | **PP** | **+6** |
+| 3 | This addendum (closure log update) | (this PR) | open / merging | — | 0 |
+
+### Bundle EE Part 2 (Group PP) — SPFLevel policy pins, test-by-test
+
+Pure test-only bundle (zero source-file changes). Pins six axes of the README §"User scenarios captured" §3 contract (_"SPF defaults to 30 and can be changed to 15, 30, 50, or 70+."_) plus the downstream invariants that depend on those axes:
+
+- **test_PP1** — `SPFLevel.displayName` per-case: pins "Unprotected reference" (capital U), "15", "30", "50", "70+" verbatim. Complements the existing `contextLabel` pins (lines 298–302) which use lowercase "unprotected reference" — `displayName` is the peer string that ships into the picker accessibility label `"SPF \(displayName)"` (JJ1 pin, line 3543) and disclosure copy. A silent capital-U regression on the unprotected-reference label would slip past `contextLabel` coverage entirely.
+- **test_PP2** — `modelMultiplier` for ALL five cases: existing line 318 only covers `spf70Plus → 50`. PP2 pins `unprotectedReference → 1`, `spf15 → 15`, `spf30 → 30`, `spf50 → 50`, `spf70Plus → 50` (the regulatory-conservatism cap). A refactor switching `unprotectedReference.modelMultiplier` from 1 to 0 would silently break the unprotected-baseline math in `BurnTimeCalculator`. Pin all five.
+- **test_PP3** — `SPFLevel(rawValue:)` closed-set membership: positive round-trip for `{1, 15, 30, 50, 70}` and explicit nil pins for `{0, 2, 25, 45, 60, 100, −1}`. Protects the storage-coercion fallback at `UserPreferenceStorage.restoredSPF` line 1301 (already pinned to coerce nil → .spf30) against a silent option-set expansion (e.g. adding `case spf100 = 100`).
+- **test_PP4** — `Identifiable.id == rawValue` across all five cases. Pins the Identifiable synthesis at SPFLevel.swift line 12. Picker `ForEach(SPFLevel.allCases)` diffing stability depends on `id` being a stable Int (not a hash).
+- **test_PP5** — `Codable` round-trip identity for all five cases + on-disk JSON shape pinned to the literal Int `rawValue` (NOT a string and NOT a keyed object). Protects `ForecastStore` cache + `UserDefaults` archive compatibility — a CodingKeys override that re-encoded as a string would silently fail decode on the next launch.
+- **test_PP6** — `SPFLevel.allCases` ordering matches README §3 user-facing order `["15", "30", "50", "70+"]` verbatim, excludes `.unprotectedReference`, and `.spf30` sits at index 1 (the default-selection slot). Documents the README↔code linkage explicitly so a future contributor cannot re-order or expand `allCases` without consciously updating the README.
+
+### Files added/modified (Bundle EE Part 2)
+
+- `app/Tests/UVBurnTimerCoreTests/BurnTimeCalculatorTests.swift` — +160 lines (Group PP MARK header explaining the PP-vs-OO collision-dodge story + 6 `@Test` functions). No source files touched.
+
+### Test contract growth (updated end-of-cycle total)
+
+- Pre-Loop-24 baseline: 290 `@Test` functions.
+- Bundle EE Part 1 (OO): +2 → 292.
+- Bundle EE Part 2 (PP): **+6 → 298 ran-passing + 2 pre-existing known issues unchanged = 300 `@Test` functions total on main post-PR #90.**
+- XCUI smoke unchanged at 9.
+
+### Persona coverage state (Bundle EE Part 2 additions)
+
+| Persona | New / strengthened guards by Bundle EE Part 2 |
+|---|---|
+| **P1 Greta** | PP1 + PP6 triply pin the SPF-30 default contract Greta sees on first launch (the SPF chip displayName "30" via PP1 + the allCases[1] picker-default-slot index via PP6 + the existing storage coercion default at line 1303). |
+| **Wheeler (photobiology)** | PP2 pins the SPF-70+ → SPF-50 conservatism cap on the SPFLevel surface itself (the regulatory-conservatism multiplier policy). Previously this cap was only pinned indirectly via the `ProductCopy.aboutHowThisWorks` parity guard (Ma-Ti L08 / line 6498). Now both sides of the constant↔copy parity are pinned independently. |
+| **Plunder (regulatory)** | PP5's on-disk JSON shape pin protects the GDPR Art.17 erasure flow's data-shape compatibility — a Codable shape regression could break the persistence-erase round-trip. |
+| **Ma-Ti (testing + QA)** | PP1–PP6 add a SECOND coverage channel beyond the picker-leaf set: where KK/MM/NN/OO cover `ForecastPickerLogic` leaves, PP covers the SPFLevel public-surface policy. The two channels are orthogonal and together pin the full picker-+-SPF-+-storage surface against silent regressions in either domain. |
+
+### Goals checklist state (updated)
+
+- ✅ **Working app** — main green throughout; PR #89 + PR #90 merged. `./build.sh` Debug + tests + Release green locally with warnings-as-errors (Bundle EE Part 1 ~3m wall-clock; Bundle EE Part 2 ~2m30s wall-clock); **298 ran-passing Swift Testing fns + 2 pre-existing known issues unchanged (300 `@Test` total)**.
+- ✅ **UI/UX approved** — unchanged. Loop-24 made no UI changes (both halves of Bundle EE are pure-test surfaces).
+- ✅ **User scenarios captured** — README §1-11 unchanged; OO1/OO2 strengthen cross-persona picker invariants, **PP1–PP6 strengthen the README §3 SPF-option-set + default contract directly via SPFLevel surface pins** (the strongest pinning of README §3 ever achieved — six axes pinned where previously only `contextLabel`/`allCases`/`rawValue` were pinned in fragments).
+- ✅ **Expert approved** — unchanged plus: **Wheeler conservatism cap now pinned on the constant side via PP2** (previously only pinned indirectly via the disclosure-copy parity guard). The constant↔copy parity is now two-sided.
+- ❌ **Code tested and validated** — unchanged. **Hardware-gated sign-off blocks remain UNFILLED** per WI-21. Goal 5 remains ❌ until a hardware-equipped owner signs off. Per WI-21 hard constraint the coordinator made **no edits** to `iris-contrast-qa-checklist.md`, `iris-launch-readiness-checklist.md`, `plunder-eu-counsel-checklist.md` E1–E10, or `privacy-policy.md` §15 `{EU_REPRESENTATIVE_TBD}` this cycle.
+
+### Updated cycle metrics
+
+- **PRs merged this cycle:** 2 (PR #89 Bundle EE Part 1 `dfb2189`; PR #90 Bundle EE Part 2 `97308af`) — plus this closure-log addendum PR pending.
+- **Tests added (merged):** +8 Swift Testing fns total (OO: +2; PP: +6).
+- **Convergent HIGH findings closed (merged):** OO1/OO2 are DENSIFICATIONS of existing Kwame L13-2/L13-4 partial closures (no new findings); PP1–PP6 are new policy-surface pins on `SPFLevel` (no prior coverage of the closed-set policy axes — Codable shape, Identifiable id, modelMultiplier all-cases, displayName all-cases, rawValue closed-set negative cases, allCases-vs-README ordering linkage).
+- **Compile retries:** 1 (Bundle EE Part 2: a manual conflict-resolution merge dropped the OO2 closing `}` + `)` during the rebase onto main; caught immediately by `swift test`'s compile error reporting, fixed via a single targeted edit, re-pushed, CI re-ran green on first retry).
+
+### Sequence of cycle commits on main (chronological — updated)
+
+1. `dfb2189` (PR #89, **Bundle EE Part 1 / Group OO**) — Loop-24 Kwame L13-2 + L13-4 densified partial closure for `snapToNearest`.
+2. `0750e88` (PR #91, **initial closure log**) — Loop-24 closure log (covers Bundle EE Part 1 only).
+3. `97308af` (PR #90, **Bundle EE Part 2 / Group PP**) — Loop-24 SPFLevel policy invariants.
+4. (this addendum PR) — Loop-24 closure log addendum covering Bundle EE Part 2 / Group PP.
+
+### End-of-loop parallel review pass — addendum
+
+Per Loop Instruction §7, the parallel review pass is extended to cover Bundle EE Part 2's diff:
+
+- **Gaia:** PP1–PP6 are SPFLevel surface pins with no architectural impact. The enum's API surface is unchanged; only test coverage grew.
+- **Kwame:** No source changes. PP4 (Identifiable id == rawValue) protects the picker `ForEach` diffing stability that Kwame's L13-2 state-machine refactor (deferred) must preserve. PP5 (Codable JSON shape) protects the `ForecastStore` cache compatibility Kwame's L13-3 GDPR Art.17 erasure path depends on.
+- **Iris:** PP1 pins the capital-U "Unprotected reference" displayName that ships into any disclosure UI that distinguishes the modeled baseline from a user-selectable choice. No UI changes.
+- **Wheeler:** **PP2 is a direct Wheeler-channel pin** — the SPF-70+ → SPF-50 conservatism cap is now pinned on the SPFLevel constant itself. Previously this cap relied on the `ProductCopy.aboutHowThisWorks` parity guard (Ma-Ti L08, line 6498) to surface drift. Now drift on either side fails its own assertion before the parity guard runs. The constant↔copy parity contract is structurally complete.
+- **Gi:** PP5's JSON-shape pin protects GDPR Art.17 erasure-path data-shape compatibility. The on-disk format for `SPFLevel.spf30` is asserted to be the literal JSON number `30` (not a string, not a keyed object) — a Codable override that broke decode would silently break the erasure round-trip on next launch.
+- **Ma-Ti:** Test count 290 → 298 ran + 2 known = 300 `@Test` total. The doubled-letter cascade is now BB → … → NN → **OO → PP** (15 letters consumed across the cumulative loops). Bundle EE Part 2's 6 tests cover a new orthogonal channel (SPFLevel surface) that the cumulative KK/MM/NN/OO chain (ForecastPickerLogic leaves) does not touch.
+- **Suchi:** PP1 + PP6 triply-pin the Greta P1 SPF-30 default contract on the displayName, allCases[1] index, and storage-coercion-default axes simultaneously.
+- **Plunder:** PP5's JSON-shape pin is a regulatory-data-shape pin in disguise — the GDPR Art.17 erasure path's compatibility depends on the on-disk format staying stable.
+- **Argos:** CI runs were stable on PR #90 both before and after the rebase. The conflict-resolution friction was caught locally before re-push; no flake on CI re-runs.
+
+**Review consensus (updated):** Loop-24 work is now consistent with the deferred-backlog enumeration AND adds a previously-unpinned README §3 contract surface. **No newly-discovered gaps surface in the extended parallel pass.** No new WIs filed for Loop-25 beyond the existing deferred-backlog carry-forward; Loop-25 may now consider the SPFLevel `displayName`-vs-`contextLabel` distinction (PP1 vs lines 298–302) as a documented bifurcation worth keeping in mind for future copy-system refactors. Loop-24's notable achievement is now **two milestones: (1) completing matrix-density + three-branch coverage on the entire picker-leaf-function set, AND (2) opening a new coverage channel on the SPFLevel public-surface policy** that did not exist before — the strongest pinning of README §3 ever achieved in this codebase.
+
+### Backlog state (entering Loop-25 — updated)
+
+| Status | Items |
+|---|---|
+| ✅ Done & merged this cycle | Bundle EE Part 1 (#89) — Kwame L13-2/L13-4 densified snapToNearest leaf-purity; Bundle EE Part 2 (#90) — SPFLevel policy invariants (Wheeler conservatism cap + README §3 option-set + Codable shape + Identifiable + storage round-trip) |
+| ⏸ Deferred to Loop-25 | (unchanged from §"Backlog state" above) Plunder L05 additional hero-card-region link convergent design; Suchi L02/L03 persona-coverage beyond source-text; Kwame L13-2/L13-4 multi-file refactors (leaf contracts now FULLY pinned by KK/MM/NN/OO + orthogonal SPFLevel surface pinned by PP) |
+| 🚫 Hardware-blocked | (unchanged) WI-21 sign-offs; EU counsel E1–E10; Bundle T L1; Plunder L02 `{EU_REPRESENTATIVE_TBD}`; Bundle V V3; Bundle X X2; Bundle Y five-element; Bundle Z ZZ1. Neither half of Bundle EE adds new hardware-gated companion rows — all 8 tests (OO1, OO2, PP1–PP6) are pure-function tests with no rendering surface requiring physical-device verification. |
+
+### Local-environment notes (Bundle EE Part 2 addendum)
+
+- The rebase-and-renumber pattern (OO → PP when a concurrent PR consumed OO mid-cycle) is the **first occurrence in the Loop-19..24 chain** of a mid-cycle doubled-letter collision. The cascade was always documented before-the-fact; this cycle the parallel-cloud-automation merging PR #89 mid-cycle caused the in-flight PR #90 to need a post-hoc rename. The merge-conflict resolution itself was straightforward (python-driven token rename of `OO1`/`OO2`/.../`OO6` → `PP1`/`PP2`/.../`PP6` in the new tests' MARK header + test function names + assertion-message tags). One transient friction: the conflict-resolution pass dropped the OO2 function's closing `)` + `}` because the conflict markers spanned a function boundary; caught by `swift test`'s compile error on first attempt and fixed in a single targeted edit. Test count and CI green confirmed on the post-fix push.
+- **Tool-sandbox quirk:** the working directory's branch state was repeatedly mutated by what appears to be a parallel cloud-automation worker during this session (HEAD reflog shows checkouts and commits the coordinator did not perform — e.g., the initial closure log PR #91 was opened and merged by the parallel worker between the coordinator's PR #90 push and its merge attempt). The coordinator adapted by hard-resetting the local `main` ref back to `github/main` after each unexpected divergence and by using force-pushes-with-lease for the rebased Bundle EE Part 2 branch. The work content is unaffected; the closure log itself simply needed this in-file addendum rather than a new file (per the "No duplicate closure logs" hard constraint).
+- Local `./build.sh` runs: Bundle EE Part 2 baseline 2m30s; subsequent `swift test --package-path app` iterations 7–10s each. XCUI flakiness pattern from Loop-23 did not recur on PR #90 — both `build-test` CI jobs (push trigger + pull_request trigger) passed first time post-rebase (6m9s + 6m17s).
+
+### What did not ship and why (Bundle EE Part 2 addendum)
+
+- **Closure log file count is exactly 1** for Loop-24 (`2026-05-22T07-08-00Z-loop-closure-twenty-fourth-cycle.md`) — the Bundle EE Part 2 work is captured via this in-file addendum, not via a second closure log file. Verified by `ls .squad/log/ | grep loop-closure-twenty-fourth-cycle` returning exactly one path.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
