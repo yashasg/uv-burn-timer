@@ -4470,3 +4470,161 @@ private func _forecastPickerSourceForGroupGG() throws -> String {
         "build.sh local-dev branch must gate the test xcodebuild invocation on `$run_tests` — parity with the CI branch (Gaia L13d)."
     )
 }
+
+// MARK: - Group R-bundle: Loop-13 follow-on HIGH closure
+//
+// Closes the next tier of HIGH-severity findings from the Loop-13
+// parallel gap-analysis pass:
+//
+//   R1 — Iris L01: WHO-band pill text color (WCAG 2.2 AA).
+//        Apple system colors against white at `.headline` size fall
+//        below 4.5:1 for green/yellow/orange/red. The pill now uses
+//        `.black` for every band below Extreme and reserves `.white`
+//        for the Purple/Extreme band where black-on-purple < 4.5:1.
+//
+//   R2 — Kwame L13-3: `clearStoredPreferences` GDPR Art.17 completeness.
+//        The function now also removes `lastRoundedCoordinate` and the
+//        legacy `lastUVSnapshot` key. Both were named by the L1
+//        storage-disclosure as device-resident state, but only the
+//        UI-test-reset path was clearing them.
+//
+//   R3 — Suchi L01: "Clear stored skin type" must re-fire L1.
+//        Asha P4 photosens cohort safety: the button now also clears
+//        the disclaimer policy version on disk and immediately
+//        re-presents the L1 cover so the photosens reach-back is on
+//        screen before the next interaction. Source-text guards pin
+//        the SettingsSheet wiring + the RootView helper.
+
+private func _forecastPickerSourceForGroupR_bundleR() throws -> String {
+    let appRoot = try appRootURL()
+    let url = appRoot.appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
+    return try String(contentsOf: url, encoding: .utf8)
+}
+
+/// R1 — WHO-band pill text color: `.black` for every band below
+/// Extreme, `.white` only at the Extreme threshold (UVI ≥ 11).
+@Test func test_R1_whoBandPillUsesBlackBelowExtreme() throws {
+    let source = try _forecastPickerSourceForGroupR_bundleR()
+    guard let range = source.range(of: "private func whoBandTextColor(for uvi: Double) -> Color {") else {
+        Issue.record("whoBandTextColor function not found")
+        return
+    }
+    // Take the next ~300 chars to capture the function body.
+    let after = source[range.upperBound...]
+    let body = String(after.prefix(300))
+
+    // The body must read `uvi < 11 ? .black : .white` (or equivalent
+    // boundary literal `11`) so that .systemPurple is the only band
+    // whose pill text is white.
+    #expect(
+        body.contains("uvi < 11"),
+        "whoBandTextColor must branch on `uvi < 11` to keep .white only for the Extreme band (Iris L01 WCAG 2.2 AA fix)."
+    )
+    #expect(
+        !body.contains("uvi < 6"),
+        "whoBandTextColor must not retain the legacy `uvi < 6` branch — that flipped to .white at the Moderate→High boundary and failed AA on orange + red bands."
+    )
+}
+
+/// R2 — `clearStoredPreferences` must remove every Pattern-B persistence
+/// key including the location pair (`lastRoundedCoordinate` +
+/// `lastUVSnapshot`). The L1 storage-disclosure named these as
+/// device-resident state; the function is now the single Art.17 entry
+/// point.
+@Test func test_R2_clearStoredPreferencesCoversLocationKeys() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    // Seed every Pattern-B key including the location pair.
+    defaults.set(FitzpatrickSkinType.typeIII.rawValue, forKey: UserPreferenceStorage.selectedSkinTypeKey)
+    defaults.set(SPFLevel.spf50.rawValue, forKey: UserPreferenceStorage.selectedSPFKey)
+    defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+    defaults.set(UserPreferenceStorage.currentDisclaimerPolicyVersion, forKey: UserPreferenceStorage.disclaimerPolicyVersionKey)
+    defaults.set("seeded-coordinate", forKey: UserPreferenceStorage.lastRoundedCoordinateKey)
+    defaults.set("seeded-uv-snapshot", forKey: UserPreferenceStorage.legacyUVSnapshotKey)
+
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+
+    // All six keys must be removed (object == nil, not just default-coerced).
+    #expect(defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.selectedSPFKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.lastRoundedCoordinateKey) == nil)
+    #expect(defaults.object(forKey: UserPreferenceStorage.legacyUVSnapshotKey) == nil)
+}
+
+/// R2b — the key-name constants themselves must match the raw strings
+/// used by `RootView`'s `@AppStorage` declarations in AppViews.swift.
+/// A drift in either name (e.g. someone renames the @AppStorage key
+/// without updating the constant) would silently bypass erasure.
+@Test func test_R2b_locationKeyConstantsMatchAppStorageDeclarations() throws {
+    let appRoot = try appRootURL()
+    let appViews = try String(
+        contentsOf: appRoot.appendingPathComponent("Sources/UVBurnTimer/AppViews.swift"),
+        encoding: .utf8
+    )
+    #expect(
+        appViews.contains("@AppStorage(\"\(UserPreferenceStorage.lastRoundedCoordinateKey)\")"),
+        "AppViews.swift must declare `@AppStorage(\"\(UserPreferenceStorage.lastRoundedCoordinateKey)\")` so the centralized erasure constant matches the rendered key."
+    )
+    #expect(
+        appViews.contains("@AppStorage(\"\(UserPreferenceStorage.legacyUVSnapshotKey)\")"),
+        "AppViews.swift must declare `@AppStorage(\"\(UserPreferenceStorage.legacyUVSnapshotKey)\")` so the centralized erasure constant matches the rendered key."
+    )
+}
+
+/// R3 — `SettingsSheet` Clear stored skin type button routes through
+/// `onClearStoredSkinType` (parent-supplied closure) instead of
+/// in-lining the wipe. The parent's closure
+/// `clearStoredSkinTypeAndRequireReattestation` resets the policy
+/// version key on disk + flips `acknowledgedDisclaimer = false` +
+/// presents L1.
+@Test func test_R3_clearStoredSkinTypeReFiresL1Disclaimer() throws {
+    let appRoot = try appRootURL()
+    let appViews = try String(
+        contentsOf: appRoot.appendingPathComponent("Sources/UVBurnTimer/AppViews.swift"),
+        encoding: .utf8
+    )
+
+    // SettingsSheet must carry the new callback.
+    #expect(
+        appViews.contains("let onClearStoredSkinType: () -> Void"),
+        "SettingsSheet must declare `let onClearStoredSkinType: () -> Void` — Asha P4 photosens cohort safety (Suchi L01)."
+    )
+
+    // The Clear stored skin type Button must call `onClearStoredSkinType()`.
+    guard let buttonRange = appViews.range(of: ".accessibilityIdentifier(\"ClearStoredSkinTypeButton\")") else {
+        Issue.record("ClearStoredSkinTypeButton not found in SettingsSheet")
+        return
+    }
+    // Look at the ~500 chars BEFORE the identifier (the Button body).
+    let buttonBodyStart = appViews.index(buttonRange.lowerBound, offsetBy: -800, limitedBy: appViews.startIndex) ?? appViews.startIndex
+    let beforeButton = String(appViews[buttonBodyStart..<buttonRange.lowerBound])
+    #expect(
+        beforeButton.contains("onClearStoredSkinType()"),
+        "SettingsSheet ClearStoredSkinTypeButton must invoke `onClearStoredSkinType()` (Suchi L01)."
+    )
+
+    // RootView must define a helper that resets the policy version key,
+    // calls `requireDisclaimerReattestation()`, and sets
+    // `showDisclaimer = true`.
+    guard let helperRange = appViews.range(of: "private func clearStoredSkinTypeAndRequireReattestation()") else {
+        Issue.record("clearStoredSkinTypeAndRequireReattestation helper not found in RootView")
+        return
+    }
+    let helperAfter = appViews[helperRange.upperBound...]
+    let helperBody = String(helperAfter.prefix(800))
+    #expect(
+        helperBody.contains("disclaimerPolicyVersionKey"),
+        "clearStoredSkinTypeAndRequireReattestation must remove `disclaimerPolicyVersionKey` so the next cold launch re-fires L1."
+    )
+    #expect(
+        helperBody.contains("requireDisclaimerReattestation"),
+        "clearStoredSkinTypeAndRequireReattestation must call `session.requireDisclaimerReattestation()` so the in-session ack is flipped."
+    )
+    #expect(
+        helperBody.contains("showDisclaimer = true"),
+        "clearStoredSkinTypeAndRequireReattestation must set `showDisclaimer = true` so L1 re-presents immediately after the Settings sheet dismisses."
+    )
+}
