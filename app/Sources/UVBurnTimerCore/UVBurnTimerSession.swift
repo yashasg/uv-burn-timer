@@ -97,6 +97,34 @@ public enum UserPreferenceStorage {
         defaults.set((spf.isSunscreen ? spf : .spf30).rawValue, forKey: selectedSPFKey)
     }
 
+    /// WI-loop31-2 — Restores the location-rationale gate from
+    /// `UserDefaults` using the existing `locationRationaleAcknowledgedKey`.
+    /// A `false`/absent value yields an unacknowledged gate so the
+    /// `LocationRationaleOnboardingView` is presented on the first cold
+    /// launch and suppressed thereafter (the LANE 1 #4 spec contract).
+    public static func restoredLocationPromptGate(
+        from defaults: UserDefaults = .standard
+    ) -> LocationPromptGate {
+        LocationPromptGate(
+            hasAcknowledgedRationale: defaults.bool(forKey: locationRationaleAcknowledgedKey)
+        )
+    }
+
+    /// WI-loop31-2 — Persists the gate's acknowledgement flag through to
+    /// `UserDefaults`. Uses the same `locationRationaleAcknowledgedKey`
+    /// that `clearStoredPreferences` already wipes, so the GDPR Art.17
+    /// erasure path keeps working without modification.
+    public static func persist(
+        locationPromptGate gate: LocationPromptGate,
+        to defaults: UserDefaults = .standard
+    ) {
+        if gate.hasAcknowledgedRationale {
+            defaults.set(true, forKey: locationRationaleAcknowledgedKey)
+        } else {
+            defaults.removeObject(forKey: locationRationaleAcknowledgedKey)
+        }
+    }
+
     public static func clearStoredPreferences(from defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: selectedSkinTypeKey)
         defaults.removeObject(forKey: selectedSPFKey)

@@ -342,6 +342,14 @@ final class UVBurnTimerUITests: XCTestCase {
         tapUntilAppears(acknowledgeButton, app.navigationBars["Choose skin type"])
     }
 
+    /// Taps `LocationRationaleContinueButton` if it appears within ~10 seconds.
+    /// No-ops if the rationale screen is not present (e.g. already acknowledged).
+    private func acknowledgeLocationRationale(_ app: XCUIApplication) {
+        let continueButton = app.buttons.matching(identifier: "LocationRationaleContinueButton").firstMatch
+        guard continueButton.waitForExistence(timeout: 10) else { return }
+        tapWithRetry(continueButton)
+    }
+
     private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {

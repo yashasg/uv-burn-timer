@@ -10,6 +10,7 @@
 		010101010101010101010101 /* UVBurnTimerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010101 /* UVBurnTimerApp.swift */; };
 		010101010101010101010102 /* AppViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010102 /* AppViews.swift */; };
 		01010101010101010101010D /* WeatherLocationServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101010A /* WeatherLocationServices.swift */; };
+		01010101010101010101013C /* LocationRationaleOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02010101010101010101013C /* LocationRationaleOnboardingView.swift */; };
 		010101010101010101010103 /* FitzpatrickSkinType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010103 /* FitzpatrickSkinType.swift */; };
 		010101010101010101010104 /* SPFLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010104 /* SPFLevel.swift */; };
 		010101010101010101010105 /* BurnTimeCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 020101010101010101010105 /* BurnTimeCalculator.swift */; };
@@ -87,6 +88,7 @@
 		020101010101010101010101 /* UVBurnTimerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UVBurnTimerApp.swift; sourceTree = "<group>"; };
 		020101010101010101010102 /* AppViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViews.swift; sourceTree = "<group>"; };
 		02010101010101010101010A /* WeatherLocationServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherLocationServices.swift; sourceTree = "<group>"; };
+		02010101010101010101013C /* LocationRationaleOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationRationaleOnboardingView.swift; sourceTree = "<group>"; };
 		020101010101010101010103 /* FitzpatrickSkinType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FitzpatrickSkinType.swift; sourceTree = "<group>"; };
 		020101010101010101010104 /* SPFLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SPFLevel.swift; sourceTree = "<group>"; };
 		020101010101010101010105 /* BurnTimeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BurnTimeCalculator.swift; sourceTree = "<group>"; };
@@ -186,6 +188,7 @@
 				020101010101010101010101 /* UVBurnTimerApp.swift */,
 				020101010101010101010102 /* AppViews.swift */,
 				02010101010101010101010A /* WeatherLocationServices.swift */,
+				02010101010101010101013C /* LocationRationaleOnboardingView.swift */,
 				02010101010101010101010E /* UVBurnTimerShortcuts.swift */,
 				020101010101010101010133 /* ForecastPickerView.swift */,
 				02010101010101010101010C /* Assets.xcassets */,
@@ -394,6 +397,7 @@
 				010101010101010101010101 /* UVBurnTimerApp.swift in Sources */,
 				010101010101010101010102 /* AppViews.swift in Sources */,
 				01010101010101010101010D /* WeatherLocationServices.swift in Sources */,
+				01010101010101010101013C /* LocationRationaleOnboardingView.swift in Sources */,
 				010101010101010101010116 /* UVBurnTimerShortcuts.swift in Sources */,
 				010101010101010101010133 /* ForecastPickerView.swift in Sources */,
 			);

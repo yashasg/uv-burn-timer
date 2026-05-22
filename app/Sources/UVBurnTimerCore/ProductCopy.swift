@@ -92,6 +92,28 @@ public enum ProductCopy {
     public static let locationPrivacyLine =
         "The app asks iOS for approximate location where available. Coordinates are rounded to 2 decimals for Apple Weather, and only the last rounded coordinate may be saved on this device."
 
+    /// WI-loop31-2 — Location Rationale Onboarding (LANE 1 #4).
+    ///
+    /// Four strings rendered by `LocationRationaleOnboardingView` to
+    /// satisfy `.squad/files/user-flow-onboarding-main-spec.md` LANE 1 #4
+    /// ("Privacy rationale BEFORE iOS prompt; CTA in
+    /// `.safeAreaInset(.bottom)`"). Copy is privacy-first and consistent
+    /// with `locationPrivacyLine`, `aboutPrivacy`, and the hosted
+    /// privacy policy (`.squad/files/privacy-policy.md`): rounded
+    /// coordinates are sent to Apple Weather for UV data; no place name,
+    /// account, analytics, or ad SDKs are involved; the user keeps full
+    /// control via Settings (When In Use can be revoked at any time).
+    public static let locationRationaleTitle = "Before we ask iOS for location"
+    public static let locationRationaleBody =
+        "UV Burn Timer needs an approximate location to fetch the UV index from Apple Weather. " +
+        "Your coordinates are rounded to 2 decimals before any request, and only the last " +
+        "rounded coordinate may be saved on this device. No place name is stored or transmitted, " +
+        "no accounts, no analytics, no ads. You can change or revoke When In Use access any time " +
+        "in iOS Settings."
+    public static let locationRationaleContinueLabel = "Continue"
+    public static let locationRationaleAccessibilityHint =
+        "Continues to the iOS location permission prompt. Tap to allow UV Burn Timer to ask iOS for your approximate location."
+
     /// WI-iris-c (Loop-11) — Pattern-B truth fix.
     ///
     /// Before WI-ff (Pattern B, ratified 2026-05-21T07:00Z) the L1 cover
@@ -328,6 +350,10 @@ public enum ProductCopy {
         disclaimerSeeAboutInlinePrompt,
         disclaimerStorageLine,
         locationPrivacyLine,
+        locationRationaleTitle,
+        locationRationaleBody,
+        locationRationaleContinueLabel,
+        locationRationaleAccessibilityHint,
         cacheRetentionLine,
         clearSavedLocationButtonTitle,
         clearStoredSkinTypeButtonTitle,
