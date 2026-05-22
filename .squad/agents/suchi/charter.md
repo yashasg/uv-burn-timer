@@ -35,7 +35,7 @@
 
 ## Model
 
-- **Preferred:** claude-opus-4.7
+- **Preferred:** claude-opus-4.7-1m-internal
 - **Rationale:** User pinned. Deep synthesis across long-form qualitative data.
 - **Fallback:** Standard chain — coordinator handles fallback automatically
 

@@ -32,7 +32,7 @@
 
 ## Model
 
-- **Preferred:** auto
+- **Preferred:** claude-opus-4.7
 - **Rationale:** Coordinator selects the best model based on task type
 - **Fallback:** Standard chain
 

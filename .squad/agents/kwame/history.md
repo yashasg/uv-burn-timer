@@ -71,3 +71,4 @@ This third attempt keeps the visual cleanup the user originally asked for (no `B
 
 These are the priority cleanup targets when a dedicated UI-pass PR is scheduled. The existing structure (safe area handling, `@ScaledMetric` for hero/gauge, no `GeometryReader` misuse) is sound; only the repeated numeric padding and forecast component sizing need refactor. See `.squad/decisions.md` → 2026-05-22 Apple-idiom SwiftUI layout policy for full detail.
 
+Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always-on — overrides prior auto selection).

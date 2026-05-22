@@ -9,3 +9,4 @@
 ## Learnings
 
 <!-- Append learnings below -->
+Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always-on — overrides prior auto selection).

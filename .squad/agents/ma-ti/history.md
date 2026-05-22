@@ -39,3 +39,4 @@ No new test gaps surfaced. All existing WI-7 coverage (Groups A–M) remains val
 ## 2026-05-22T02:58:03-07:00 — SwiftLint HIG gate installed
 
 SwiftLint now hard-gates CI before tests (Kwame's branch `squad/swiftlint-hig-error-gate`), so test-only changes may trigger lint failures if they touch view files. 16 baseline HIG violations are now visible; Iris will HIG-pass them before merge.
+Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always-on — overrides prior auto selection).

@@ -50,3 +50,4 @@ Monetization-personas validation, design brief, persona overlay on flow diagram,
 
 **Skill extracted:** `feature-validation-jtbd-personas` — a six-section template (JTBD match / JTBD mismatch / competitor friction / cognitive risk / edge-case personas / verdict-with-conditions) for evaluating PM-proposed features against an existing persona inventory. Generalized from this pass. Confidence: medium (n=1 application, but the structure is portable).
 
+Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-context internal variant — for full-corpus photobiology consensus reviews).

@@ -36,7 +36,7 @@
 
 ## Model
 
-- **Preferred:** claude-opus-4.7
+- **Preferred:** claude-opus-4.7-1m-internal
 - **Rationale:** User pinned. Regulatory reasoning needs careful, multi-step analysis.
 - **Fallback:** Standard chain — coordinator handles fallback automatically
 

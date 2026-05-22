@@ -4295,3 +4295,37 @@ Full specification with regex patterns, rationale, false-positive notes, and exa
 
 **Supersedes:** Iris's own self-positioning as "pragmatic" w.r.t. lint adoption — her catalog's "Error after grace period" bucket and the `minHeight: 44/56` literal exemption were both manifestations of this looser posture. Both already overridden by the prior directive; this directive locks in the BEHAVIORAL change so future Iris spawns don't re-propose the soft pattern.
 
+
+### 2026-05-22T03:55: User directive — supersede `claude-opus-4.7` with `claude-opus-4.7-1m-internal` for the 4 premium agents
+
+**By:** yashasg (via Copilot)
+**What:** Wheeler, Suchi, Plunder, Argos move from the standard `claude-opus-4.7` to the **1M-context internal variant** `claude-opus-4.7-1m-internal`. This supersedes the prior 2026-05-22T02:58 rename directive (which moved them from `claude-opus-4.7-xhigh` → `claude-opus-4.7`).
+**Why:** User request. The 1M-context variant gives these agents the headroom for full-corpus reviews (Wheeler's photobiology consensus checks, Suchi's persona-mapping across the full `decisions.md` history, Plunder's compliance cross-checks, Argos's monetization context spanning multiple PRs). The standard 4.7 context is too tight for their typical workloads.
+
+---
+
+### 2026-05-22T04:01: User directive — Gaia / Gi / Kwame / Ma-Ti always use `claude-opus-4.7`
+
+**By:** yashasg (via Copilot)
+**What:** Override the per-task "auto" charter setting for Gaia (Lead/Architect), Gi (Data Specialist), Kwame (iOS Developer), and Ma-Ti (Tester). They now ALWAYS use `claude-opus-4.7` (the standard 4.7, NOT the 1M-internal variant). Added to `.squad/config.json` `agentModelOverrides` AND charter `Preferred` lines updated from `auto` to `claude-opus-4.7`.
+**Why:** User request. These four are the team's core working agents — Lead/Data/Dev/Test. Premium reasoning consistency matters more than the cost-saving auto-selection for their workloads. They don't need the 1M context (that's for the research-heavy roles), but they DO need the premium Opus model on every spawn.
+
+---
+
+### Final post-batch model assignment table (effective immediately for all future spawns)
+
+| Agent | Role | Resolved model | Override source |
+|---|---|---|---|
+| Wheeler | Skin Science Expert | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Suchi | User Researcher | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Plunder | Legal & Compliance | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Argos | Monetization Strategy | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Gaia | Lead / Architect | `claude-opus-4.7` | config.json + charter (was auto) |
+| Gi | Data Specialist | `claude-opus-4.7` | config.json + charter (was auto) |
+| Kwame | iOS Developer | `claude-opus-4.7` | config.json + charter (was auto) |
+| Ma-Ti | Tester | `claude-opus-4.7` | config.json + charter (was auto) |
+| Iris | UI/UX Designer | `claude-sonnet-4.6` | config.json + charter (unchanged) |
+| Scribe | Session Logger | `claude-haiku-4.5` | per squad.agent.md (never overridden — mechanical ops only) |
+| Ralph | Work Monitor | auto (defaults — typically haiku) | per squad.agent.md |
+
+**Historical (do NOT retroactively edit):** Prior directives — `claude-opus-4.7-xhigh` (Loops 20–24), `claude-opus-4.7-xhigh → claude-opus-4.7` (2026-05-22T02:58, merged at commit `0777de2`) — remain in `decisions.md` / archive as the historical record. These two new directives supersede the prior policy without rewriting history.

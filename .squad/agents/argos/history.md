@@ -77,3 +77,4 @@ The previous squad's monetization owner (Karai, Stage 6) established the followi
 
 **Skill extracted:** `anti-subscription-wedge-applicability` — checklist for when the "$X once not $X/mo" symbolic wedge is load-bearing vs. decorative.
 
+Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-context internal variant — for full-corpus photobiology consensus reviews).

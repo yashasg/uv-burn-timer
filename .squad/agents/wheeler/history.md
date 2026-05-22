@@ -17,3 +17,4 @@
 - All five WI-7 prior decisions hold unchanged
 
 **Polar-specific copy archived.** No further review needed for v1 implementation.
+Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-context internal variant — for full-corpus photobiology consensus reviews).
