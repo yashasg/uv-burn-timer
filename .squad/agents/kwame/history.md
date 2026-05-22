@@ -300,3 +300,24 @@ should land green now that the rule exists upstream.
 
 
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
+
+## 2026-05-22T18:15:00Z — WI-loop29-5 toolbar XCUI flake stabilisation (PR #111)
+
+**Scope:** Gaia GAP-iter2-B. Stabilise `testEstimateInfoNavigationRoundTripReturnsToMainScreen` + `testToolbarRendersBothSettingsAndEstimateInfoButtons` on iOS 26.4 simulator.
+
+**Root cause:** iOS 26 Liquid Glass `.topBarTrailing` composition (ADR-0002 platform constraint) lags `NavigationStack` nav-bar arrival by a few hundred ms. The shared `acknowledgeDisclaimerAndChooseTypeIII` helper's tail call `_ = waitForHittable(EstimateInfoButton, timeout: 5)` waited on ONE of the two trailing items and discarded the result — whichever button the layout engine settled last became the racy one. Ma-Ti's parallel read-only investigation (2026-05-22T19:00:00Z entry in `.squad/agents/ma-ti/history.md`) independently surfaced the same `_ =`-discarded anti-pattern.
+
+**Fix (test-only, +91 / −9 LOC, single file `app/Tests/UVBurnTimerUITests/UVBurnTimerUITests.swift`):** Added private `waitForMainToolbarSettled(in:timeout:) -> ToolbarSettleSnapshot` helper that polls **both** `Settings` and `EstimateInfoButton` together for `exists && isHittable` with a 20s budget + 200 ms idle settle, then returns a snapshot the callers interrogate without re-querying mid-assertion. Pattern is the toolbar-suite analogue of the Loop-20 `tapWithRetry` cover-chain helper. Both flaky tests now gate on the helper before existence/hittable/nav assertions.
+
+**Non-regression:** Zero production code modified (`app/Sources/` diff is empty). ADR-0001 toolbar identity contract intact; ADR-0002 topBarTrailing composition untouched (test-side stabilisation explicitly preferred per Gaia scope).
+
+**Validation:** Core 326/326 GREEN locally prior to UI-test attempt; `xcrun swiftc -parse` clean. iOS 26.4 sim died with Mach error -308 ("Failed to install or launch the test runner") on repeated `./build.sh` runs — host-level sim-infra failure unrelated to the diff. **0 local UI re-runs achieved**; confidence-gathering deferred to CI. **CI green 2/2** runs against fresh GitHub Actions runners — both `build-test` jobs passed (9m42s + 6m5s).
+
+**PR:** [#111](https://github.com/yashasg/uv-burn-timer/pull/111) — open, CI green, awaiting merge.
+
+### Learnings (Loop-29 carry-forward)
+
+1. **`_ =`-discarded XCUI waits are anti-pattern when ≥2 toolbar-sibling items must be ready** — convert to a single Bool-returning helper whose result the caller asserts. The discarded-return form trains the suite to pass on partial readiness, then flake on the unasserted half.
+2. **iOS 26 `.topBarTrailing` settle is async w.r.t. nav-bar arrival** — assert composition stability via "both items hittable in same UI snapshot" before per-item hittability, not after. Same class of fix as Loop-20 cover-chain `tapWithRetry`, hoisted up one composition layer (toolbar vs. fullScreenCover).
+3. **Local sim infra is unreliable for repeat-loop validation** — Mach -308 simulator runner crashes recurred deterministically across `./build.sh` invocations in this cycle. Defer confidence-gathering to CI rather than burning N×5min retry cycles on the host.
+4. **Concurrent-agent branch chaos requires defensive fetch+stash discipline** — main moved twice during this session (Scribe iter-2 close + Gaia Loop-30 PR #112 merge) and my squad branch was momentarily reset by another agent's branch tip. Always `git fetch github` + verify HEAD + `git stash -u` before any rebuild, and re-verify branch tip after long-running builds.
