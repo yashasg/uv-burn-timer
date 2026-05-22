@@ -80,3 +80,5 @@ SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 
 ## 2026-05-22: Loop-28 closure — 4 WIs shipped; Goal 5 remains hardware-gated
 
 **Gaia (Lead/Architect) perspective:** Loop-28 executed cleanly. Kwame shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper); all PR CI green on re-run. Iris HIG-passed all 4. Plunder compliance verified (no new gaps). SwiftLint strict 0 violations post-merge. Goals 1–4 tracking PASS/PARTIAL (Goal 5 intentionally FAIL per WI-21 structural constraint — hardware-gated sign-offs remain blank). Carry-forward: WI-loop-28-A (14 HIG catalog rules pending, multi-cycle), WI-loop-28-C (Privacy Policy URL user-action-gated), WI-2-flake (UI cold-start flakiness investigation).
+
+### 2026-05-22T17:35:00Z: Loop-29 Iteration-2 spawned (observer note); WI-29-7 closed, parallel iter-2 agents in flight

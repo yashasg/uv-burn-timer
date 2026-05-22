@@ -48,3 +48,5 @@ SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 
 
 **Iris execution:** Reviewed all 4 Kwame WIs against strict-enforcer charter. No pragmatic softening detected. All PRs (#99–#102) HIG-passed. Post-merge: SwiftLint strict 0 violations, Dynamic Type scaling confirmed on iPhone SE at AX5. Audit status: 1 structural gap closed this cycle (WI-29-3: SkinTypePickerRow rowMinHeight). ~14 catalog rules remain pending for Loop-28-A (multi-cycle). Label-closure regex blind spot confirmed real; scheduled for swift-syntax AST replacement. Carry-forward cold-start flakiness (WI-2-flake) for Loop-29 investigation.
 
+
+### 2026-05-22T17:35:00Z: Loop-29 Iteration-2 spawned — parallel agents on WI-29-4/WI-29-6; WI-29-7 closed via PR #106

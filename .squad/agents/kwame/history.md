@@ -198,3 +198,5 @@ per the established convention (see Loop-27 closure).
 
 **Kwame execution:** Landed 4 work items on main (toolbar, chip/footer, hardcoded-frame-dimensions audit widening, matched-brace helper test refactor). Dynamic Type scaling verified on iPhone SE at AX5. SwiftLint strict: 0 violations post-merge. Discovered: UI cold-start flakiness on first CI run of PR #100 (3 tests flaked, all passed on re-run); documented as Loop-29 WI-2-flake candidate. Carry-forward: ~14 HIG catalog rules pending (WI-loop-28-A), label-closure regex blind spot (scheduled for swift-syntax AST replacement).
 
+
+### 2026-05-22T17:35:00Z: Loop-29 Iteration-2 spawned — parallel agents on WI-29-4/WI-29-6; WI-29-7 closed via PR #106

@@ -1,5 +1,86 @@
 # UVBurnTimer Squad Decisions Archive
 
+## 2026-05-22
+
+### Kwame — WI-Loop29-7 closure (Group LX green, merged via PR #106)
+
+# kwame — WI-loop29-7 closure (Group LX green, merged via PR #106)
+
+- **Date:** 2026-05-22T17:05:00Z
+- **Owner:** Kwame (iOS Developer)
+- **Status:** closed — merged to main 2026-05-22T17:31:35Z
+- **Requested by:** yashasgujjar (Copilot CLI loop driver)
+
+## Outcome
+
+Iris loop-29 GAP-7 / WI-29-7 closed. `missing_min_touch_target`
+SwiftLint regex now covers `NavigationLink\s*\{`, `NavigationLink\s*\(`,
+and `Link\s*\(` in addition to the existing `Button` / `onTapGesture`
+forms — analogous to the WI-29-2 / PR #104 widening for `Button {`.
+All 10 NavigationLink/Link trigger sites in
+`app/Sources/UVBurnTimer/AppViews.swift` and 2 sites in
+`app/Sources/UVBurnTimer/ForecastPickerView.swift` reconciled via
+either adjacent `.frame(minHeight: minTap)` floors or inline
+`// swiftlint:disable:this missing_min_touch_target` directives with
+`Reason:` annotations. Group LX (LX1 / LX2 / LX3) green.
+
+**Merged via PR #106** (squad/wi-loop29-7-navlink-link-regex-audit →
+main). 323/323 core tests pass post-merge. SwiftLint strict gate at
+0 violations.
+
+## Parallel-cohort note
+
+A peer agent picked up the same WI-loop29-7 spawn prompt in parallel
+and shipped the identical test-pattern fix (anchor `linkParenPattern`
+on the YAML alternation pipe `|\bLink\s*\(` rather than a regex `\b`
+word boundary that cannot fire between two backslash-letter pairs in
+the YAML's regex source text). Their commit `7d197fd` reached main
+first (PR #106 merged 17:31:35Z); by the time this agent finished its
+own local verification, the branch had already been deleted and HEAD
+relocated. No duplicate PR was opened. Convergent fix; same diagnosis;
+no rework.
+
+## Lesson — test-pattern anchoring on alternation tokens
+
+When a test asserts on the *source text* of a SwiftLint YAML regex
+(e.g. proving that a particular alternation arm is present in the
+`regex:` value), do not use the regex `\b` word boundary against
+backslash-letter pairs. The YAML literal `|\bLink\s*\(` contains the
+substring `\bLink`; the chars `b` and `L` are both word chars, so a
+runtime `\b` inserted between them never matches at that position.
+
+**Pattern to use instead:** anchor on the alternation pipe itself —
+match `\|\\bLink\\s\*\\\(` in a Swift raw-string regex (which
+compiles to the literal text `|\bLink\s*\(`). The leading pipe both
+disambiguates the `Link` alternation from the sibling `NavigationLink`
+alternation and removes the need for any runtime word boundary inside
+the YAML's regex source.
+
+This pattern generalises: whenever a test must prove that "alternation
+arm X is present in a regex source text," anchor on the `|` token that
+introduces the arm, not on word/non-word boundaries that may fall
+inside escaped-character pairs.
+
+## Out-of-scope flake noted
+
+The `testEstimateInfoNavigationRoundTripReturnsToMainScreen` and
+`testToolbarRendersBothSettingsAndEstimateInfoButtons` UI tests flake
+intermittently on the iOS 26.4 simulator (one-or-the-other per
+xcodebuild run, on toolbar code WI-29-7 does not touch). Documented in
+PR #106 body; not addressed here. Candidate for a dedicated UI-test
+stabilisation WI in a later loop.
+
+## References
+
+- PR #106 — https://github.com/yashasg/uv-burn-timer/pull/106
+  (merged 2026-05-22T17:31:35Z, commit on main: 8af7921)
+- Iris loop-29 gap analysis — GAP-7
+- WI-29-2 / PR #104 — prior `Button {` blind-spot closure (precedent)
+
+---
+
+*Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
+
 ## 2026-05-21
 
 ### Guardrail 1: Clarify Fitzpatrick persistence model
