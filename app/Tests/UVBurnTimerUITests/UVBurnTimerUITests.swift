@@ -344,10 +344,13 @@ final class UVBurnTimerUITests: XCTestCase {
 
     /// Taps `LocationRationaleContinueButton` if it appears within ~10 seconds.
     /// No-ops if the rationale screen is not present (e.g. already acknowledged).
+    /// Waits up to 5 s for the button to disappear so callers can proceed once
+    /// the sheet has fully dismissed.
     private func acknowledgeLocationRationale(_ app: XCUIApplication) {
         let continueButton = app.buttons.matching(identifier: "LocationRationaleContinueButton").firstMatch
         guard continueButton.waitForExistence(timeout: 10) else { return }
         tapWithRetry(continueButton)
+        _ = continueButton.waitForNonExistence(timeout: 5)
     }
 
     private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
