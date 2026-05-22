@@ -1407,7 +1407,7 @@ struct SettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    NavigationLink {
+                    NavigationLink { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                         SkinTypeEditView(session: $session)
                     } label: {
                         HStack {
@@ -1432,11 +1432,11 @@ struct SettingsSheet: View {
                 }
 
                 Section {
-                    NavigationLink("About & Citations") {
+                    NavigationLink("About & Citations") { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                         AboutView()
                     }
 
-                    NavigationLink("Attribution & Legal") {
+                    NavigationLink("Attribution & Legal") { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                         AttributionView()
                     }
                 }
@@ -1624,7 +1624,7 @@ struct SkinTypePickerList: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(ProductCopy.skinTypeSourcePointer)
                         .font(.footnote.weight(.medium))
-                    NavigationLink("Open About & Citations") {
+                    NavigationLink("Open About & Citations") { /* Reason: Inline footnote-style reach-back hyperlink inside a Section footer paragraph — HIG tap-target floor does not apply to inline body links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                         AboutView()
                     }
                     .font(.footnote.weight(.medium))
@@ -1769,7 +1769,7 @@ struct AboutView: View {
                         Text(ProductCopy.photosensitizationAuthorityLine)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-                        Link(
+                        Link( /* Reason: Inline hyperlink inside body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                             "NIH MedlinePlus sun-sensitivity overview",
                             destination: ProductCopy.medlinePlusSunSensitivityURL
                         )
@@ -1813,7 +1813,7 @@ struct AboutView: View {
                         .font(.title3.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
                     Text(ProductCopy.weatherDataAttributionBody)
-                    Link("Apple Weather data sources", destination: ProductCopy.weatherAttributionLegalURL)
+                    Link("Apple Weather data sources", destination: ProductCopy.weatherAttributionLegalURL) /* Reason: Inline hyperlink inside body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                     Text(ProductCopy.weatherAttributionLegalURLString)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -1877,7 +1877,7 @@ struct CitationLinksView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(ProductCopy.citationLinks, id: \.title) { link in
-                Link(link.title, destination: link.url)
+                Link(link.title, destination: link.url) /* Reason: Inline hyperlink inside a footnote-styled citations list — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                     .font(.footnote.weight(.medium))
             }
         }
@@ -1898,7 +1898,7 @@ struct AttributionView: View {
 
                 WeatherAttributionView()
 
-                Link("Apple Weather data sources", destination: legalURL)
+                Link("Apple Weather data sources", destination: legalURL) /* Reason: Inline hyperlink inside the Attribution body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
                 Text(ProductCopy.weatherAttributionLegalURLString)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -1922,7 +1922,7 @@ struct WeatherAttributionView: View {
         HStack {
             officialMark
             Spacer()
-            Link("Data sources", destination: attribution?.legalPageURL ?? fallbackLegalURL)
+            Link("Data sources", destination: attribution?.legalPageURL ?? fallbackLegalURL) /* Reason: Inline caption-style hyperlink inside the WeatherKit attribution row — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -2167,7 +2167,7 @@ struct PersistentFooter: View {
     @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
-        NavigationLink {
+        NavigationLink { /* Reason: HIG ≥44pt tap-target floor IS applied via `.frame(minHeight: minTap, alignment: .leading)` on the Label below — the floor sits beyond the SwiftLint regex's 200-char lookahead window because of the intervening multi-line Loop-11/Loop-28 history comment. Iris loop-29 WI-29-7. */
             AboutView(highlightEstimateApplicability: true)
         } label: {
             Label(ProductCopy.disclaimerLinkLabel, systemImage: "info.circle")

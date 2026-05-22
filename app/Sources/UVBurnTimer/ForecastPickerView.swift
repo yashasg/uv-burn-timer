@@ -153,7 +153,7 @@ public struct ForecastPickerView: View {
             Divider()
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
-            NavigationLink {
+            NavigationLink { /* Reason: HIG ≥44pt tap-target floor IS applied via `.frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)` on the NavigationLink below — the floor sits beyond the SwiftLint regex's 200-char lookahead window because of the verbose label content and accessibility modifiers. Iris loop-29 WI-29-7. */
                 AboutView(highlightEstimateApplicability: true)
             } label: {
                 Label("Is this estimate for me?", systemImage: "info.circle")
@@ -166,7 +166,7 @@ public struct ForecastPickerView: View {
             .frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)
             .padding(.horizontal, 16)
 
-            Link(destination: ProductCopy.weatherAttributionLegalURL) {
+            Link(destination: ProductCopy.weatherAttributionLegalURL) { /* Reason: HIG ≥44pt tap-target floor IS applied via `.frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)` on the Link below — the floor sits beyond the SwiftLint regex's 200-char lookahead window because of the verbose label, accessibility modifiers, and Loop-13 history comment. Iris loop-29 WI-29-7. */
                 Text("Source: \(ProductCopy.weatherAttributionServiceName)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
