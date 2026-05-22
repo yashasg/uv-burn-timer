@@ -1207,3 +1207,156 @@ private func unsuppressedNavigationLinkLinkViolations(
         "ForecastPickerView.swift must not contain `NavigationLink {`, `NavigationLink(`, or `Link(` sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style or inline-hyperlink context excuses the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` (or inline `:this`) directive with a Reason: comment. Iris loop-29 GAP-7 / WI-29-7. Found \(violations.count) unsuppressed site(s)."
     )
 }
+
+// MARK: - Group LY: Loop-29 WI-4 — toolbar Image @ScaledMetric frame floor
+//
+// Iris loop-29 gap analysis GAP-4: the SwiftLint `missing_min_touch_target`
+// rule's trigger alternation watches `Button`/`onTapGesture`/`NavigationLink`/
+// `Link`, but NOT bare `Image(...)`. Inside a SwiftUI `.toolbar { ... }`
+// closure, the toolbar item's tappable label is frequently an `Image(
+// systemName:)` whose intrinsic rendered size is small (≈22pt). Prior to
+// iOS 26.4 the toolbar chrome padded these out to ≥44pt automatically;
+// in iOS 26.4 that implicit floor regressed and toolbar Image labels need
+// an explicit `@ScaledMetric`-backed `.frame(minWidth:, minHeight:)` floor.
+// PR #99 manually fixed the RootView gear + info-circle Images (AppViews.swift
+// line 120 toolbar block) but the rule did not codify the requirement, so a
+// future toolbar Image regression would slip past SwiftLint again.
+//
+// WI-29-4 introduces a NEW SwiftLint custom rule
+// `toolbar_image_needs_scaled_frame` that fires on any `Image(...)` appearing
+// inside a `.toolbar { ... }` window without a nearby
+// `.frame(...min(Width|Height): <identifier>...)` (identifier-backed, not
+// literal) inside a 200-char trailing lookahead — mirroring the existing
+// `missing_min_touch_target` style. Group LY mirrors the rule here in
+// Swift `NSRegularExpression` so unit tests catch regressions independently
+// of the lint pass.
+//
+// Group LY strategy:
+//   LY1 — `.swiftlint.yml` contains a `toolbar_image_needs_scaled_frame:`
+//         custom rule entry with a `regex:` field referencing both
+//         `\.toolbar` and `\bImage\s*\(`, at `severity: error`.
+//   LY2 — `AppViews.swift`: every `.toolbar { ... }` block has every
+//         `Image(` inside floored by an adjacent `@ScaledMetric`-backed
+//         `.frame(...min(Width|Height): <id>...)` within 200 chars
+//         (mirror of the SwiftLint regex).
+//   LY3 — `ForecastPickerView.swift`: same mirror-guard. May be vacuously
+//         true (no `.toolbar` blocks today), but the guard is added so a
+//         future toolbar-bearing edit cannot regress silently.
+
+/// Mirror-guard: returns the ranges of `Image(` occurrences inside a
+/// `.toolbar { ... }` window (2000-char outer window from the `.toolbar {`
+/// opener, matching the SwiftLint custom-rule regex) that lack an adjacent
+/// `@ScaledMetric`-backed `.frame(...min(Width|Height): <identifier>...)`
+/// within a 200-char trailing lookahead. Sites carrying an immediately-
+/// preceding `// swiftlint:disable:next toolbar_image_needs_scaled_frame`
+/// (or inline `:this`) directive are intentional exceptions and exempt.
+/// Mirrors the `toolbar_image_needs_scaled_frame` SwiftLint regex exactly
+/// so a regression in either side will be caught.
+private func unsuppressedToolbarImageViolations(
+    in source: String
+) throws -> [NSRange] {
+    let pattern = #"\.toolbar\s*\{[\s\S]{0,2000}?\bImage\s*\((?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    let matches = regex.matches(in: source, range: range)
+    let nsSource = source as NSString
+    return matches.compactMap { match -> NSRange? in
+        // Anchor the per-line suppression check on the `Image(` token within
+        // the match, not on the `.toolbar {` opener at the start of the
+        // match's range.
+        let matchedText = nsSource.substring(with: match.range)
+        guard let imageOffset = matchedText.range(of: "Image") else {
+            return match.range
+        }
+        let imageStart = match.range.location + matchedText.distance(
+            from: matchedText.startIndex, to: imageOffset.lowerBound
+        )
+        var lineStart = imageStart
+        while lineStart > 0 && nsSource.character(at: lineStart - 1) != 0x0A {
+            lineStart -= 1
+        }
+        var lineEnd = imageStart
+        while lineEnd < nsSource.length && nsSource.character(at: lineEnd) != 0x0A {
+            lineEnd += 1
+        }
+        let currentLine = nsSource.substring(
+            with: NSRange(location: lineStart, length: lineEnd - lineStart)
+        )
+        if currentLine.contains("swiftlint:disable:this")
+            && currentLine.contains("toolbar_image_needs_scaled_frame") {
+            return nil
+        }
+        if lineStart > 0 {
+            let endOfPrev = lineStart - 1
+            var startOfPrev = endOfPrev
+            while startOfPrev > 0 && nsSource.character(at: startOfPrev - 1) != 0x0A {
+                startOfPrev -= 1
+            }
+            let prevLine = nsSource.substring(
+                with: NSRange(location: startOfPrev, length: endOfPrev - startOfPrev)
+            )
+            if prevLine.contains("swiftlint:disable:next")
+                && prevLine.contains("toolbar_image_needs_scaled_frame") {
+                return nil
+            }
+        }
+        return match.range
+    }
+}
+
+/// LY1 — `.swiftlint.yml` must declare a `toolbar_image_needs_scaled_frame:`
+/// custom rule entry with a `regex:` field that references both `\.toolbar`
+/// and `\bImage\s*\(` literals, at `severity: error`. Iris loop-29 GAP-4 /
+/// WI-29-4 — codifies the iOS 26.4 toolbar Image hit-target requirement
+/// that PR #99 manually fixed at the call site.
+@Test func test_LY1_swiftlintToolbarImageNeedsScaledFrameRuleExists() throws {
+    let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
+    let range = NSRange(source.startIndex..., in: source)
+    let entryPattern = #"toolbar_image_needs_scaled_frame:\s*\n"#
+    let toolbarLiteralPattern = #"toolbar_image_needs_scaled_frame:[\s\S]{0,2500}regex:\s*'[^']*\\\.toolbar[^']*'"#
+    let imageLiteralPattern = #"toolbar_image_needs_scaled_frame:[\s\S]{0,2500}regex:\s*'[^']*\\bImage\\s\*\\\([^']*'"#
+    let severityPattern = #"toolbar_image_needs_scaled_frame:[\s\S]{0,2500}severity:\s*error"#
+    #expect(
+        try NSRegularExpression(pattern: entryPattern).firstMatch(in: source, range: range) != nil,
+        ".swiftlint.yml must declare a `toolbar_image_needs_scaled_frame:` custom rule entry. Iris loop-29 GAP-4 / WI-29-4."
+    )
+    #expect(
+        try NSRegularExpression(pattern: toolbarLiteralPattern).firstMatch(in: source, range: range) != nil,
+        ".swiftlint.yml `toolbar_image_needs_scaled_frame` regex must reference the `\\.toolbar` literal. Iris loop-29 GAP-4 / WI-29-4."
+    )
+    #expect(
+        try NSRegularExpression(pattern: imageLiteralPattern).firstMatch(in: source, range: range) != nil,
+        ".swiftlint.yml `toolbar_image_needs_scaled_frame` regex must reference the `\\bImage\\s*\\(` trigger literal. Iris loop-29 GAP-4 / WI-29-4."
+    )
+    #expect(
+        try NSRegularExpression(pattern: severityPattern).firstMatch(in: source, range: range) != nil,
+        ".swiftlint.yml `toolbar_image_needs_scaled_frame` rule must ship at `severity: error` (HIG hard gate — no warning tier). Iris loop-29 GAP-4 / WI-29-4."
+    )
+}
+
+/// LY2 — `AppViews.swift` must contain no `Image(` site inside a
+/// `.toolbar { ... }` block that lacks an adjacent `@ScaledMetric`-backed
+/// `.frame(...min(Width|Height): <id>...)` floor within 200 chars (mirror
+/// of the WI-29-4 SwiftLint custom rule). Iris loop-29 GAP-4 / WI-29-4 —
+/// codifies the PR #99 manual gear/info-circle fix.
+@Test func test_LY2_appViewsToolbarImageSitesCarryMinTapFloor() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    let violations = try unsuppressedToolbarImageViolations(in: source)
+    #expect(
+        violations.isEmpty,
+        "AppViews.swift must not contain any `Image(` site inside a `.toolbar { ... }` block lacking an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars. Toolbar Image labels regressed visibly in iOS 26.4 without an explicit floor — see PR #99 (RootView gear + info-circle). Iris loop-29 GAP-4 / WI-29-4. Found \(violations.count) unsuppressed site(s)."
+    )
+}
+
+/// LY3 — `ForecastPickerView.swift` mirror-guard for toolbar `Image(`
+/// sites. Vacuously true today (no `.toolbar` blocks live in this file),
+/// but added so a future toolbar-bearing edit cannot regress silently.
+/// Iris loop-29 GAP-4 / WI-29-4.
+@Test func test_LY3_forecastPickerToolbarImageSitesCarryMinTapFloor() throws {
+    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
+    let violations = try unsuppressedToolbarImageViolations(in: source)
+    #expect(
+        violations.isEmpty,
+        "ForecastPickerView.swift must not contain any `Image(` site inside a `.toolbar { ... }` block lacking an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars. Iris loop-29 GAP-4 / WI-29-4. Found \(violations.count) unsuppressed site(s)."
+    )
+}
