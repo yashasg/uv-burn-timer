@@ -1197,11 +1197,42 @@ struct DisclaimerCover: View {
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
 
-                    Label(ProductCopy.photosensitizerDisclaimerLine, systemImage: "exclamationmark.triangle")
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(.orange)
-                        .accessibilityLabel(ProductCopy.photosensitizerDisclaimerLine)
-                        .accessibilityElement(children: .combine)
+                    // WI-bundleT / Iris L02 (Loop-14) — WCAG 2.1 SC 1.4.3
+                    // contrast fix on the photosens disclaimer text.
+                    //
+                    // The pre-Loop-14 shape was a single-string Label with
+                    // `.foregroundStyle(.orange)` applied to the whole Label,
+                    // which tinted both the icon AND the text. SwiftUI's
+                    // `.orange` against the `.regularMaterial` cover
+                    // background measures roughly 2.3–2.5:1 in Light Mode +
+                    // Standard Contrast — a WCAG 2.1 SC 1.4.3 (4.5:1)
+                    // failure for the text path. The photosens disclaimer
+                    // line is the load-bearing safety surface for Asha (P4
+                    // Accutane / photosensitizer cohort), so the text must
+                    // be legible at every contrast mode.
+                    //
+                    // The decomposed Label below tints only the
+                    // `exclamationmark.triangle` icon in orange (a pure
+                    // visual signal, no text payload — SC 1.4.3 does not
+                    // apply to icons; SC 1.4.11 3:1 floor is met) while
+                    // the text inherits `.primary` (the system-adaptive
+                    // label color, which clears ≥ 7:1 against any system
+                    // background in both Standard and Increased Contrast).
+                    //
+                    // The outer `.accessibilityLabel(photosensitizer\
+                    // DisclaimerLine)` + `.accessibilityElement(children:
+                    // .combine)` keep VoiceOver output identical to the
+                    // pre-T1 shape (pinned by Group JJ5).
+                    Label {
+                        Text(ProductCopy.photosensitizerDisclaimerLine)
+                            .foregroundStyle(.primary)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    }
+                    .font(.callout.weight(.semibold))
+                    .accessibilityLabel(ProductCopy.photosensitizerDisclaimerLine)
+                    .accessibilityElement(children: .combine)
 
                     Text(ProductCopy.disclaimerBody)
                         .font(.body)
