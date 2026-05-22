@@ -1,11 +1,12 @@
 import XCTest
 @testable import SwiftLintASTRules
 
-// TDD-first tests for the SwiftSyntax AST rule
-// `image_systemname_missing_accessibility_label` (WI-loop30-4a, ADR-0003
-// §Rollout WI-30-B). Iris's scope memo (Loop-30 iter-2 closure) defines
-// the FP contract: every existing `Image(systemName:)` site in
-// `app/Sources/` must remain silent because every one of them is either
+// TDD tests for the SwiftSyntax AST rule
+// `image_systemname_missing_accessibility_label` (WI-loop30-4a + 4b,
+// ADR-0003 §Rollout WI-30-B). Iris's HIG fixture catalog (Loop-30
+// iter-2: `iris-image-accessibility-fixtures.md` §P5) is the canonical
+// spec: every existing `Image(systemName:)` site in `app/Sources/` must
+// remain silent because every one of them is either
 //   (a) inside an interactive ancestor's label closure that carries
 //       `.accessibilityLabel(...)` (or a parent that combines children
 //       under a single accessibility label), or
@@ -14,8 +15,19 @@ import XCTest
 //   (c) lives inside a `Label { ... } icon: { Image(...) }` block whose
 //       title closure supplies the label.
 //
-// The rule fires on a bare `Image(systemName: ...)` that satisfies NONE
-// of (a)/(b)/(c) — i.e. an unlabeled VoiceOver-blind icon.
+// WI-loop30-4b note (silencer-(d) removal): the previous draft of the
+// rule (WI-loop30-4a as merged in #119) also exempted any Image with a
+// sibling `Text(...)` in the same view-builder block. Iris's catalog P5
+// is explicit that sibling adjacency is NOT a labeling relation in
+// SwiftUI's accessibility tree — VoiceOver will announce the bare
+// `Image(systemName: "<id>")` symbol-id verbatim regardless of an
+// adjacent Text. Silencer (d) is therefore removed; the rule fires on
+// bare `Image(systemName:)` whenever NONE of (a)/(b)/(c) apply.
+//
+// Pre-requisite: PR #120 (WI-loop30-4a-iris-3sites) added explicit
+// silencers (a)/(b) to the 3 production sites that would have caught
+// silencer (d); without (d) the rule still reports 0 violations on
+// `app/Sources/` post-#120 (verified by the parity gates below).
 
 final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
 
@@ -24,11 +36,18 @@ final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
         return rule.violations(in: source)
     }
 
-    // MARK: - True negatives — silencer (d): sibling Text supplies label
+    // MARK: - Iris P5 reassertion — sibling Text does NOT silence
+    //
+    // Per `iris-image-accessibility-fixtures.md` §P5 / §E5, sibling
+    // adjacency is NOT a labeling relation in SwiftUI's accessibility
+    // tree. Each of the following shapes MUST fire — author must add an
+    // explicit silencer (a)/(b)/(c) (typically
+    // `.accessibilityElement(children: .combine) + .accessibilityLabel(...)`
+    // on the parent stack, or `.accessibilityHidden(true)` on the icon).
 
-    func test_trueNegative_imageWithSiblingTextInHStack() {
-        // ForecastPickerView.swift:209 shape — refresh banner icon
-        // paired with descriptive Text.
+    func test_truePositive_irisP5_imageWithSiblingTextInHStack() {
+        // Iris P5 canonical shape — refresh-banner-style icon paired
+        // with descriptive Text. Bare HStack with no a11y modifiers.
         let source = """
         import SwiftUI
         struct V: View {
@@ -45,10 +64,10 @@ final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
             }
         }
         """
-        XCTAssertEqual(violations(source).count, 0)
+        XCTAssertEqual(violations(source).count, 1)
     }
 
-    func test_trueNegative_imageWithSiblingTextInVStack() {
+    func test_truePositive_irisP5_imageWithSiblingTextInVStack() {
         let source = """
         import SwiftUI
         struct V: View {
@@ -60,7 +79,91 @@ final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
             }
         }
         """
-        XCTAssertEqual(violations(source).count, 0)
+        XCTAssertEqual(violations(source).count, 1)
+    }
+
+    // MARK: - Regression guard — exact post-#120 production shapes WITHOUT silencers
+    //
+    // The following three fixtures mirror Kwame's PR #120 sites
+    // verbatim, except the explicit silencers added in #120 have been
+    // stripped. If a future refactor accidentally removes any of those
+    // silencers and only leaves the sibling-Text adjacency, the rule
+    // must STILL fire (silencer (d) is gone). These tests protect
+    // against silent regression of the three Loop-30 iter-2 sites.
+
+    func test_truePositive_productionShape_tierBadgeAccessoryGlyph_withoutHidden() {
+        // AppViews.swift TierBadge — accessory glyph WITHOUT
+        // `.accessibilityHidden(true)`. Sibling `Label(title, systemImage:)`
+        // does NOT label the standalone Image — rule must fire.
+        let source = """
+        import SwiftUI
+        struct TierBadge: View {
+            let title: String
+            let symbolName: String
+            let differentiateWithoutColor: Bool
+            let accessorySymbolName: String?
+            var body: some View {
+                HStack(spacing: 4) {
+                    Label(title, systemImage: symbolName)
+                    if differentiateWithoutColor, let accessorySymbolName {
+                        Image(systemName: accessorySymbolName)
+                    }
+                }
+            }
+        }
+        """
+        XCTAssertEqual(violations(source).count, 1)
+    }
+
+    func test_truePositive_productionShape_refreshBannerSpinner_withoutCombine() {
+        // ForecastPickerView.swift stale-banner — spinner Image WITHOUT
+        // the parent `.accessibilityElement(children: .combine) +
+        // .accessibilityLabel("Updating forecast")` modifiers.
+        let source = """
+        import SwiftUI
+        struct V: View {
+            var body: some View {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text("Updating forecast…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                .padding(.horizontal, 16)
+            }
+        }
+        """
+        XCTAssertEqual(violations(source).count, 1)
+    }
+
+    func test_truePositive_productionShape_refreshErrorBanner_withoutCombine() {
+        // ForecastPickerView.swift error-banner — same shape with
+        // `exclamationmark.icloud` glyph, Retry Button preserved.
+        let source = """
+        import SwiftUI
+        struct V: View {
+            var body: some View {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.icloud")
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                    Text("Forecast unavailable")
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Button("Retry") { }
+                        .buttonStyle(.borderless)
+                }
+                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                .padding(.horizontal, 16)
+            }
+        }
+        """
+        XCTAssertEqual(violations(source).count, 1)
     }
 
     // MARK: - True positives (rule MUST fire)
@@ -78,8 +181,9 @@ final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
     }
 
     func test_truePositive_imageInPlainHStack_noLabels() {
-        // Sibling is NOT a Text (so silencer (d) does not apply) and
-        // there is no parent accessibility modifier → fire.
+        // Sibling is `Spacer` (not Text) and no parent accessibility
+        // modifier → fire. Post WI-loop30-4b, even a Text sibling would
+        // also fire — see `test_truePositive_irisP5_*` above.
         let source = """
         import SwiftUI
         struct V: View {

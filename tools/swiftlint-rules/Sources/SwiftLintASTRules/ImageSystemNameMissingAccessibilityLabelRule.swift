@@ -3,11 +3,11 @@ import SwiftSyntax
 import SwiftParser
 
 /// SwiftSyntax AST rule `image_systemname_missing_accessibility_label`
-/// (WI-loop30-4a, ADR-0003 §Rollout WI-30-B; design = Iris's Loop-30
-/// iter-2 scope memo).
+/// (WI-loop30-4a + 4b, ADR-0003 §Rollout WI-30-B; design = Iris's
+/// Loop-30 iter-2 fixture catalog §P5).
 ///
 /// Fires on any standalone `Image(systemName: …)` call expression that
-/// is not labeled for VoiceOver via any of the four structural
+/// is not labeled for VoiceOver via any of the three structural
 /// silencers below:
 ///
 ///   (a) Image lives inside the `label:` closure of an interactive
@@ -26,15 +26,18 @@ import SwiftParser
 ///       `systemImage:`, not an `Image` expression — so it never has
 ///       an `Image(systemName:)` expression inside it and the rule
 ///       trivially does not fire.)
-///   (d) Image has a sibling `Text(...)` view in the same enclosing
-///       view-builder block (e.g. an HStack/VStack pairing an icon
-///       with descriptive copy — `ForecastPickerView.swift`'s
-///       stale/error banners are the canonical shape). This matches
-///       Iris's informal HIG convention for icon-plus-descriptor
-///       banners: when an icon is paired with descriptive text in the
-///       same view-builder block, the text supplies the semantic, the
-///       icon is decorative reinforcement, and VoiceOver reads the
-///       text aloud. Inverse of `color_only_meaning_signal` (Batch-2).
+///
+/// WI-loop30-4b history: an earlier draft of this rule (merged in #119)
+/// also exempted Images with a sibling `Text(...)` view in the same
+/// view-builder block — silencer "(d)". Iris's catalog §P5 is explicit
+/// that sibling adjacency is NOT a labeling relation in SwiftUI's
+/// accessibility tree (VoiceOver announces the bare
+/// `Image(systemName: "<id>")` symbol-id regardless of an adjacent
+/// Text). Silencer (d) was therefore removed; authors of icon-plus-
+/// descriptor banners must reach for silencer (b) explicitly
+/// (`.accessibilityElement(children: .combine)` + an explicit
+/// `.accessibilityLabel(...)` on the parent stack, or
+/// `.accessibilityHidden(true)` on the icon).
 ///
 /// The visitor reuses the parent-walking machinery proven out by
 /// `ToolbarImageNeedsScaledFrameRule` (the WI-30-B spike rule).
@@ -74,13 +77,12 @@ private final class ImageSystemNameVisitor: SyntaxVisitor {
 
         if isImageSystemNameCall(node),
            !isInsideSilentClosure(node),
-           !hasAccessibilitySilencerInChain(node),
-           !hasSiblingTextInSameBlock(node) {
+           !hasAccessibilitySilencerInChain(node) {
             let loc = node.startLocation(converter: locator)
             violations.append(
                 Violation(
                     ruleID: ImageSystemNameMissingAccessibilityLabelRule.id,
-                    message: "HIG/WCAG 1.1.1: Image(systemName:) needs `.accessibilityLabel(...)`, `.accessibilityHidden(true)`, or an enclosing Label/Button/NavigationLink/Link (or sibling Text) that supplies the label.",
+                    message: "HIG/WCAG 1.1.1: Image(systemName:) needs `.accessibilityLabel(...)`, `.accessibilityHidden(true)`, or an enclosing Label/Button/NavigationLink/Link that supplies the label.",
                     line: loc.line,
                     column: loc.column
                 )
@@ -229,52 +231,9 @@ private final class ImageSystemNameVisitor: SyntaxVisitor {
         }
     }
 
-    /// Silencer (d): Image has a sibling `Text(...)` view in the same
-    /// enclosing view-builder block. Locates the nearest CodeBlockItem
-    /// ancestor of the Image, then scans its siblings for a code-block
-    /// item whose outermost expression (after stripping the
-    /// `.modifier(...).modifier(...)` chain) is a `Text(...)` call.
-    private func hasSiblingTextInSameBlock(_ node: FunctionCallExprSyntax) -> Bool {
-        var current: Syntax? = Syntax(node)
-        while let n = current, n.as(CodeBlockItemSyntax.self) == nil {
-            current = n.parent
-        }
-        guard
-            let myItem = current?.as(CodeBlockItemSyntax.self),
-            let list = myItem.parent?.as(CodeBlockItemListSyntax.self)
-        else {
-            return false
-        }
-        for item in list where item.id != myItem.id {
-            if codeBlockItemRootsAtTextCall(item) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func codeBlockItemRootsAtTextCall(_ item: CodeBlockItemSyntax) -> Bool {
-        guard let expr = item.item.as(ExprSyntax.self) else { return false }
-        var current: ExprSyntax = expr
-        while true {
-            if let call = current.as(FunctionCallExprSyntax.self) {
-                if let member = call.calledExpression.as(MemberAccessExprSyntax.self),
-                   let base = member.base {
-                    current = base
-                    continue
-                }
-                if let ref = call.calledExpression.as(DeclReferenceExprSyntax.self),
-                   ref.baseName.text == "Text" {
-                    return true
-                }
-                return false
-            }
-            if let member = current.as(MemberAccessExprSyntax.self),
-               let base = member.base {
-                current = base
-                continue
-            }
-            return false
-        }
-    }
+    /// Silencer (d) — sibling `Text(...)` exemption — was removed in
+    /// WI-loop30-4b per Iris's catalog §P5: sibling adjacency is NOT a
+    /// labeling relation in SwiftUI's accessibility tree. The original
+    /// `hasSiblingTextInSameBlock` / `codeBlockItemRootsAtTextCall`
+    /// helpers were deleted with this change.
 }
