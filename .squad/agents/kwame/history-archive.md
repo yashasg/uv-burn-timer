@@ -34,12 +34,14 @@
 
 ---
 
+
 ## Post-session note: K-10/K-11 pre-shipped state
 
 **Learning (2026-05-21T05:30:00Z, UX-cleanup round):** The discovery that K-10 (`aboutSunSafetyActions` constant) and K-11 (its usage in `AboutView.notForMeAnchor`) were already present in the codebase from a prior session provided useful confirmation about build state. This is a valuable pattern for future code reviews: when implementing from spec, always search for related constants/text blocks first to avoid redeclaration errors. The prior session's work had actually pre-delivered the safety actions text needed to satisfy Plunder regulatory constraint C2, which meant the ratification of Iris v2 was immediately implementable without additional work. This kind of codebase state visibility (what's already present vs. what's still pending) is critical for coordinating multi-agent work in rapid sprints.
 
 
 ---
+
 
 ## Learnings — LocationRationaleCard removal (2026-05-21, Kwame)
 
@@ -53,6 +55,7 @@ When an app requests only approximate/reduced-accuracy location (`kCLLocationAcc
 **Full History Archive:** See `history-archive-2026-05-21T04-15-00Z.md`
 
 ---
+
 
 ## Final Round (2026-05-21T04:15:00Z) — Items 9 + 10
 
@@ -98,6 +101,7 @@ var selectedRowOpacity: Double { contrast == .increased ? 0.25 : 0.12 }
 - Both TODO markers removed
 
 ---
+
 
 ## Summary: WI-7 Ship
 
@@ -166,6 +170,7 @@ var selectedRowOpacity: Double { contrast == .increased ? 0.25 : 0.12 }
 
 ---
 
+
 ## Learnings — Appended 2026-05-21T02:00:00Z
 
 - **`ForecastModels.swift` conflict**: Prior sessions may leave stub files with conflicting type declarations. Always check `ls Sources/UVBurnTimerCore/` before creating new files.
@@ -219,9 +224,11 @@ var selectedRowOpacity: Double { contrast == .increased ? 0.25 : 0.12 }
 
 ---
 
+
 ## Learnings — Skin-type Persistence + policyVersion L1 Trigger (K-1..K-11) — 2026-05-21T07:50:00Z
 
 ### Pattern B implementation shipped
+
 ## Learnings — Iris §8 items 9 + 10 — 2026-05-21T03:35:00Z
 
 ### Items shipped this round
@@ -292,6 +299,7 @@ The original `@State`-only skin-type rule was a reasonable precautionary stance 
 - Unit tests: ✅ TEST SUCCEEDED (all pass)
 - Branch: `feature/main-screen-cleanup`, commits `af2205a`, `c23ed4e`, `93e7c3b`, `c66c93d`
 
+
 ## 2026-05-21 Kwame-9: Pattern B Implementation (LAUNCH-PLAN Reversal)
 
 Kwame-9 executed Iris-6 spec. Full UserDefaults persistence shipped per Plunder/Wheeler/Suchi consensus. LAUNCH-PLAN @State-only rule reversed.
@@ -307,6 +315,7 @@ Kwame-9 executed Iris-6 spec. Full UserDefaults persistence shipped per Plunder/
 WI-7 implementation and C16 fix complete. 11 commits (6 implementation + 1 fix), 97 tests all passing. Storage layer fully locked and ready for UI.
 
 
+
 ## Learnings — ForecastPickerView Structural Shell — 2026-05-21T03:30:00Z
 
 - **Swift type-checker complexity budget**: SwiftUI views with many `@State` properties + long modifier chains can hit the type-checker's expression complexity limit, triggering "unable to type-check this expression in reasonable time". The fix is NOT to just extract the VStack content — you must also split the *modifier chain itself* into two separate computed properties (`navigationStackBase` + `mainNavigationStack`). Each property is type-checked independently. ~16 modifiers was the tipping point here.
@@ -318,6 +327,7 @@ WI-7 implementation and C16 fix complete. 11 commits (6 implementation + 1 fix),
 - **`@ViewBuilder` split pattern**: To keep `RootView.body` trivial, use `body → mainNavigationStack → navigationStackBase`. Each level is a separately-typed expression. `body` returns one property, `mainNavigationStack` applies event modifiers to `navigationStackBase`, and `navigationStackBase` owns the NavigationStack chrome (toolbar, safeAreaInset, title).
 
 - **ForecastPickerLogic placement**: Pure logic (no SwiftUI, no actors) belongs in UVBurnTimerCore so Ma-Ti can test it without any app target linkage. The app target's `ForecastPickerView` imports it.
+
 
 
 ## Learnings — Iris §8 Checklist Implementation — 2026-05-21T03:10:00Z
@@ -351,201 +361,4 @@ WI-7 implementation and C16 fix complete. 11 commits (6 implementation + 1 fix),
 
 ---
 
-## Post-squash-merge conflict resolution (2026-05-21T08:25:00Z)
 
-**Context:** MR !29 (WI #7) was squash-merged to `main`. MR !30 (`feature/main-screen-cleanup`) auto-retargeted and had conflicts because its branch contained the individual WI #7 commits as ancestors while `main` only had the squash.
-
-**Conflicts resolved:**
-- `app/Tests/UVBurnTimerCoreTests/ForecastProviderTests.swift` — add/add conflict, both sides identical content. Took `--ours` (HEAD).
-- `app/Sources/UVBurnTimer/AppViews.swift` — 3 conflict regions:
-  1. `.sheet(isPresented: $showSkinTypeEdit)` block: HEAD had it, origin/main didn't. Kept HEAD.
-  2. `LocationRationaleCard` block: origin/main had it, HEAD intentionally removed it (cleanup). Kept HEAD (empty).
-  3. Large WI #7 block (~117 lines): origin/main added WI #7 computed properties + `photosensitizationBanner`; HEAD had closing braces + duplicate WI #7 props + unique !30 additions (`skinTypeChip`, 3-chip `mainInputsRow`). Resolution: took origin/main's WI #7 props (EXCLUDING `photosensitizationBanner` — intentionally removed by !30), then removed duplicates from HEAD, then kept HEAD's unique !30 additions.
-
-**Key insight:** In a post-squash-merge conflict, both branches' changes are logically intended. The conflict is an artifact of the squash strategy. Map each conflict region to its WI/PR ownership before resolving — "which team wrote this and for what purpose?" is the right question, not "which is newer?"
-
-**Build + test:** 69 unit tests ✅, 5 UI smoke tests ✅. No new warnings.
-**Merge commit:** `4b9afc0` pushed to `origin/feature/main-screen-cleanup`.
-
----
-
-## 2026-05-21T09:10:00Z — Second attempt: remove HeroTimerCard wrapper (commit `9da54cf`)
-
-**Branch:** `feature/remove-burn-time-card`
-**Requested by:** Yashas
-
-### What was done
-- Removed the `HeroTimerCard` struct entirely from `AppViews.swift`
-- Inlined all sub-views (`heroContent`, `heroBurnRiskGauge`, `heroEstimateText`, `heroStaleEstimateContent`, `heroVerdictText`, `heroAccessibilityLabel`) directly onto `RootView`
-- Added `@Environment(\.accessibilityReduceMotion)`, `@ScaledMetric heroNumberSize`, `@ScaledMetric heroIconSize` to `RootView`
-- Dropped the "Burn-time estimate" title row — no card header on main screen
-- `forecastDateContext` rendered as a quiet `.caption` above the gauge when non-nil
-- Removed all card chrome: `.padding(24)`, `.background(.regularMaterial)`, `.cornerRadius(24)` gone
-- Deleted `ProductCopy.burnTimeEstimateTitle` and its entry in `auditCopySurfaces`
-- Removed the test assertion that pinned the removed copy string
-- Build clean, unit tests pass, UI smoke tests pass
-
-### Lesson learned (critical)
-The first attempt (commit `0d5dadc`) only removed an inner nested card duplicate, leaving `HeroTimerCard` still rendering with its title and card surface. When Yashas says "remove the card encapsulating X", the **outermost** card is the target — not an inner duplicate. Future translations from the coordinator must verify: "which card is the wrapper?" before implementing. If the description references a visible card title (e.g., "Burn-time estimate"), that title's host struct is the one to remove.
-
----
-
-## 2026-05-21T09:55:00Z — Third attempt: restore HeroTimerCard wrapper, drop card chrome (Group R contract)
-
-**Branch:** `feature/remove-burn-time-card`
-**Requested by:** Coordinator (loop closure on `feature/remove-burn-time-card`)
-
-### What was done
-- Restored `HeroTimerCard: View` struct at `AppViews.swift:737` — same body the second attempt (commit `9da54cf`) inlined, but **without** the card chrome (`.regularMaterial`, `cornerRadius: 24`, `.padding(24)`) and **without** the `Burn-time estimate` header row. The circular gauge still stands alone as the main-screen primary.
-- Rewrote `RootView.heroTimerCardView` to delegate via a single `HeroTimerCard(...)` constructor call (11 explicit params: `estimate`, `uvIndex` resolved via `activeUVIndex ?? uvIndex`, `fetchedAt`, `now`, `contextLine`, `statusMessage` from `displayedStatusMessage`, `locationFailureMessage`, `weatherFailureMessage`, `isEstimateStale`, `forecastDateContext`, `onRecalculate: { Task { await refreshUV() } }`).
-- Deleted RootView's now-duplicated helpers: `heroBurnRiskGauge`, `heroBurnRiskGaugeUnavailableMessage`, `heroContent`, `heroStaleEstimateContent`, `heroEstimateText`, `heroVerdictText`, `heroAccessibilityLabel`.
-- Dropped RootView's `@Environment(\.accessibilityReduceMotion)`, `@ScaledMetric heroNumberSize`, and `@ScaledMetric heroIconSize` props — those properties now live on `HeroTimerCard` only. `dynamicTypeSize` stays on RootView (used by `mainInputsRow`).
-- Added Group R contract tests (R1–R6) to `BurnTimeCalculatorTests.swift` to pin this architecture in code (the only test file wired into `app.xcodeproj`'s `UVBurnTimerCoreTests` target). They guard: wrapper struct existence (R1), RootView delegation via `HeroTimerCard(` (R2), retired `burnTimeEstimateTitle` constant (R3), no `.regularMaterial`/`cornerRadius: 24` chrome inside the card body (R4), `.font(.caption)` for `forecastDateContext` (R5), and retained `mainVerdictCaveatLinkLabel` constant for the toolbar ⓘ deep-link (R6).
-- Updated `.squad/files/user-flow-onboarding-main-spec.md` and `.squad/files/iris-launch-readiness-checklist.md` to document the shipped state (card chrome retired, gauge-as-primary, `HeroForecastDateContext` accessibility identifier).
-
-### Critical fix — XCUI `testSettingsSheetOpens` regression
-The second attempt (commit `9da54cf`) inlined the entire HeroTimerCard body into `RootView.heroTimerCardView`, removing the `struct HeroTimerCard: View` boundary. That broke XCUI `testSettingsSheetOpens` — the toolbar `gearshape` Button's tap stopped opening the `.sheet(isPresented: $showSettings)` because the inlined hero card shared RootView's SwiftUI identity, scrambling the toolbar's hit-test envelope. Restoring the wrapper re-isolates the hero card's SwiftUI identity from RootView's toolbar and re-enables tap dispatch.
-
-This third attempt keeps the visual cleanup the user originally asked for (no `Burn-time estimate` header, no `.regularMaterial` card chrome, no padding) **and** preserves the wrapper boundary that XCUI requires. Group R guards both invariants so the next refactor can't regress either side.
-
-### Build + test verification
-- `swift test` (SwiftPM, UVBurnTimerCoreTests target): ✅ 128 passed in 0.124s, including all 6 R-group tests
-- `CONFIGURATION=Debug RUN_TESTS=false bash build.sh` (xcodebuild Debug build): ✅ BUILD SUCCEEDED, zero warnings (warnings-as-errors)
-- xcodebuild UI tests via `build.sh`: ✅ `testAppLaunchesWithoutCrash`, `testForecastPickerCardIsRendered`, `testSettingsSheetOpens` (22.1s — the test R-group guards) all passed before local simulator crashed mid-flight on `testSkinTypePickerEndToEnd`. Simulator instability is iOS 26 sim flake (IOHIDLib arch mismatch + xctrunner launch failures); not a code regression — CI will re-run on a clean macos-15 runner.
-
----
-
-## Learnings
-
-### 2026-05-22T02:30:00Z — SwiftLint HIG error gate harness
-- Pinned `SimplyDanny/SwiftLintPlugins` at `0.63.2` in `app/Package.swift`; kept Homebrew `swiftlint` in CI/build.sh because the plugin is build-tool-only and the canonical pipeline still needs an explicit CLI invocation.
-- Added repo-root `.swiftlint.yml` that promotes HIG custom rules to `error` and seeds the current audit with `hardcoded_frame_dimensions` + `literal_system_font_size` so the gate is already red on known layout debt.
-- `build.sh` now runs `swiftlint --strict --config .swiftlint.yml --reporter xcode` before `xcodebuild`, exposes `./build.sh lint` for emoji-reporter local feedback, warns/skips when `swiftlint` is not installed locally, and defaults DerivedData to `.build/derived-data` instead of a temp dir.
-- `.github/workflows/ci.yml` now installs SwiftLint with Homebrew and runs the strict lint step before `./build.sh`.
-- Baseline sanity check: **16 HIG violations** on the current tree (`11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`). Those fixes stay with issues `#95` / `#96`, not the harness branch.
-- Validation: `swift package resolve --package-path app` resolved the plugin at `0.63.2`; Debug + Release builds still succeed when SwiftLint is intentionally absent locally; `xcodebuild test` remains non-green because of the repo’s existing two Swift Testing known-issue records in `ForecastPickerLogicTests`.
-
-### 2026-05-22T03:32:09-07:00 — SwiftLint strict day-1 HIG tightening
-- User directive superseded Iris’s softer bucket: all HIG layout/touch/typography rules in this harness stay at `severity: error` from day 1. No grace period and no warning ramp.
-- `missing_min_touch_target` no longer treats literal `minHeight: 44` / `56` as green. The regex now only passes Button / `.onTapGesture` sites when a nearby `.frame(...minWidth|minHeight: someIdentifier)` uses a bare identifier; that is a pragmatic heuristic for `@ScaledMetric`, not proof.
-- Sanity-check baseline is now **31 HIG violations** on the current tree: `15` `missing_min_touch_target`, `11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`. This branch stays config-only; cleanup belongs to issues `#95` / `#96`.
-- Remember why this is strict: Iris previously allowed an error-after-grace-period bucket and a literal `44` / `56` touch-target exception, but the user overruled both because iPhone SE/mini + AX5 makes fixed 44pt targets too cramped.
-
-
-## 2026-05-22 — Loop-27 review
-
-Post-merge review of PR #98 (HIG cleanup AppViews.swift + earlier
-ForecastPickerView.swift). swiftlint --strict on merged main: 0
-violations. Debug + tests + Release all passed pre-merge.
-
-**Goal 1 verdict: PASS.** PR #98 applies Iris's HIG playbook
-mechanically; no behavioural drift, no risk to the burn-time math,
-WeatherKit fetch path, Fitzpatrick storage rules, or L1/L2 disclaimer
-chain. Group R source-text guards extended to pin the new `minTap` /
-`warningIconSize` / `numeralColWidth` tokens.
-
-**AV-9 `.sheet → .fullScreenCover` for AboutView — confirmed.** The
-parent `DisclaimerCover` is `.interactiveDismissDisabled(true)`
-(AppViews.swift:1315), so stacking a swipe-dismissible `.sheet` on
-top would have produced ambiguous gesture semantics. `.fullScreenCover`
-+ inner `NavigationStack`'s explicit "Done" toolbar button is the
-correct HIG modal container for a NavigationStack-wrapped
-sustained-reading destination presented from an already-modal
-context. Right call.
-
-**AV-3 disable comment justified.** The `Button("Open Settings")`
-body spans 4 lines and pushes `.frame(minHeight: minTap)` past the
-200-char regex lookahead — same shape as the other 4 disables added
-in Loop-27. All carry inline reason comments in the correct order
-(reason first, then `swiftlint:disable:next`).
-
-- **`navigation_stack_in_sheet` → `.fullScreenCover`.** When a sheet
-  presents an `AboutView()` or similar destination wrapped in its own
-  `NavigationStack`, the modal-on-modal collapses gesture
-  affordances. Convert the `.sheet(isPresented:)` modifier to
-  `.fullScreenCover(isPresented:)`. The inner NavigationStack now owns
-  the navigation chrome cleanly. Pin with a source-text guard.
-
-- **SwiftLint `:next` ordering quirk.** `// swiftlint:disable:next
-  {rule}` disables the *immediately* following line — including if the
-  next line is a comment. Wrong order yields a
-  `superfluous_disable_command` violation. Correct shape: **reason
-  comments first, then the disable directive on the line directly
-  above the rule-violating statement**:
-
-  ```swift
-  // Multi-line Button body; .frame(minHeight: minTap) on Text
-  // label is outside SwiftLint's 200-char lookahead.
-  // swiftlint:disable:next missing_min_touch_target
-  Button(role: .destructive) { … } label: { … }
-  ```
-
-- **`missing_min_touch_target` regex 200-char lookahead.** The rule
-  regex `(?:\.onTapGesture\b|\bButton\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)`
-  only looks 200 chars ahead. Long Button bodies push the
-  `@ScaledMetric` `.frame(minHeight: minTap)` outside that window and
-  trigger false positives. Mitigate with documented per-line disable
-  (with reason); long-term replace the regex with a swift-syntax AST
-  rule.
-
-- **Line-number-fragile tests are tech debt.** `test_S5_adr0001*`
-  pins ADR-0001 citations against current source line numbers. Any
-  `@ScaledMetric` declaration drift inside a cited struct breaks the
-  test. Similarly `test_U2_settingsSheet*` has a fixed 7000-char scan
-  window from `struct SettingsSheet: View`. Both required workarounds
-  during cleanup (shrink reason comments to fit; refresh ADR
-  citations). Future refactor: swap integer-line citations for symbol
-  anchors; replace fixed scan windows with struct-boundary detection.
-
-- **Pre-existing literal `minHeight: 44` sites that pass SwiftLint.**
-  AppViews.swift:295/315/337 (locationChip/spfChip/skinTypeChip
-  Labels) and 2135 (PersistentFooter) carry `.frame(maxWidth:
-  .infinity, minHeight: 44)`. They escape the rule because (a) their
-  host wrapper is `Button { … }` / `Menu` / `NavigationLink` — none
-  of which match `\bButton\s*\(`, and (b) within the 200-char window
-  the lookahead also catches `.infinity` (an identifier!) on the
-  preceding `maxWidth:` parameter and incorrectly considers the rule
-  satisfied. Both are tech-debt artifacts of the regex rule, NOT a
-  signal that literal `44` is permitted. Source-text guards must be
-  scoped to Iris's playbook targets (the specific CTAs being
-  transformed), not the entire file, or false positives will fire on
-  pre-existing legitimate sites.
-## Learnings
-
-### 2026-05-22T02:30:00Z — SwiftLint HIG error gate harness
-- Pinned `SimplyDanny/SwiftLintPlugins` at `0.63.2` in `app/Package.swift`; kept Homebrew `swiftlint` in CI/build.sh because the plugin is build-tool-only and the canonical pipeline still needs an explicit CLI invocation.
-- Added repo-root `.swiftlint.yml` that promotes HIG custom rules to `error` and seeds the current audit with `hardcoded_frame_dimensions` + `literal_system_font_size` so the gate is already red on known layout debt.
-- `build.sh` now runs `swiftlint --strict --config .swiftlint.yml --reporter xcode` before `xcodebuild`, exposes `./build.sh lint` for emoji-reporter local feedback, warns/skips when `swiftlint` is not installed locally, and defaults DerivedData to `.build/derived-data` instead of a temp dir.
-- `.github/workflows/ci.yml` now installs SwiftLint with Homebrew and runs the strict lint step before `./build.sh`.
-- Baseline sanity check: **16 HIG violations** on the current tree (`11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`). Those fixes stay with issues `#95` / `#96`, not the harness branch.
-- Validation: `swift package resolve --package-path app` resolved the plugin at `0.63.2`; Debug + Release builds still succeed when SwiftLint is intentionally absent locally; `xcodebuild test` remains non-green because of the repo’s existing two Swift Testing known-issue records in `ForecastPickerLogicTests`.
-
-### 2026-05-22T03:32:09-07:00 — SwiftLint strict day-1 HIG tightening
-- User directive superseded Iris’s softer bucket: all HIG layout/touch/typography rules in this harness stay at `severity: error` from day 1. No grace period and no warning ramp.
-- `missing_min_touch_target` no longer treats literal `minHeight: 44` / `56` as green. The regex now only passes Button / `.onTapGesture` sites when a nearby `.frame(...minWidth|minHeight: someIdentifier)` uses a bare identifier; that is a pragmatic heuristic for `@ScaledMetric`, not proof.
-- Sanity-check baseline is now **31 HIG violations** on the current tree: `15` `missing_min_touch_target`, `11` `hardcoded_frame_dimensions`, `4` `literal_system_font_size`, `1` `navigation_stack_in_sheet`. This branch stays config-only; cleanup belongs to issues `#95` / `#96`.
-- Remember why this is strict: Iris previously allowed an error-after-grace-period bucket and a literal `44` / `56` touch-target exception, but the user overruled both because iPhone SE/mini + AX5 makes fixed 44pt targets too cramped.
-**Loop-28 follow-ups** captured in
-`.squad/decisions/inbox/kwame-loop-27-code-review.md`:
-1. Residual literal `minHeight: 44` sites at AppViews.swift:295/315/337
-   and 2135 still escape the regex rule via Button/Menu/NavigationLink
-   wrappers + `.infinity` lookahead false-pass; convert to
-   `@ScaledMetric minTap`.
-2. `ForecastPickerView` header strip `minHeight: 28` (non-tappable)
-   should fold into the @ScaledMetric token block for symmetry.
-3. `chevronSize` / `hourIconSize` chose `@ScaledMetric` over semantic
-   fonts intentionally (cell-geometry preservation); annotate the
-   playbook so the next pass doesn't "correct" it.
-4. **Schedule swift-syntax AST replacement for
-   `missing_min_touch_target`** to retire the growing population of
-   per-site `swiftlint:disable:next` directives.
-5. Line-number-fragile tests (`test_S5_adr0001*`,
-   `test_U2_settingsSheet*`) — swap integer-line citations for
-   symbol/struct-name anchors; repeat tech debt from Loop-26.
-
-
-## 2026-05-22: Loop-26 closure — PR #98 merged (a8b1ac8)
-
-SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 13 + AV 18). Issues #95/#96 closed. Post-merge audit PASS-WITH-NOTES (5 structural rule-coverage gaps deferred to Loop-28+). Privacy Policy hosting and physical-device sign-offs remain user-owned blockers.
-
-**Commits:** 66cc6c9 (TDD), a643523 (FPV), 174be71 (AV) → merged as a8b1ac8

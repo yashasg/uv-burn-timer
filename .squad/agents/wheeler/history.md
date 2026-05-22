@@ -17,3 +17,18 @@
 - All five WI-7 prior decisions hold unchanged
 
 **Polar-specific copy archived.** No further review needed for v1 implementation.
+Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-context internal variant — for full-corpus photobiology consensus reviews).
+
+## 2026-05-22 — Loop-27 review
+
+**Goal 4 (Expert approved) — skin-science slice: PASS.**
+
+- Loop-27 PR #98 (merged into main, commits 174be71 + a8b1ac8) was scoped to HIG cleanup only: @ScaledMetric touch-target tokens, semantic font on moon icon, `.sheet → .fullScreenCover` for AboutView, and a SwiftLint error-gate install. Diff touches `AppViews.swift`, `ForecastPickerView.swift`, `.swiftlint.yml`, CI, and `MainScreenCleanupContractTests.swift`.
+- `app/Sources/UVBurnTimerCore/BurnTimeCalculator.swift` and `app/Sources/UVBurnTimerCore/FitzpatrickSkinType.swift` were **not** modified (last touched Loop-13 / Loop-11 respectively). Verified via `git log` on both paths — no Loop-27 commits.
+- All prior Wheeler sign-offs hold unchanged:
+  - Burn-time formula (Loop-11 photobiology citation hygiene, Group EE) — intact.
+  - Fitzpatrick MED defaults + edited-variant descriptions (D-2026-05-19-009/012) — intact.
+  - Photosensitization reach-back paths (L1 disclaimer + Asha re-attestation model, @State-only Fitzpatrick canon) — intact; Loop-27 did not alter onboarding or settings logic, only touch-target sizing inside `SkinTypePickerRow` / `SkinTypeEditView` / `DisclaimerCover`.
+  - WI-7 polar-region ratifications (2026-05-21) — intact.
+- **New skin-science gaps surfaced for Loop-28:** none. No inbox memo written.
+- Status: standing by; nothing required from Wheeler this loop beyond this verification pass.

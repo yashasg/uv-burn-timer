@@ -5,6 +5,10 @@
     "suchi": "claude-opus-4.7-xhigh",
     "plunder": "claude-opus-4.7-xhigh",
     "argos": "claude-opus-4.7-xhigh",
-    "iris": "claude-sonnet-4.6"
+    "gaia": "claude-opus-4.7-xhigh",
+    "gi": "claude-opus-4.7-xhigh",
+    "kwame": "claude-opus-4.7-xhigh",
+    "ma-ti": "claude-opus-4.7-xhigh",
+    "iris": "claude-opus-4.7-xhigh"
   }
 }

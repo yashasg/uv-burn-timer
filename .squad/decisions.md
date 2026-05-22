@@ -2,49 +2,6 @@
 
 ## 2026-05-21
 
-### 2026-05-21T07:45:00Z: User directive — UI tests are too expensive
-**By:** Yashas (via Copilot)
-**What:** "we have way too many ui tests, this app is a simulator resource hog." Going forward, favor unit/contract tests (Core test target) over UI tests (UI test target). When existing UI tests fail because of intentional UI removals, prefer DELETE over fix-in-place. Maintain only a minimal UI smoke-test set; coverage belongs at the model/logic/contract layer.
-**Why:** User request — captured for team memory. Cost/value trade-off: UI test runs are 5-10min each in simulator and have caused 49+min iteration cycles; contract-level tests are seconds and survive UI refactors.
-
-### 2026-05-21T07:00:00Z: Iris — Skin-type persistence spec (Pattern B, chip + policyVersion)
-**Author:** Iris
-**Type:** Design spec — ready for implementation
-**Full spec:** `.squad/designs/iris-skin-type-persistence-spec.md`
-
-**What was decided:** Yashas ratified Pattern B (UserDefaults persistence + ambient tap-to-change chip). This spec translates that into a Kwame-executable implementation plan.
-
-**Key outcomes:**
-- New `skinTypeChip` in `mainInputsRow` (§2) — ambient, tappable, 44pt min target, AX5-safe
-- `DisclaimerCover` now triggers via `policyVersion` integer, not unconditionally (§4)
-- Existing users silently migrated to v1 on upgrade — no re-fire
-- G27/G28 are **unchanged** — they guard ForecastSnapshot JSON, not UserDefaults
-- 11-item Kwame checklist (K-1 through K-11) with file:line references (§7)
-- 4 new test stubs for Ma-Ti (G-D1 through G-D4) (§6)
-
-**Blockers before Kwame ships:**
-1. **Plunder P-3:** L1 cover must gain a storage-disclosure sentence before K-3/K-4 can ship
-2. **Wheeler W-1:** Chip copy confirm (low risk, quick)
-3. **E13 counsel gate** (Plunder's lane — EU/UK consent basis confirmation)
-
-### 2026-05-21T06:35:00Z: Plunder — Skin-type persistence & re-attestation cadence (Pattern B recommended)
-**Author:** Plunder (Legal & Compliance)
-**Requested by:** Yashas
-**Memo:** `.squad/designs/plunder-skin-type-persistence-floor.md`
-
-**TL;DR:**
-- The "skin type stays `@State`-only / L1 fires every cold launch" posture is **self-imposed defensive overkill, not a regulatory floor.** No regulation requires it.
-- `UserDefaults`-local persistence: ✅ permissible under FDA, EU MDR, UK MHRA, Apple §5.1.1, and GDPR Art.9 (with explicit consent — the act of selection qualifies)
-- Minimum defensible re-attestation cadence: **first install + material policy/methodology change + user request.** Per-cold-launch is permitted but not required.
-- **Recommended pattern: Pattern B** — `UserDefaults` persistence + always-visible result-surface chip ("Fitzpatrick III · tap to change") with one-tap edit. Solves the UX friction Yashas named while strengthening the photosensitizer-cohort safety surface.
-
-**Verdict on the four patterns:**
-| Pattern | Verdict |
-# Squad Decisions
-
-## Decisions Ledger
-
-
 ### Guardrail 1: Clarify Fitzpatrick persistence model
 
 **Current state:** The spec says "**@State only — no Fitz persisted**" (user-flow spec LANE 1, Screen 1 note). This implies:
@@ -642,149 +599,6 @@ Same `fetchedAt` and `now` already used for `isEstimateStale`. Exactly the same 
 - **C1–C5, C8–C10 unchanged.**
 
 **Open attorney items (confirm-before-submit, not blockers):** E13 (Art.9 explicit-consent reading) · E14 (Art.35 DPIA exclusion) · E15 (FTC HBNR amendment scope) · E16 (only if iCloud) · E17 (Apple §1.4 review on dropping per-launch L1) · E10–E12 + E6/E9 carried forward unchanged.
-
-### 2026-05-21T06:35:00Z: Suchi — Skin-type re-prompt friction research (Pattern B ranked #1)
-**Author:** Suchi (User Researcher)
-**Requested by:** Yashas
-**Full memo:** `.squad/designs/suchi-skin-type-friction-research.md`
-
-**Answer (user-research POV only):** Persist. Specifically: **Pattern B — Persist + tap-confirm chip** ("Fitzpatrick III ✓ — tap to change") is the strongest user-side recommendation.
-
-**Ranking (1=best, 4=worst):**
-1. **Pattern B** — persist + tap-confirm chip on cold launch. Matches user mental model (identity-as-constant, §2), matches market convention (every major competitor persists, §3), zero friction for 6 of 7 personas, *actively safer* for Tomás (reduces auto-pilot under-pick risk).
-2. **Pattern A** — persist + 30-day re-confirm modal. Acceptable; 30-day cadence is arbitrary and doesn't map to a real user behavior.
-3. **Pattern C** — don't persist, in-memory default-to-last. Marginal; addresses backgrounding but not dominant JTBD.
-4. **Status quo** — full picker every cold launch. Below user-acceptability floor. No major competitor does this.
-
-**Load-bearing findings:**
-- User mental model: "I'm a Fitz III" (identity-as-constant), not state-as-variable.
-- Every major competitor persists indefinitely after one-time setup.
-- Zero user-voiced complaints in major UV-app reddit cohorts of re-prompting (because no competitor does it).
-- L1 re-attestation ≠ Fitzpatrick re-prompt; decoupling preserves every safety dividend.
-- Tomás's under-pick risk is *worse* under re-prompting, not better.
-- No persona in inventory benefits from per-launch Fitzpatrick re-attestation.
-
-**Critical decoupling note:** Fitzpatrick picker (captures stable trait) vs. Photosensitization disclosure (captures session-volatile state). These are two different controls with different scientific loads. Decoupling them is scientifically clean.
-
-### 2026-05-21T06:35:00Z: Wheeler — Skin-type re-attestation: science verdict (Pattern B defensible)
-**Owner:** Wheeler (Skin Science Expert)
-**Full memo:** `.squad/designs/wheeler-skin-type-reattestation-science.md`
-
-**TL;DR (science lane only):** Dermatologically, Fitzpatrick should be captured once at first use and never re-prompted on a calendar — only on user-initiated edit. The trait is stable in adults at session/month/year scale; melanocyte attrition is decade-scale (8–20%/decade per Gilchrest & Yaar 1992). All real photoresponsiveness-shifting events (medications, procedures, conditions, pregnancy) are *not* captured by re-asking the Fitzpatrick picker — they live on the photosensitization-disclosure surface. Re-asking the picker more often only injects self-report instrument noise.
-
-**Pattern verdicts (science only):**
-| Pattern | Verdict |
-|---|---|
-| A — persist + 30-day re-prompt | ❌ scientifically unjustified — no biological basis for 30-day cadence |
-| **B — persist + per-launch tap-confirm chip** | ✅ scientifically defensible — closest to clinical-workflow precedent |
-| C — don't persist; default to last value | ⚠️ neutral — similar profile to status quo with slight noise reduction |
-| Status quo — per-launch full picker | ❌ over-cautious; net-negative (injects noise, catches no real safety events) |
-
-**Critical decoupling note for synthesis:** The current implementation entangles **Fitzpatrick re-attestation** with **photosensitization-disclosure re-presentation** via the shared `@State`-only model. From a dermatological standpoint these are two different controls with different scientific loads. Decoupling them is scientifically clean (though regulatorily, Plunder owns that call).
-
-### 2026-05-21T07:50:00Z: Kwame — Pattern B implementation complete (LAUNCH-PLAN reversal, policyVersion, chips)
-**Author:** Kwame (iOS Developer)
-**Branch:** `feature/main-screen-cleanup`
-**Status:** IMPLEMENTED
-**Commits:** af2205a, c23ed4e, 93e7c3b, c66c93d, 8f31a25
-
-**LAUNCH-PLAN reversal — IMPLEMENTED:**
-The `@State`-only rule for skin type + SPF (LAUNCH-PLAN §9, line 293) has been reversed per Yashas ratification 2026-05-21. `LAUNCH-PLAN.md` updated with verbatim Iris §5 text. `UserPreferenceStorage.persist(skinType:)` and `persist(spf:)` now write to `UserDefaults`.
-
-**policyVersion-gated L1 trigger — IMPLEMENTED:**
-`UserPreferenceStorage.disclaimerPolicyVersionKey` and `currentDisclaimerPolicyVersion = 1` added. `shouldShowDisclaimerCover(defaults:currentVersion:) -> Bool` extracted as a testable free function. `UVBurnTimerApp.init` now calls this function instead of hardcoding `true`. `onAcknowledge` closure writes the current version synchronously.
-Migration: existing users (presence of `selectedSkinTypeKey` or `locationRationaleAcknowledgedKey`) silently receive `policyVersion = 1` on first upgrade — no surprise L1 re-fire.
-
-**Free function extracted for Ma-Ti contract tests — DONE:**
-`UserPreferenceStorage.shouldShowDisclaimerCover(defaults:currentVersion:)` is on branch. Ma-Ti can pull and write G-D1..G-D4 tests against this function without touching `UVBurnTimerApp`.
-
-**Fitzpatrick chip + SPF chip — IMPLEMENTED:**
-`skinTypeChip` added to `mainInputsRow` as first chip (SkinType → Location → SPF). Full VoiceOver spec, 44pt min target, `.bordered` style per Iris §2.5. Tap-to-change via `SkinTypeEditView` sheet (type set) or onboarding (nil). No parallel SPF chip needed — `spfChip` already exists (Iris §2.4 confirmed).
-
-**Open items NOT blocking this PR:**
-- P-1 (Plunder): confirm `"Type III"` / `"Set skin type"` copy is legally acceptable
-- P-2 (Plunder): confirm `"Clear stored skin type"` button wording
-- P-3 (Plunder/Yashas): E13 gate — add storage-disclosure sentence to `ProductCopy.disclaimerBody`
-- W-1 (Wheeler): confirm `"Type III"` chip display doesn't induce anchoring noise
-
-### 2026-05-21T07:00:00Z: Kwame-8 — Drop LocationRationaleCard; OS prompt is sole permission UI
-**Author:** Kwame (iOS Developer)
-**Branch:** `feature/main-screen-cleanup`, commit `22e98a5`
-
-**Decision:** Remove `LocationRationaleCard` and all its plumbing. The OS system prompt is the **sole** permission UI for location access in UV Burn Timer.
-
-**Rationale:**
-- Approximate location is low-sensitivity; OS dialog already uses "approximate" and use case (UV index) is immediately understandable.
-- Extra taps create friction without benefit.
-- Privacy substance is covered elsewhere (`locationPrivacyLine`, `aboutPrivacy` in `AboutView`).
-- Reduced-accuracy = self-evident consent.
-
-**What changed:** Removed `LocationRationaleCard` rendering and acknowledgement flow. See `kwame/history.md` for file:line touchpoints.
-
-**What was NOT changed:**
-- `LocationPromptGate` struct is kept (unit test still exercises it).
-- `UserPreferenceStorage.locationRationaleAcknowledgedKey` is kept for migration cleanup.
-- `locationPrivacyLine` constant is kept (no render site; retained per instruction).
-
-**Reversibility:** If a future version requests full precise location or a non-obvious background mode, a custom rationale card may become appropriate again.
-
-### 2026-05-21T07:00:00Z: Ma-Ti-3 — Pre-existing test failure fix (6 UI tests, 4 dispositions)
-**Author:** Ma-Ti (Test Engineer)
-**Branch:** feature/main-screen-cleanup
-**Commit:** fa13021
-
-**Context:** Kwame-8 reported 6 pre-existing failures in `UVBurnTimerUITests` when removing `LocationRationaleCard`. Investigation confirmed all 6 were introduced silently during `9402465` (K-1/K-6/K-7) and missed because previous handoffs only verified the unit test target, not the UI test target.
-
-**Root causes:**
-- K-1 removed `PhotosensitizationBanner` from the main scroll view.
-- K-6 removed the `reapplicationFooter` `Text` from `PersistentFooter`.
-- K-7 removed the `mainVerdictCaveatLinkLabel` `NavigationLink` from `HeroTimerCard`.
-
-**Disposition summary:**
-- **Disposition B (Delete):** `testPhotosensitizationBannerRendersAsFullWidthBannerAboveHero` — permanently gone layout.
-- **Disposition A (Update):** 5 tests updated for new tap targets / removed assertions:
-  - `testScenario4PhotosensitizationReachBackOpensAboutApplicability` — new target: EstimateInfoButton
-  - `acknowledgeDisclaimerAndChooseTypeIII` helper — new settle signal
-  - `testScenario1ColdLaunchShowsRequiredDisclaimerThenScenario2RequiresSkinTypeSelection` — removed "Reapply" assertion
-  - `testScenario8StaleEstimateShowsWarningRecalculateAndAccessibleTierSeverity` — same removal
-  - `testScenario5CappedEstimateRendersLongCaveatAndFooter` — same removal
-  - `testAshaHeroVerdictCaveatLinkRendersAndDeepLinksToApplicabilityAnchor` — rewritten for EstimateInfoButton
-
-**No Disposition D (real bugs) found:** All 6 failures were caused by intentional K-1/K-6/K-7 removals.
-
-**Post-fix state:**
-- `UVBurnTimerUITests`: **38 tests, 0 failures** (was 39 tests, 6 failures)
-- `UVBurnTimerCoreTests`: **122 tests, 0 failures** (5 withKnownIssue — unchanged)
-
-**Discipline note:** These failures were missed across two handoffs because both agents reported counts from the unit target only. Correct verification procedure going forward: verify BOTH `UVBurnTimerCoreTests` + `UVBurnTimerUITests`.
-
-### 2026-05-21T07:50:00Z: Ma-Ti-4 — UI Test Axe: 38 → 5 smoke tests (Yashas directive)
-**Author:** Ma-Ti (Test Engineer)
-**Branch:** feature/main-screen-cleanup
-**Directive from:** Yashas
-**Commits:** ba37d2f + 4e474a2
-
-**The 5 Tests Kept:**
-1. `testAppLaunchesWithoutCrash` — Cold start; main screen renders within 10s
-2. `testSkinTypePickerEndToEnd` — Disclaimer → skin type picker → select Type III → main screen
-3. `testLocationButtonFiresLocationRequest` — Tap "Use my location" → location flow starts
-4. `testForecastPickerCardIsRendered` — Scroll to "UV Forecast" header on main screen (structural)
-5. `testSettingsSheetOpens` — Tap gear → "Settings" nav bar appears
-
-**Categories Deleted (33 tests):**
-- **Copy-string assertion tests (6):** covered by ProductCopy contract tests
-- **Attribution visibility tests (7):** covered by ProductCopy constants
-- **Per-surface presence tests (4):** covered by unit/contract tests
-- **Edge-case UI state tests (8):** covered by unit tests
-- **Scenario tests that duplicate contract coverage (8):** complex scenarios replaced by targeted smoke tests
-
-**Result:**
-- **Before:** 38 UI tests, ~1188 lines, ~5–8 min simulator time
-- **After:** 5 UI tests, 177 lines, ~60 s simulator time
-- **Unit suite:** 122 tests unchanged, 0 new failures
----
-
-## Changes implemented
 
 ### 1. Fitzpatrick selector: source-backed question + shared component
 
@@ -4079,243 +3893,6 @@ Dynamic data shape + reveal gesture do not touch any of these science lines. Con
 
 ## WI #7: 10-Day UV Forecast Feature — User Directives (2026-05-21)
 
-### 2026-05-21T01:06:16Z: User directive — burn-time picker horizon
-
-**By:** yashasg (via Copilot)
-
-**What:** The burn-time picker (Iris's "Plan for another time" sheet from work item #7) horizon is **7 days rolling, today → today + 7 days** ("Tuesday to Tuesday, Wednesday to Wednesday, etc."). This resolves the open delta between Iris's spec (D+10 = WeatherKit data-availability cap) and Wheeler's recommendation (D+7 = forecast-skill cap). Wheeler's stricter cap wins.
-
-**Why:** User decision — answers Call 1 from the v2 forecast pushback synthesis. Closes the picker-horizon question. Aligns with Wheeler's photobiology argument (Joslyn & Savelli 2010 + WHO/WMO operational publishing horizon; ±1 UVI input error past D+7 makes the burn-time output statistically meaningless).
-
-**Impact:**
-- Iris's picker spec needs its `DatePicker` range updated: `in: Date.now ... Date.now + 7 days`.
-- The 10-day forecast card itself is unchanged — it still shows all 10 days. The picker simply cannot anchor to days 8–10.
-- Days 8–10 on the forecast card show WHO category band only (per Wheeler's condition).
-- Kwame should treat the picker upper bound as a hard structural cap, not a "soft suggestion past 7 days."
-
----
-
-### 2026-05-21T01:06:30Z: User directive — days 6–10 scalar on forecast card
-
-**By:** yashasg (via Copilot)
-
-**What:** On the 10-day forecast card, **days 1–5 show the numeric peak UVI plus the WHO `TierBadge`**; **days 6–10 show the `TierBadge` only (no numeric UVI integer)**. This resolves Call 2 from the v2 forecast pushback synthesis.
-
-**Impact / consolidated spec (work item #7 now fully locked):**
-
-Feature: 10-day UV Index forecast via "View UV Forecast" chip on main screen, opening a `.sheet`. The sheet contains:
-
-1. **Hourly "Today" card** — `ScrollView(.horizontal)` of hourly cells; auto-adapts to `LazyVStack` at `dynamicTypeSize >= .accessibility3`.
-2. **10-day card** — `LazyVStack` of daily rows. Days 1–5: numeric peak UVI + `TierBadge`. Days 6–10: `TierBadge` only.
-3. **Card-level science footnote** — *"UV accuracy beyond ~5 days decreases as cloud cover becomes harder to predict."*
-4. **L3 disclosure chevron** — *"Is this estimate for me?"* at foot of card.
-
-Owners: Kwame (SwiftUI, WeatherKit), Iris (design review), Ma-Ti (tests), Wheeler (health review), Plunder (copy gate), Apple Weather attribution.
-
----
-
-### 2026-05-21T01:31:09Z: User directives — forecast cache staleness & coord eviction
-
-**By:** yashasg (via Copilot)
-
-#### A. Staleness signal — use WeatherKit's own expiration metadata
-
-**What:** Replace any hardcoded N-hour staleness threshold with Apple's expiration timestamp on the `Weather` response. Re-fetch when `Date.now() > snapshot.expirationDate`.
-
-**Why:** Apple is the source of truth for forecast staleness. Using `Weather.metadata.expirationDate` is the same signal Apple's own Weather app trusts.
-
-**Supersedes:**
-- Kwame's "6h staleness threshold" (forecast-storage-mechanism.md §4)
-- Gi's "1h stale on foreground" (forecast-data-lifecycle.md §3)
-
-#### B. Coord eviction — 50 km validity radius
-
-**What:** Discard the cached snapshot and re-fetch only when the user's current rounded coordinate is more than ~50 km from the snapshot's stored coordinate.
-
-**Why:** Apple's approximate-location returns coordinates within ~1–20 km of true position. 50 km envelope never invalidates cache for normal movement. UVI varies negligibly over 50 km.
-
-**Distance check:**
-- Use `CLLocation(latitude: snapshot.latitude, longitude: snapshot.longitude).distance(from: currentCLLocation) > 50_000` (meters)
-
-**Supersedes:**
-- Kwame's "0.1° (~10 km) coord delta" (forecast-storage-mechanism.md §6)
-
----
-
-### 2026-05-21T01:34:16Z: User directive — dynamic data shape + days 8-10 progressive disclosure
-
-**By:** yashasg (via Copilot)
-
-#### A. Picker hard cap D+7 confirmed
-
-Default visible range on the 10-day forecast surface is days 1–7. Days 8–10 are revealed via progressive-disclosure interaction.
-
-#### B. Progressive disclosure — days 8-10 revealed via right-arrow gesture
-
-**What:** Days 1–7 visible by default. Days 8–10 revealed when user presses right-arrow button.
-
-**Why:** Reduces visual emphasis on lowest-skill days without hiding them. Appropriate friction for band-only/no-integer rendering already locked for days 6–10.
-
-#### C. Dynamic UI principle — never hardcode hour or day counts
-
-**What:** No layer of the codebase shall hardcode `168`, `240`, or any other fixed hour count. Storage persists whatever WeatherKit returned; UI renders dynamically over actual array length.
-
-**Why:** *"there are places in the world where the sun doesnt set and places in the world where the sun doesnt rise, our UI should be dynamic"* — polar regions break the assumption that a forecast day = 24 hours.
-
----
-
-### 2026-05-21T01:36:00Z: User clarification — data shape always 24 rows per day; UI translates
-
-**By:** yashasg (via Copilot)
-
-**What:**
-- **Storage layer:** Always store **24 rows per day**. Total stored hours = `daysReturnedByWeatherKit × 24` (typically 240 if WeatherKit returns 10 days). Assertion that `hours.count == days.count × 24` is acceptable.
-- **UI layer:** Translates the 24-rows-per-day data into appropriate display.
-
-**Why:** Keeps the data layer maximally regular and concentrates all dynamism in the rendering layer.
-
----
-
-### 2026-05-21T01:52:54Z: User directive — trust WeatherKit signals directly for polar detection; no fallback heuristics
-
-**By:** yashasg (via Copilot)
-
-**What:**
-- The polar-night detection trigger uses **only** signals that WeatherKit returns directly.
-- **No reverse-engineered fallback heuristics** — the "18+ consecutive zero hours" fallback in Iris's spec §3.3 is dropped.
-- If WeatherKit gives us ambiguous data, we render whatever we got rather than substituting our own inference.
-
-**Why:** Reduces surface area for bugs. Apple has more sources than we can replicate. Trust the vendor signal.
-
-**Supersedes:**
-- Iris v3 spec §3.3 fallback: "18+ consecutive hours with UVI = 0.0" — DROPPED.
-
----
-
-### 2026-05-21T01:58:19Z: User directive — treat polar night as nighttime; no polar-specific UI or copy
-
-**By:** yashasg (via Copilot)
-
-**What:**
-- **Polar night = nighttime.** No special case. No special copy. No special detection logic.
-- UVI = 0 hours render with whatever the burn-timer/UI does for nighttime today.
-- A 24-hour stretch of UVI = 0 is just a day where the burn timer shows "no UV risk" for every hour.
-
-**Why:**
-- Apple treats it this way at the data layer (UVI = 0 in polar night, same as midnight on a regular day)
-- Adding educational copy is unnecessary visual noise
-- Eliminates an entire detection-and-render code path
-- Consistent with prior directives: trust the data, don't reinvent semantics, don't add noise
-
-**Implications — what gets dropped:**
-- **Iris v3 spec §3.3 (Polar Adaptation):** ENTIRELY DROPPED. No replacement text needed.
-- **Wheeler's polar-night copy recommendations** (memo §4.2 single-day and §4.3 multi-day variants): archived as "not used in v1."
-
-**Implications — what does NOT change:**
-- **Storage layer:** unchanged. Still exactly 24 rows per day.
-- **`UVResult` enum:** unchanged. The `.nighttime` case handles UVI = 0 hours.
-- **Burn-timer logic:** unchanged. UVI = 0 → no burn risk.
-- **Picker horizon:** unchanged (D+7 cap, 8-10 reveal).
-
-**Supersedes:**
-- Iris v3 spec §3.3 — DROPPED ENTIRELY
-- Wheeler memo §4.2 (single-day polar copy) — ARCHIVED, not used in v1
-- Wheeler memo §4.3 (multi-day polar copy) — ARCHIVED, not used in v1
-- Prior directive 2026-05-21T01:52:54Z — SUPERSEDED IN SCOPE
-
----
-
-## WI #7 Design Spec Artifacts — Reference Memos (moved to .squad/designs/wi-7/)
-
-### 2026-05-21T01:34:16Z: Iris — Forecast Card Redesign v3
-
-**Author:** Iris (UI/UX Designer)  
-**Status:** Design spec — ready for Kwame implementation + Wheeler ratification  
-**Source file:** `.squad/designs/wi-7/iris-forecast-card-redesign-v3.md`
-
-**Key locked items:**
-- Loading-state UX: skeleton rows (10 rows, days 1–5 have UVI placeholders, days 6–10 omit numeric UVI), shimmer with `accessibilityReduceMotion` fallback
-- Skeleton hourly strip: 6 visible cells (60pt × 88pt each)
-- VoiceOver per-row announcements
-- Dynamic Type >= accessibility3 adapts hourly scroll to LazyVStack
-- Days 8–10 behind progressive-disclosure right-arrow button
-- Polar-night UI: collapsed single-row badge — **now pure nighttime rendering per polar-treat-as-nighttime directive**
-- Countdown timer UX on burn-time picker result
-
-**Note:** Iris's v3 spec §3.3 polar-adaptation section is superseded by user directive 2026-05-21T01:58:19Z.
-
----
-
-### 2026-05-20T18:42:00Z: Wheeler — Polar-Region UV Science Ratification
-
-**Author:** Wheeler (Skin Science / UV Photobiology)  
-**Status:** Approved with modifications  
-**Source file:** `.squad/designs/wi-7/wheeler-polar-region-uv-science.md`
-
-**Key locked items:**
-- Burn-time formula at UVI=0 (polar night): uses existing `.infinity` / `.none` tier semantic
-- Polar-day sustained 24h UVI: single-session "minutes to first MED" is correct; cumulative-dose concern deferred to v1.1
-- WeatherKit UVI quality: trust vendor, no gating on latitude
-- All five WI-7 v1/v2 ratifications hold unchanged
-
-**Note:** Wheeler's §4.2 (single-day polar copy) and §4.3 (multi-day polar copy) are archived — not used in v1.
-
----
-
-### 2026-05-20T18:06:16Z: Kwame — iOS Forecast Storage Mechanism
-
-**Author:** Kwame (iOS Developer)  
-**Status:** Proposed; coordinated with Gi lifecycle policy  
-**Source file:** `.squad/designs/wi-7/kwame-forecast-storage-mechanism.md`
-
-**Key locked items:**
-- File location: `Caches/forecast-snapshot.json`
-- Schema: `schemaVersion`, `latitude` (2dp), `longitude` (2dp), `fetchedAt`, `expirationDate`, `days: [DayForecast]` (10 items), `hours: [HourForecast]` (240 items)
-- Actor: `ForecastStore: ForecastStoring` with async load/save/clear
-- Offline behavior: show stale + disclosure banner
-- Schema mismatch: throw and re-fetch, no migration
-
----
-
-### 2026-05-21T01:52:54Z: Kwame — WeatherKit Polar API Research
-
-**Author:** Kwame (iOS Developer)  
-**Status:** Research complete; type-name correction locked  
-**Source file:** `.squad/designs/wi-7/kwame-weatherkit-polar-api-research.md`
-
-**Key findings:**
-- WeatherKit type is `SunEvents`, not `Sun`. `DayWeather.sun: SunEvents` (non-optional struct)
-- Canonical polar-night trigger: `DayWeather.sun.solarNoon == nil`
-- `HourWeather.uvIndex` returns `0.0` for polar-night hours (not nil)
-
-**Note:** Scope narrowed per user directive 2026-05-21T01:58:19Z (polar-as-nighttime). The canonical signal is locked but will not be used in v1 UI detection.
-
----
-
-### 2026-05-20T18:06:16Z: Gi — Forecast Data Lifecycle
-
-**Author:** Gi (Data Specialist)  
-**Status:** Proposed; coordinated with Kwame storage mechanism  
-**Source file:** `.squad/designs/wi-7/gi-forecast-data-lifecycle.md`
-
-**Key locked items:**
-- Data shape: `ForecastSnapshot` wrapper with `days` (10 items) and `hours` (240 items = 10 days × 24 rows/day)
-- DayForecast fields: `date`, `peakUVI`, `peakUVIHour`, `whoCategory`, `sunrise`, `sunset`
-- HourForecast fields: `timestamp`, `uvIndex`, `condition`
-- Staleness: `Date.now() >= snapshot.expirationDate`
-- Coord eviction: > 50 km from stored coordinate
-- Loading states: `.idle → .loading → .loaded → .failed` per Iris §1
-- Offline: show stale + disclosure banner
-- Schema bump: throw and re-fetch, no migration
-- Lookup API: `UVResult` enum (.value | .nighttime | .unavailable(reason))
-
----
-
-**End of WI #7 consolidation — design memos moved to .squad/designs/wi-7/**
-
-
----
-
 ### WI-7 Implementation: ForecastStore Actor + ForecastSnapshot Schema
 
 **Author:** Kwame (iOS Developer)
@@ -4565,3 +4142,190 @@ In practice this is not a production bug (the snapshot invariant guarantees all 
 
 Formalized as `.squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md`. Captures the inlining-vs-wrapper SwiftUI identity-boundary rule that emerged from the 8th-loop hero-card-wrapper-restore cycle. Pinned in source by R1/R2 guards.
 
+---
+
+## 2026-05-22
+
+### Apple-idiom SwiftUI layout policy
+
+**Author:** Iris  
+**Date:** 2026-05-22
+
+For live SwiftUI content, raw numeric `.padding(N)` and raw `.frame(width:/height: N)` are no longer the default layout move. Prefer system/default padding, `frame(maxWidth: .infinity)`, `Spacer`, accessibility reflow branches, and `@ScaledMetric` when a component truly needs a token-sized dimension.
+
+**Allowed exception:** Fixed minimum sizes that directly serve Apple HIG touch-target rules stay allowed (`minHeight: 44` / `56` rows, large controls, decorative dots). The problem is hardcoded live-content layout, not touch-target floors.
+
+**Audit findings:**
+- ✅ Good structure: no `GeometryReader`, bottom actions inside `.safeAreaInset`, AX reflow via `dynamicTypeSize`, `@ScaledMetric` for hero/gauge sizing
+- ⚠️ Gaps concentrated in ForecastPickerView.swift (11 hardcoded frames, 35 numeric paddings) and AppViews.swift (disclaimer padding)
+
+**Cleanup anchors for next UI pass:**
+- `ForecastPickerView.swift:583` — hourly cell `60×88`
+- `ForecastPickerView.swift:515` — hourly AX row time column `64`
+- `ForecastPickerView.swift:371` — band chip `56×22`
+- `ForecastPickerView.swift:357` — numeric badge `40×22`
+- `AppViews.swift:1288` — disclaimer content `.padding(32)`
+
+---
+
+### Iris — SwiftLint HIG Rule Catalog
+
+**Owner:** Iris (UI/UX Designer — Apple HIG & Accessibility)  
+**Requested by:** yashasg  
+**Date:** 2026-05-22T02:30:00Z  
+**Status:** ready for Kwame's SwiftLint harness
+
+**Scope note:** These regexes are pragmatic smell-detectors for SwiftLint `custom_rules`, not AST proofs. Scope them to `app/Sources/**/*.swift`, exclude `app/Tests/**`, previews, and generated code, and use `// swiftlint:disable:next {rule_id}` only for real, documented exceptions.
+
+#### 20-Rule Catalog
+
+**Always error (10 rules):**
+- `color_literal_rgb` — Ban raw RGB/white color constructors; use semantic colors for dark-mode adaptation
+- `no_hex_color_initializer` — Ban hex-based custom color initializers (`Color(hex:)`)
+- `navigation_stack_in_sheet` — Ban `NavigationStack` inside `.sheet { ... }`
+- `no_navigation_bar_title_deprecated` — Ban deprecated `.navigationBarTitle(...)`
+- `no_uppercased_in_code` — Ban `.uppercased()` on user-facing strings (locale-unsafe)
+- `no_lowercased_in_code` — Ban `.lowercased()` on user-facing strings
+- `unsafe_user_string_assembly` — Ban `+` concatenation in `Text()/Label()/Button()` constructors
+- `no_raw_feedback_generator` — Ban direct `UINotificationFeedbackGenerator` etc.; use `.sensoryFeedback(...)`
+- `no_forced_color_scheme` — Ban `.preferredColorScheme(.light)` or `.(.dark)` locks
+- `explicit_ignores_safe_area_edges` — Ban no-arg `.ignoresSafeArea()` calls
+
+**Error after grace period (5 rules, warn now, flip in 2 weeks):**
+- `unsafe_fixed_typography` — Ban `.font(.system(size: ...))`, fixed custom fonts, weight-only styling
+- `no_fixed_text_frame_height` — Ban `Text`/`Label` locked to literal `.frame(height: ...)`
+- `no_fixed_frame_both_axes` — Ban `.frame(width: N, height: N)` with raw literals
+- `no_numeric_padding` — Ban positive numeric padding literals (`.padding(12)`, `.padding(.horizontal, 16)`)
+- `missing_min_touch_target` — Ban `Button`/`.onTapGesture` with no 44pt hit-target clue
+
+**Always warn (5 rules):**
+- `geometry_reader_requires_justification` — Unqualified `GeometryReader` usage
+- `unsafe_motion_without_reduce_motion_guard` — `withAnimation(.default)` / `repeatForever` without Reduce Motion guard
+- `image_requires_accessibility_semantics` — `Image(...)` must have `.accessibilityLabel(...)` or `.accessibilityHidden(...)`
+- `no_plain_list_style_for_settings` — Ban `.listStyle(.plain)` on settings/about/preferences surfaces
+- `scrollview_requires_keyboard_dismiss` — `ScrollView` with text input/search must have `.scrollDismissesKeyboard(...)`
+
+Full specification with regex patterns, rationale, false-positive notes, and examples: see `.squad/skills/swiftlint-hig-ruleset/SKILL.md`.
+
+---
+
+### Gaia decision — HIG issue bundling
+
+**Date:** 2026-05-22T02:26:49.194-07:00  
+**Author:** Gaia (Lead / Architect)
+
+**Decision:** When a SwiftUI HIG audit clusters into a small number of concrete view files, file the implementation work **per file**, not per violation category. Bootstrap missing squad labels if the repo workflows expect them, but apply only the implementation owner's `squad:{member}` label on the issue. Keep reviewer requirements in the body as an explicit gate.
+
+**Context:** Iris's 2026-05-22 `Apple-idiom SwiftUI layout policy` audit surfaced cleanup concentrated in two files: `ForecastPickerView.swift` and `AppViews.swift`. The repository had no `squad:*` labels even though the squad workflows reference them. The repo also currently exposes only `yashasg` as an assignable GitHub user, so squad personas cannot be represented faithfully via GitHub assignees.
+
+**Trade-offs:**
+- **Per-file bundling:** Keeps each cleanup local to a SwiftUI surface and reduces merge/conflict risk. Cost: one issue can mix frames, padding, and symbol sizing concerns.
+- **Per-category bundling:** Cleaner metrics but forces cross-file PRs and higher coordination overhead.
+- **Dual owner + reviewer labels:** Would encode more metadata but would misroute work (each `squad:*` label is treated as ownership).
+
+**Consequences:**
+- Use `enhancement` plus `squad:{owner}` for this class of cleanup issue.
+- State the reviewer explicitly in the issue body with a gate: **Iris must HIG-pass before merge.**
+- Reserve top-5-only bundles for emergency fast-ship cases.
+
+**Applied example:**
+- Filed `#95` — `[HIG] Apple-idiom layout cleanup in ForecastPickerView.swift`
+- Filed `#96` — `[HIG] Apple-idiom layout cleanup in AppViews.swift`
+
+---
+
+### User directive — Opus 4.7 model rename
+
+**By:** yashasg (via Copilot)  
+**Date:** 2026-05-22T02:58:03-07:00
+
+**What:** All squad members previously configured with the model identifier `claude-opus-4.7-xhigh` now use `claude-opus-4.7`. This supersedes the prior policy that pinned Wheeler, Suchi, Plunder, and Argos to `claude-opus-4.7-xhigh` via `agentModelOverrides`.
+
+**Why:** User directive. The `-xhigh` suffix was never a real model identifier in the platform's valid catalog (documented in Loops 20–24 closure logs) — every cycle that requested it silently fell back to `claude-opus-4.7`. The fallback is now codified as the policy.
+
+**Live state updated this turn:**
+- `.squad/config.json` — `agentModelOverrides` rewritten: wheeler/suchi/plunder/argos all → `claude-opus-4.7`. Iris's `claude-sonnet-4.6` override unchanged.
+- `.squad/agents/wheeler/charter.md` — `Preferred:` updated
+- `.squad/agents/suchi/charter.md` — `Preferred:` updated
+- `.squad/agents/plunder/charter.md` — `Preferred:` updated
+- `.squad/agents/argos/charter.md` — `Preferred:` updated
+
+**Historical records intentionally NOT modified** (append-only files, per Source of Truth Hierarchy):
+- `.squad/log/*` (session logs)
+- `.squad/orchestration-log/*` (routing evidence)
+- `.squad/sessions/*`, `.squad/orchestrations/*` (historical records)
+- `.squad/decisions/archive/gaia-model-default-loop.md` (archived prior policy)
+- Prior entries in `.squad/decisions.md` that reference the old identifier — they record what was true at the time.
+
+**Effective immediately for all future spawns.**
+
+ 
+
+## 2026-05-22
+
+### 2026-05-22T03:32: User directive — HIG layout rules are ERROR day 1, no literal exceptions
+
+**By:** yashasg (via Copilot)
+**What:** Override Iris's "Error after grace period" severity bucket and her "allowed exception" carve-out for `minHeight: 44` / `minHeight: 56` HIG-touch-target floors. The new policy is:
+
+1. **All HIG layout rules ship at `severity: error` on day 1.** No grace period, no "warn now, error in 2 weeks" ramp. The CI gate is the gate from the moment the SwiftLint PR merges.
+2. **No literal numbers in layout — including HIG touch-target floors.** `.frame(minHeight: 44)`, `.frame(minHeight: 56)`, etc. must be backed by `@ScaledMetric` (e.g., `@ScaledMetric private var minTap: CGFloat = 44`). The raw literal does not satisfy the lint rule even though Iris originally exempted it.
+3. **The `missing_min_touch_target` rule regex must enforce `@ScaledMetric`** as the backing, not a literal `44`/`56`/`88` count. Literals fail.
+4. **Rationale (user-supplied):** Small screens (iPhone SE / mini) combined with AX5 Dynamic Type make a fixed-pixel 44pt tap target visibly cramped. `@ScaledMetric` lets the tap target grow proportionally with the user's text-size preference, which is what HIG actually intends. The literal is the easy interpretation of HIG; `@ScaledMetric` is the right one.
+
+**Supersedes:**
+- Iris's "Severity bucket recommendations" section in `iris-hig-lint-rule-catalog.md` (merged into `decisions.md` earlier this session) — specifically the "Error after grace period (warn for now, error in 2 weeks)" bucket for touch-target and padding rules.
+- Iris's "Allowed exception: Fixed minimum sizes that directly serve Apple HIG touch-target rules stay allowed (`minHeight: 44` / `56`)" carve-out documented in the same catalog.
+
+**Action items:** Applied via Kwame (commit 1c0c64c on `squad/swiftlint-hig-error-gate`): all HIG layout rules now `severity: error`, `missing_min_touch_target` regex requires `@ScaledMetric` backing, 31 baseline HIG violations identified.
+
+---
+
+### 2026-05-22T03:34: User directive — Iris enforces HIG, does not interpret it loosely
+
+**By:** yashasg (via Copilot)
+**What:** Iris's role is to ENFORCE Apple Human Interface Guidelines, not to interpret them loosely or carve out convenience exceptions. Specifically:
+
+1. **No "pragmatic adoption" softening.** When Iris specs lint rules or design policies, the default severity is `error`, not `warning`. Grace periods, soft-launches, and "warn now, error later" buckets are NOT acceptable defaults — they are emergency tools, used only when a CONCRETE engineering blocker (not a comfort or velocity concern) forces a delay.
+2. **No carve-outs for HIG-mandated minimums that defeat the spirit.** Example from this session: Iris exempted literal `minHeight: 44` / `minHeight: 56` from the touch-target rule because HIG names those numbers explicitly. That's the letter of HIG, not the spirit — `@ScaledMetric` so the target grows with Dynamic Type is what HIG actually intends on small screens at AX5. Iris should default to the spirit, not the letter.
+3. **HIG is the floor, period.** "Treats HIG as a floor, not a ceiling — but never deviates without a documented reason" already in Iris's charter is reaffirmed and TIGHTENED: deviations downward (softer enforcement, looser rules, longer grace periods) require explicit user approval. Deviations upward (stricter than HIG) are encouraged.
+4. **When speccing rules for lint/CI gates:** Iris's job is to write the rules at maximum reasonable strictness and document any escape hatches via per-line disable comments — not to pre-soften the rules globally.
+
+**Implementation:** `.squad/agents/iris/charter.md` updated this turn to encode this — the "Style" and "How I Work" sections now explicitly call out strict-error-default for lint specs, and a new "Voice" line reinforces "enforcer, not interpreter."
+
+**Supersedes:** Iris's own self-positioning as "pragmatic" w.r.t. lint adoption — her catalog's "Error after grace period" bucket and the `minHeight: 44/56` literal exemption were both manifestations of this looser posture. Both already overridden by the prior directive; this directive locks in the BEHAVIORAL change so future Iris spawns don't re-propose the soft pattern.
+
+
+### 2026-05-22T03:55: User directive — supersede `claude-opus-4.7` with `claude-opus-4.7-1m-internal` for the 4 premium agents
+
+**By:** yashasg (via Copilot)
+**What:** Wheeler, Suchi, Plunder, Argos move from the standard `claude-opus-4.7` to the **1M-context internal variant** `claude-opus-4.7-1m-internal`. This supersedes the prior 2026-05-22T02:58 rename directive (which moved them from `claude-opus-4.7-xhigh` → `claude-opus-4.7`).
+**Why:** User request. The 1M-context variant gives these agents the headroom for full-corpus reviews (Wheeler's photobiology consensus checks, Suchi's persona-mapping across the full `decisions.md` history, Plunder's compliance cross-checks, Argos's monetization context spanning multiple PRs). The standard 4.7 context is too tight for their typical workloads.
+
+---
+
+### 2026-05-22T04:01: User directive — Gaia / Gi / Kwame / Ma-Ti always use `claude-opus-4.7`
+
+**By:** yashasg (via Copilot)
+**What:** Override the per-task "auto" charter setting for Gaia (Lead/Architect), Gi (Data Specialist), Kwame (iOS Developer), and Ma-Ti (Tester). They now ALWAYS use `claude-opus-4.7` (the standard 4.7, NOT the 1M-internal variant). Added to `.squad/config.json` `agentModelOverrides` AND charter `Preferred` lines updated from `auto` to `claude-opus-4.7`.
+**Why:** User request. These four are the team's core working agents — Lead/Data/Dev/Test. Premium reasoning consistency matters more than the cost-saving auto-selection for their workloads. They don't need the 1M context (that's for the research-heavy roles), but they DO need the premium Opus model on every spawn.
+
+---
+
+### Final post-batch model assignment table (effective immediately for all future spawns)
+
+| Agent | Role | Resolved model | Override source |
+|---|---|---|---|
+| Wheeler | Skin Science Expert | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Suchi | User Researcher | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Plunder | Legal & Compliance | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Argos | Monetization Strategy | `claude-opus-4.7-1m-internal` | config.json + charter |
+| Gaia | Lead / Architect | `claude-opus-4.7` | config.json + charter (was auto) |
+| Gi | Data Specialist | `claude-opus-4.7` | config.json + charter (was auto) |
+| Kwame | iOS Developer | `claude-opus-4.7` | config.json + charter (was auto) |
+| Ma-Ti | Tester | `claude-opus-4.7` | config.json + charter (was auto) |
+| Iris | UI/UX Designer | `claude-sonnet-4.6` | config.json + charter (unchanged) |
+| Scribe | Session Logger | `claude-haiku-4.5` | per squad.agent.md (never overridden — mechanical ops only) |
+| Ralph | Work Monitor | auto (defaults — typically haiku) | per squad.agent.md |
+
+**Historical (do NOT retroactively edit):** Prior directives — `claude-opus-4.7-xhigh` (Loops 20–24), `claude-opus-4.7-xhigh → claude-opus-4.7` (2026-05-22T02:58, merged at commit `0777de2`) — remain in `decisions.md` / archive as the historical record. These two new directives supersede the prior policy without rewriting history.
