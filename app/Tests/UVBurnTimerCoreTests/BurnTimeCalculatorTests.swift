@@ -7550,3 +7550,189 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
         "NN2 post-clear invariant: lastRoundedCoordinateKey MUST be removed by clearStoredPreferences — this is the GDPR Art.17 erasure key lifted into UserPreferenceStorage by Bundle R / Kwame L13-3. If this fires, the GDPR Art.17 erasure-path completeness regressed. (Kwame L13-4 partial closure — extended — Loop-23)"
     )
 }
+
+// MARK: - Group OO: Loop-24 deferred-HIGH partial closures (Bundle EE — Group OO test prefix)
+//
+// OO was free at cycle-start (verified 2026-05-22 by a `grep -rE "test_OO[0-9]"
+// app/Tests/` returning zero hits). Loop-24 Bundle EE uses Group OO as the test
+// function prefix, continuing the cumulative AA→BB→CC→DD→EE→FF→GG→HH→II→JJ→KK→LL→
+// MM→NN→OO doubled-letter cascade documented in the Group MM MARK header above. The
+// PR / branch / closure-log references call this "Bundle EE" — only the test
+// function prefix is OO.
+//
+// Group OO bundles two pure-function guards that densify Bundle BB's KK1/KK2
+// coverage on the SECOND picker leaf (`snapToNearest`) with the same
+// matrix-density pattern Bundle CC's MM1/MM2 used on the THIRD picker leaf
+// (`uvResult`) and Bundle DD's NN1/NN2 used on the FIRST picker leaf
+// (`defaultSelectedDate`). After OO1/OO2, all three picker leaves have the
+// SAME matrix-density coverage shape — closing the leaf-set density gap
+// the Loop-23 closure log §"Backlog state (entering Loop-24)" explicitly named
+// ("`snapToNearest` matrix-density as a natural Loop-24 target"):
+//
+//   OO1  Kwame L13-2 (extended, second leaf, denser sampling) — cold-start race
+//        contract for `snapToNearest` with a 5 probe-date × 2
+//        empty-equivalent-snapshot matrix (10 cells). KK1 covered ONE cell
+//        (mid-day-+6h probe × {nil, empty-hours}); OO1 densifies to catch
+//        silent regressions where the nil/empty branch becomes dependent on
+//        a specific probe date or skips the roundedDownToHour normalization.
+//        The early guard at ForecastPickerLogic.swift lines 67–70
+//        (`guard let snap = snapshot, !snap.hours.isEmpty else { return
+//        roundedDownToHour(date) }`) MUST return `roundedDownToHour(date)`
+//        for ANY combination of (a) nil snapshot vs empty-hours snapshot,
+//        (b) any probe-date value including the extremes (.distantPast,
+//        .distantFuture). Mirrors MM1's 5×5 matrix density pattern adapted
+//        for the single-argument `snapToNearest`.
+//
+//   OO2  Kwame L13-4 (extended, second leaf, three-branch sampling) — picker
+//        state on clear contract sampled across THREE distinct outcome cells:
+//        (1) clamp-low (probe < firstHour) → returns firstHour, (2) in-window
+//        (firstHour ≤ probe ≤ lastHour) → returns roundedDownToHour(probe),
+//        (3) clamp-high (probe > lastHour) → returns lastHour. KK2 pinned
+//        referential transparency on the clamp-low branch only (via the
+//        snapProbe = nowEpoch + 6*3600 with hour15..hour17 spanning
+//        nowEpoch+2..nowEpoch+4 hours). NN2 added the third
+//        `defaultSelectedDate` branch but only re-asserted ONE snapToNearest
+//        branch. OO2 explicitly samples ALL THREE snapToNearest outcome
+//        branches across a `clearStoredPreferences` invocation against an
+//        isolated UserDefaults suite. Re-asserts the post-clear erasure
+//        invariants on selectedSkinTypeKey + lastRoundedCoordinateKey so a
+//        no-op regression in clearStoredPreferences itself cannot make the
+//        purity assertions pass vacuously.
+
+/// OO1 — Kwame L13-2 (extended, second leaf, denser sampling) cold-start race
+/// contract for the `snapToNearest` leaf.
+@Test func test_OO1_snapToNearestColdStartArgumentIndependence() throws {
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+
+    let emptyHoursSnap = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: Date(timeIntervalSince1970: nowEpoch),
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: []
+    )
+
+    let probeVariants: [(label: String, date: Date)] = [
+        ("midDay",        Date(timeIntervalSince1970: nowEpoch)),
+        ("probeMinus3h",  Date(timeIntervalSince1970: nowEpoch - 3 * 3600)),
+        ("probePlus6h",   Date(timeIntervalSince1970: nowEpoch + 6 * 3600)),
+        ("distantPast",   Date.distantPast),
+        ("distantFuture", Date.distantFuture)
+    ]
+
+    let snapshotVariants: [(label: String, value: ForecastSnapshot?)] = [
+        ("nilSnapshot",        nil),
+        ("emptyHoursSnapshot", emptyHoursSnap)
+    ]
+
+    for probeVariant in probeVariants {
+        let expected = ForecastPickerLogic.roundedDownToHour(probeVariant.date)
+        for snapVariant in snapshotVariants {
+            let result = ForecastPickerLogic.snapToNearest(
+                probeVariant.date,
+                in: snapVariant.value
+            )
+            #expect(
+                result == expected,
+                "ForecastPickerLogic.snapToNearest(\(probeVariant.label) (\(probeVariant.date)), in: \(snapVariant.label)) MUST return roundedDownToHour(date) (\(expected)) — this is the cold-start / skeleton-then-hydrate fallback at ForecastPickerLogic.swift lines 67–70: `guard let snap = snapshot, !snap.hours.isEmpty else { return roundedDownToHour(date) }`. Actual: \(result). The result MUST be INDEPENDENT of any specific probe-date value (including .distantPast/.distantFuture) — the early guard runs before any snapshot-dependent date arithmetic, so the only date-derived computation allowed is roundedDownToHour. If this fires, the early guard was (a) made conditional on date, (b) refactored to return the raw `date` (without UTC-hour rounding), (c) made conditional on a UserDefaults read, or (d) the `!snap.hours.isEmpty` part of the guard was dropped (which would cause the empty-hours variant to fall through to `snap.hours.first!`/`snap.hours.last!` and crash). KK1 (Loop-21) covered ONE cell here (probePlus6h × {nil, emptyHours}); OO1 densifies to a 5×2 matrix to catch silent regressions KK1's single-cell sample would miss. Mirrors NN1's matrix-density pattern but on the SECOND picker leaf, completing the matrix coverage across all three picker leaves alongside MM1 (third leaf) and NN1 (first leaf). (Kwame L13-2 partial closure — extended, second leaf — Loop-13 deferred / Loop-24)"
+            )
+        }
+    }
+}
+
+/// OO2 — Kwame L13-4 (extended, second leaf, three-branch sampling) picker
+/// state on clear contract for `snapToNearest`.
+@Test func test_OO2_snapToNearestReferentialTransparencyAcrossPreferencesClear() throws {
+    let suiteName = "test_OO2_snapToNearestRefTransparency_\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer {
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+    let now = Date(timeIntervalSince1970: nowEpoch)
+
+    // Snapshot hour window: [nowEpoch+2h .. nowEpoch+4h] → [15:00Z .. 17:00Z]
+    let hour15 = HourForecast(timestamp: Date(timeIntervalSince1970: nowEpoch + 2 * 3600), uvIndex: 7)
+    let hour16 = HourForecast(timestamp: Date(timeIntervalSince1970: nowEpoch + 3 * 3600), uvIndex: 5)
+    let hour17 = HourForecast(timestamp: Date(timeIntervalSince1970: nowEpoch + 4 * 3600), uvIndex: 3)
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: now,
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: [hour15, hour16, hour17]
+    )
+
+    // Three distinct outcome branches:
+    //  (1) clamp-low  — probe at nowEpoch (13:00Z) is BEFORE firstHour (15:00Z) → returns hour15.timestamp (firstHour)
+    //  (2) in-window  — probe at nowEpoch + 3*3600 + 1800 (16:30Z) → roundedDownToHour → hour16.timestamp (16:00Z)
+    //  (3) clamp-high — probe at nowEpoch + 8*3600 (21:00Z) is AFTER lastHour (17:00Z) → returns hour17.timestamp (lastHour)
+    let probeClampLow   = now
+    let probeInWindow   = Date(timeIntervalSince1970: nowEpoch + 3 * 3600 + 1800)
+    let probeClampHigh  = Date(timeIntervalSince1970: nowEpoch + 8 * 3600)
+
+    let baselineClampLow  = ForecastPickerLogic.snapToNearest(probeClampLow,  in: snapshot)
+    let baselineInWindow  = ForecastPickerLogic.snapToNearest(probeInWindow,  in: snapshot)
+    let baselineClampHigh = ForecastPickerLogic.snapToNearest(probeClampHigh, in: snapshot)
+
+    #expect(
+        baselineClampLow == hour15.timestamp,
+        "OO2 setup invariant: baseline snapToNearest(13:00Z, in: snapshot) MUST clamp to hour15.timestamp (15:00Z, firstHour) — confirms the clamp-low branch (ForecastPickerLogic.swift lines 73 + 75 via clamp()) is being exercised. Actual: \(baselineClampLow) vs expected \(hour15.timestamp). If this fires, either (a) the hour window changed, (b) clamp() was inverted, or (c) the firstHour computation was refactored to skip roundedDownToHour."
+    )
+    #expect(
+        baselineInWindow == hour16.timestamp,
+        "OO2 setup invariant: baseline snapToNearest(16:30Z, in: snapshot) MUST round-down to hour16.timestamp (16:00Z, in-window) — confirms the in-window pass-through branch (ForecastPickerLogic.swift lines 71 + 75 via clamp() identity) is being exercised. Actual: \(baselineInWindow) vs expected \(hour16.timestamp). If this fires, the roundedDownToHour normalization on the probe was dropped or the clamp bounds were refactored."
+    )
+    #expect(
+        baselineClampHigh == hour17.timestamp,
+        "OO2 setup invariant: baseline snapToNearest(21:00Z, in: snapshot) MUST clamp to hour17.timestamp (17:00Z, lastHour) — confirms the clamp-high branch (ForecastPickerLogic.swift lines 74 + 75 via clamp()) is being exercised. Actual: \(baselineClampHigh) vs expected \(hour17.timestamp). If this fires, either the lastHour computation regressed or clamp() upper bound was dropped."
+    )
+
+    UserPreferenceStorage.persist(skinType: .typeIII, to: defaults)
+    UserPreferenceStorage.persist(spf: .spf50, to: defaults)
+    defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+    defaults.set(
+        UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+    )
+    defaults.set("37.77,-122.42", forKey: UserPreferenceStorage.lastRoundedCoordinateKey)
+    defaults.set(Data([0xDE, 0xAD, 0xBE, 0xEF]), forKey: UserPreferenceStorage.legacyUVSnapshotKey)
+
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) != nil,
+        "OO2 setup invariant: selectedSkinTypeKey must be present in the isolated defaults before clearStoredPreferences runs — otherwise the post-clear equality check is vacuous. If this fires, `UserPreferenceStorage.persist(skinType:to:)` was refactored to a no-op for non-nil values; restore the `defaults.set(skinType.rawValue, forKey:)` branch."
+    )
+
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+
+    let postClearClampLow  = ForecastPickerLogic.snapToNearest(probeClampLow,  in: snapshot)
+    let postClearInWindow  = ForecastPickerLogic.snapToNearest(probeInWindow,  in: snapshot)
+    let postClearClampHigh = ForecastPickerLogic.snapToNearest(probeClampHigh, in: snapshot)
+
+    #expect(
+        postClearClampLow == baselineClampLow,
+        "ForecastPickerLogic.snapToNearest(_:in:) MUST be referentially transparent on the clamp-low branch (lines 73 + 75 via clamp()) — it must return the same Date for the same (probe, snapshot) input regardless of any UserDefaults mutations or clear operations between calls. Baseline was \(baselineClampLow); post-clear was \(postClearClampLow). If this fires, the function gained a hidden dependency on UserDefaults specifically in the clamp-low path (most likely via a default-parameter-evaluated singleton, a global cache layer, or a refactor that started routing firstHour computation through a stored value). Remove the hidden dependency. (Kwame L13-4 partial closure — extended, second leaf, clamp-low branch — Loop-24)"
+    )
+    #expect(
+        postClearInWindow == baselineInWindow,
+        "ForecastPickerLogic.snapToNearest(_:in:) MUST be referentially transparent on the in-window pass-through branch (lines 71 + 75). Baseline was \(baselineInWindow); post-clear was \(postClearInWindow). If this fires, the function gained a hidden dependency on UserDefaults specifically in the in-window path — a regression that KK2's single-branch sample would have missed because KK2 only exercised the clamp branch via probeplus6h. Remove the hidden dependency. (Kwame L13-4 partial closure — extended, second leaf, in-window branch — Loop-24)"
+    )
+    #expect(
+        postClearClampHigh == baselineClampHigh,
+        "ForecastPickerLogic.snapToNearest(_:in:) MUST be referentially transparent on the clamp-high branch (lines 74 + 75 via clamp()). Baseline was \(baselineClampHigh); post-clear was \(postClearClampHigh). If this fires, the function gained a hidden dependency on UserDefaults specifically in the clamp-high path — a regression that KK2 and NN2 would have missed because neither exercised an above-lastHour probe across a clearStoredPreferences cycle. Remove the hidden dependency. (Kwame L13-4 partial closure — extended, second leaf, clamp-high branch — Loop-24)"
+    )
+
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) == nil,
+        "OO2 post-clear invariant: selectedSkinTypeKey MUST be removed by clearStoredPreferences (UVBurnTimerSession.swift lines 100–116). If this fires, the `defaults.removeObject(forKey: selectedSkinTypeKey)` line was dropped — restore it. Without this, the purity assertions above would pass vacuously after a regression in clearStoredPreferences itself. (Kwame L13-4 partial closure — extended — Loop-24)"
+    )
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.lastRoundedCoordinateKey) == nil,
+        "OO2 post-clear invariant: lastRoundedCoordinateKey MUST be removed by clearStoredPreferences — this is the GDPR Art.17 erasure key lifted into UserPreferenceStorage by Bundle R / Kwame L13-3. If this fires, the GDPR Art.17 erasure-path completeness regressed; restore the `defaults.removeObject(forKey: lastRoundedCoordinateKey)` line at UVBurnTimerSession.swift line 114. (Kwame L13-4 partial closure — extended — Loop-24)"
+    )
+}
