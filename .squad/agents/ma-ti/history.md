@@ -91,3 +91,19 @@ SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
 
 **2026-05-22T20:30:00Z** — Loop-30 iter-2 closure: PR #116 merged (1a4eecb), AST gate wired into build.sh (belt-and-braces with regex), swift-syntax pin restored (603.0.1 SemVer), SPM bare-repo defense via env-var, ready for WI-30-AST-LY-retire-regex after ≥1 main cycle stability.
+
+**2026-05-22T20:30:00Z** — **WI-loop30-4a opened: AST rule `image_systemname_missing_accessibility_label` → PR #119.**
+First batch-1 rule from Iris's WI-loop30-4 cluster (rule #2, High/S — the smallest, chosen to validate AST-harness reuse before the larger rule #1 lands). Strict TDD: 3 commits — RED (`3499509`, 18 XCTest cases incl. parity gates against AppViews.swift + ForecastPickerView.swift), GREEN (`5b24cf4`, ~280 LoC SwiftSyntax visitor reusing ToolbarImage parent-walking machinery), Wire (`566a22e`, swiftlint-ast CLI registration + 2 added silencer-(d) tests). **Result: 34/34 tests pass (20 new + 14 existing); `./build.sh lint` → 0 SwiftLint violations + 0 AST violations** against current `app/Sources/`. CI: 26312128817 (push), 26312168547 (PR).
+
+**Visitor design — four silencers:**
+(a) Image inside Button/NavigationLink/Link `label:` closure;
+(b) `.accessibilityLabel(...)` / `.accessibilityHidden(true)` / `.accessibilityElement(...)` anywhere in ancestor modifier chain (covers AppViews.swift:1152 combine-children HStack);
+(c) Image inside `Label { } icon: { }` icon closure;
+(d) **new — beyond Iris's catalog** — Image has sibling `Text(...)` in same view-builder block. Required for 0-FP against ForecastPickerView.swift L209/L230 (refresh/error banners) which Iris's AppViews-focused FP scan did not enumerate. Per WI-loop30-4a constraint ("refine the rule, not the SUT"), relaxed the visitor rather than touch app sources. Flagged for Iris review.
+
+**Catalog divergences flagged in PR body + inbox memo (`ma-ti-wi-loop30-4a-opened.md`):** punted Toggle/Menu interactive ancestors (no current sites); silencer (a) is unconditional (Iris's stricter contract: ancestor must have title or .accessibilityLabel); silencer (b) accepts any `.accessibilityElement` form (Iris narrowed to `.ignore` + label). Iris to ratify or veto.
+
+**Learnings:**
+- ToolbarImage-style visitor scaffold ports cleanly across rules — parent-walking + silent-closure-ID stack + modifier-chain inspection is a reusable template. ADR-0003 §Rollout WI-30-B hypothesis confirmed at N=2 rules.
+- Co-tenant repo hazard: a parallel agent (on `squad/wi-loop30-ast-ly-retire-regex`) `git checkout`-stomped the working dir mid-session, blowing away an untracked impl file. Mitigation for future sessions: commit early (even WIP), or work in a dedicated worktree.
+- Iris's FP scan is AppViews-only by default. Future scope memos for rules whose target surface spans multiple files should explicitly enumerate the scan scope so the TDD harness can be sized correctly upfront.
