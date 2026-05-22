@@ -44,8 +44,54 @@ run_swiftlint() {
   swiftlint "$@" --config .swiftlint.yml --reporter "$reporter"
 }
 
+# WI-loop30-AST-buildsh-wire: SwiftSyntax AST gate.
+# Belt-and-braces with the regex SwiftLint rules — both gates run for
+# this PR. ADR-0003 §Rollout WI-30-A: the regex rule for
+# `toolbar_image_needs_scaled_frame` stays in `.swiftlint.yml` while
+# the AST rule beds in for one CI cycle.
+#
+# Skips gracefully when `swift` is not on PATH (parity with the
+# SwiftLint-not-installed skip in `run_swiftlint`). CI runners that
+# do not provision a Swift toolchain (rare for this iOS repo) will
+# log a warning rather than fail.
+#
+# Test hook: AST_LINT_PATHS_OVERRIDE lets `scripts/test-ast-lint-gate.sh`
+# point the gate at a known-violating fixture to assert non-zero exit.
+run_swiftlint_ast() {
+  if ! command -v swift >/dev/null 2>&1; then
+    echo "warning: swift toolchain not on PATH; skipping AST lint gate. AST rules require Swift 6.0+ for SPM resolution." >&2
+    return 0
+  fi
+
+  local ast_paths
+  if [[ -n "${AST_LINT_PATHS_OVERRIDE:-}" ]]; then
+    ast_paths="$AST_LINT_PATHS_OVERRIDE"
+  else
+    ast_paths="app/Sources"
+  fi
+
+  # SPM bare-repo allowlist — DerivedData SPM checkouts trip git's
+  # `safe.bareRepository=explicit` default on some CI images. Scoped
+  # to this subshell only.
+  echo "Running SwiftSyntax AST lint gate against: $ast_paths"
+  set +e
+  GIT_CONFIG_COUNT="${GIT_CONFIG_COUNT:-1}" \
+  GIT_CONFIG_KEY_0="${GIT_CONFIG_KEY_0:-safe.bareRepository}" \
+  GIT_CONFIG_VALUE_0="${GIT_CONFIG_VALUE_0:-all}" \
+  swift run --package-path tools/swiftlint-rules --quiet swiftlint-ast $(find $ast_paths -name "*.swift" -type f 2>/dev/null)
+  local ast_rc=$?
+  set -e
+
+  if [[ $ast_rc -ne 0 ]]; then
+    echo "error: SwiftSyntax AST lint gate failed (exit=$ast_rc). See diagnostics above. ADR-0003 / WI-loop30-AST-buildsh-wire." >&2
+    exit "$ast_rc"
+  fi
+  echo "AST lint gate: 0 violations."
+}
+
 if [[ "$command_mode" == "lint" ]]; then
   run_swiftlint emoji
+  run_swiftlint_ast
   exit 0
 fi
 
@@ -80,6 +126,7 @@ run_tests="${RUN_TESTS:-true}"
 
 echo "Running SwiftLint HIG gate..."
 run_swiftlint xcode --strict
+run_swiftlint_ast
 
 # ---------------------------------------------------------------------------
 # Simulator destination
