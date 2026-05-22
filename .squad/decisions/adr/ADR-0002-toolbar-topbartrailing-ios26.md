@@ -169,28 +169,6 @@ real-finger taps, which makes the toolbar untestable end-to-end.
     the dispatcher at all). Both must hold for the toolbar to be
     reliable.
 
-## iOS 26.4 extension — toolbar Image-frame requirement
-
-Starting with iOS 26.4 the Liquid Glass toolbar composition no longer
-guarantees a hit-testable frame for `Image(...)` labels inside
-`ToolbarItem` declarations. PR #99 discovered the regression on
-`RootView`'s gear and ⓘ buttons: the labels rendered visually but XCUI
-hit-tests landed in the toolbar gutter rather than on the `Button`. The
-fix is to floor every toolbar Image label with an `@ScaledMetric`-backed
-`.frame(minWidth: minTap, minHeight: minTap)`. ADR-0001 (parent-identity
-contract) and the `.topBarTrailing` placement chosen in this ADR remain
-necessary but are **not sufficient** on iOS 26.4 — the explicit
-Image-frame floor is the third leg of the contract. WI-29-4 / PR #108
-codifies this as the SwiftLint `toolbar_image_needs_scaled_frame` custom
-rule (regex-mirrored by Group LY in `MainScreenCleanupContractTests.swift`).
-
-- SwiftLint rule: `.swiftlint.yml` → `toolbar_image_needs_scaled_frame`
-- Test mirror: `MainScreenCleanupContractTests.swift` → Group LY (LY1–LY3)
-- Original discovery: PR #99
-- Rule installation: PR #108 (WI-loop29-4)
-- Related: Loop-29 WI-29-2 / PR #104 (Button-`{` blind spot) and
-  WI-29-7 / PR #106 (NavigationLink/Link blind spot)
-
 ## Audit
 
 When adding a new toolbar item to any navigation bar in the app
