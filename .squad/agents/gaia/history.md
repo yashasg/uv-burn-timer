@@ -98,3 +98,5 @@ PR **#112** merged (squash) at `42c97e9`. Docs-only ADR proposing replacement of
 **Decision-shape lesson:** The right moment to make a regex-vs-AST decision is *before* the next batch of rules ships, not after. If WI-loop30-4 (next HIG-rule cluster) had landed first with five more regex rules, we would have locked in the brittleness tax for another cycle. Filed WI-loop30-4 as dependency-gated on this ADR's spike outcome in the Loop-30 backlog seed.
 
 **Recommendation 1-liner:** Adopt SwiftSyntax-based custom lints for net-new structural HIG rules (Option A); keep regex only for single-token rules where no syntactic context is needed. Spike scope = port Group LY (most fragile / most recent regex). Major-decision note filed to `.squad/decisions/inbox/gaia-wi-loop30-2-ast-lints.md`.
+
+**2026-05-22T20:30:00Z** — Loop-30 iter-2 closure: ADR-0003 flipped Accepted (PR #115, f616517), all 3 review PRs merged first-pass (PR #114 Kwame, PR #116 Ma-Ti), merge-sweep discipline documented, ready for iter-3 dispatch.

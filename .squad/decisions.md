@@ -634,3 +634,35 @@ Three are dispatchable in parallel; one (WI-loop30-4) stays gated.
 - After PR #113 lands and PR #111 reruns green, the next decision point is whether WI-loop30-4 dispatches **as regex rules with a sunset clause** or **waits flat for the AST spike**. My current lean is wait-flat; revisit at the next dispatch tick.
 
 — Gaia
+
+---
+
+## 2026-05-22 (Loop-30 iter-2 closure — 4 PRs merged, merge-sweep)
+
+### Gaia — Loop-30 iter-2 merge-gate sweep
+
+- **Date:** 2026-05-22T20:10:00Z  
+- **Scope:** Reviewer-discipline sweep across three Loop-30 iter-2 PRs (#114 / #115 / #116); all merged first-pass, no rejections
+
+**Merge summary:**
+| PR  | Author | Status    | Merge SHA   |
+|-----|--------|-----------|-------------|
+| 115 | Gaia   | merged    | `f616517`   |
+| 114 | Kwame  | merged    | `5b899df`   |
+| 116 | Ma-Ti  | merged    | `1a4eecb`   |
+
+**Key outcomes:**
+- ADR-0003 flipped to Accepted (markdown-only, spike-backed)
+- Cross-agent reviewer discipline held (Gaia reviewed Kwame PR #114 and Ma-Ti PR #116)
+- AST gate live on main (belt-and-braces with regex)
+- Stash hygiene: `scribe-loop30-iter2-deferred` applied, `gaia-pre-mergesync-iris-mati-history` dropped
+- Inbox merged (Scribe closure logging recorded)
+
+**Loop-30 iter-2 goals:**
+- ✅ Goal-1: UI flake stabilisation (PR #111 + #114)
+- ✅ Goal-2: ADR-0003 spike verdict (PR #115)
+- ✅ Goal-3: AST gate integration (PR #116)
+- 🟡 Goal-4: Privacy policy hosting (blocked, Plunder WI-30-6 spawned)
+- ❌ Goal-5: Contrast QA (hardware-blocked)
+
+**Iter-3 dispatch ready:** WI-30-1 (Kwame+Ma-Ti flake bisection), WI-30-3 (Scribe decisions compaction), WI-30-6 (Plunder privacy policy)

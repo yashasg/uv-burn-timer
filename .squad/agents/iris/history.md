@@ -80,3 +80,41 @@ The base HIG ≥44pt tap-target rule is itself untestable as a single guard — 
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
 
 **2026-05-22T18:15:00Z** — WI-loop29-6 rebase post-mortem (concurrent-merge no-op). A late spawn asked me to rebase PR #107 onto `github/main` after PR #108 shipped the `toolbar_image_needs_scaled_frame` SwiftLint rule + Group LY tests, then push and watch CI. By the time the local rebase completed (b2cd1d4) and the simulator finished cycling through cold-start UI-test flakes, a parallel agent / coordinator had already squash-merged PR #107 as `fcdb196` on main with CI green (build-test 2× pass, heartbeat pass). The rebased patch was a clean docs-only +55-line subsection on ADR-0002 — identical to what merged. Branch deleted upstream; local recreation rejected by `--force-with-lease` (stale info). **Audit-hygiene lesson:** when a PR body claims docs-only, verify the diff before pushing — but also verify *current upstream state* before starting a rebase loop. A concurrent merge mid-task is a no-op for the codebase, but two agents running `gh pr edit` / `git push` against the same number races; one will always lose. Coordinator should serialise PR-mutating spawns by PR number, not just by WI ID. Loop-29 iter-2 closure recorded above (18:30:00Z) supersedes this entry — included here as the audit trail.
+
+**2026-05-22T20:30:00Z** — Loop-30 iter-2 closure: WI-loop30-4 scope memo delivered (5 AST HIG rules proposed), FP audit results captured for Ma-Ti harness build, design-before-code pattern validated (FP audit IS rule spec), Goal-5 status reconfirmed hardware-blocked, ready for WI-30-4 dispatch to Ma-Ti after ≥1 main cycle AST gate validation.
+
+---
+
+## 2026-05-22T20:30:00Z — Fixture catalog for `image_systemname_missing_accessibility_label` (WI-loop30-4 batch-1 rule #2)
+
+Wrote `.squad/decisions/inbox/iris-image-accessibility-fixtures.md` — 31-fixture corpus for Ma-Ti's AST-visitor test harness:
+
+- **13 POSITIVE** (rule MUST fire): bare-image, Button-label-no-title, NavLink-label-no-label, toolbar-without-action-wrapper, HStack-sibling-Text (adjacency is NOT labeling), Button(action:label:), toolbar-Button-no-label, Link-no-title, Menu-trigger, plus edge cases (helper functions, `hidden(false)`, empty-label, ForEach rows, style-only chains, `children:.ignore` without parent label).
+- **17 NEGATIVE** (rule MUST stay silent): explicit `.accessibilityLabel`, `.accessibilityHidden(true)`, `Button("title")`, both `Label` initializer forms, parent-labeled NavLink/Link/Button/Menu, chained modifiers, `.accessibilityElement(children:.ignore|.combine)` + parent label, iOS 17 `Button("…", systemImage:)` shorthand, `tabItem { Label }`, dynamic / variable label args.
+- **1 soft (E3 empty-label)** — marked TODO; first-pass can treat empty-string as labeled.
+
+Each fixture cites HIG/WCAG SC 1.1.1 and explicitly notes why regex fails (parent-walk, modifier-chain inspection, sibling enumeration, initializer-signature recognition).
+
+### `app/Sources/` re-scan — REVISED finding
+
+Earlier scope-memo claim "~10 sites, all OK, no sub-WI needed" was **wrong**. Re-scanned all 14 (not 10) sites:
+
+- 11 confirmed NEG (correctly labeled via N2/N5/N6/N7 shapes).
+- **3 POS — will fire when rule lands:**
+  1. `AppViews.swift:1152` (`TierBadge` accessory glyph — bare in HStack, sibling Label labels the tier but accessory has no `.accessibilityHidden(true)`)
+  2. `ForecastPickerView.swift:209` (`arrow.clockwise` stale-banner refresh glyph — bare in HStack with sibling Text)
+  3. `ForecastPickerView.swift:230` (`exclamationmark.icloud` error-banner glyph — same shape)
+
+**Withdrew the "no sub-WI" line.** Recommended sub-WI **`WI-loop30-4a-iris-3sites`** for Kwame — each site is a 1-line `.accessibilityHidden(true)` add (or HStack-level `children:.combine` wrap for the banners). Gates rule landing.
+
+### Design call
+
+The rule is intentionally conservative — it does not honor "implicit decoration via adjacency to Text" because SF Symbols' default a11y description is the symbol identifier ("Exclamation mark, triangle, fill"), which is never the intended user-facing label. Authors MUST opt in to either labeling or hiding. This matches Apple's own first-party app conventions (Mail, Notes, Reminders all explicitly hide or label every glyph).
+
+### FP risks surfaced
+
+- Custom `Image(systemName:)` wrappers in helpers (E1 shape) — not present today but documented.
+- `.accessibilityRepresentation { }` (iOS 17+) — not present, TODO if it appears.
+- `AccessibilityRotorEntry` / `accessibilityChildren` — out of scope for batch-1.
+
+No code changes to `app/` or `.swiftlint.yml` made (per scope constraint). Catalog is the deliverable.
