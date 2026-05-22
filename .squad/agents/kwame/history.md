@@ -321,3 +321,56 @@ should land green now that the rule exists upstream.
 2. **iOS 26 `.topBarTrailing` settle is async w.r.t. nav-bar arrival** — assert composition stability via "both items hittable in same UI snapshot" before per-item hittability, not after. Same class of fix as Loop-20 cover-chain `tapWithRetry`, hoisted up one composition layer (toolbar vs. fullScreenCover).
 3. **Local sim infra is unreliable for repeat-loop validation** — Mach -308 simulator runner crashes recurred deterministically across `./build.sh` invocations in this cycle. Defer confidence-gathering to CI rather than burning N×5min retry cycles on the host.
 4. **Concurrent-agent branch chaos requires defensive fetch+stash discipline** — main moved twice during this session (Scribe iter-2 close + Gaia Loop-30 PR #112 merge) and my squad branch was momentarily reset by another agent's branch tip. Always `git fetch github` + verify HEAD + `git stash -u` before any rebuild, and re-verify branch tip after long-running builds.
+## 2026-05-22T19:00:00Z: WI-loop30-1 — toolbar UI-test flake patch implemented; push/CI blocked by host
+
+WI-loop30-1 (Stabilize toolbar UI-test flake on iOS 26.4 simulator):
+Implemented Ma-Ti's GAP-iter2-B plan exactly on branch
+`squad/wi-loop30-1-ui-flake-stabilization` at commit `758e784`
+(branched from `85080a8`). Three additive XCUITest-only edits (no SUT
+touched), +35 / −3 LOC. **Patch is local-only — not pushed, no PR, no
+CI signal, no merge.**
+
+The patch:
+
+1. New helper `waitForToolbarSettled(in:timeout:)` polls BOTH
+   `buttons["Settings"]` AND `buttons.matching("EstimateInfoButton")
+   .firstMatch` for `exists && isHittable` in a single 100 ms-cadence
+   loop, returning one `Bool` the caller XCTAsserts.
+2. `acknowledgeDisclaimerAndChooseTypeIII` now `XCTAssertTrue`s
+   `waitForToolbarSettled(timeout: 10)` instead of discarding a
+   single-item `_ = waitForHittable(...)`.
+3. Round-trip test's tail uses `XCTNSPredicateExpectation(predicate:
+   NSPredicate(format: "exists == false"), object: navigationBars[
+   "About & Citations"])` waited via `XCTWaiter.wait(timeout: 5)`,
+   replacing the immediate `XCTAssertFalse(...exists)` that raced
+   the pop-animation tail.
+
+Hand-off detail in `.squad/decisions/inbox/kwame-wi-loop30-1-noop.md`.
+
+### Learnings
+
+- **Never leave XCUITest patch edits uncommitted between tool calls
+  in a shared workspace.** A concurrent peer agent in this workspace
+  ran `git checkout` mid-session, twice silently discarding our
+  uncommitted working-tree edits to `UVBurnTimerUITests.swift` and
+  `kwame/history.md`. Protocol: `git add && git commit` immediately
+  after the edit batch, before any other shell operation.
+- **XCUI multi-trailing-item hittability idiom.** When asserting
+  hittability of >1 `.topBarTrailing` item on iOS 26+, the helper
+  must poll **both** items together in a single `Bool`-returning loop
+  the caller XCTAsserts. Polling one (and worse, discarding the
+  result) leaks the layout-race into whichever assertion the test
+  writes next — the canonical "one-or-the-other" flake.
+- **`XCTNSPredicateExpectation` for animation-tail "doesn't exist"
+  assertions.** SwiftUI `NavigationStack` pop animations on iOS 26.4
+  can leave the popped nav bar in the a11y tree one frame after the
+  underlying screen's nav bar reappears. `NSPredicate(format: "exists
+  == false")` + `XCTWaiter.wait` is the symmetric counterpart to
+  `waitForExistence(timeout:)` and should be default for any post-pop
+  "gone" check in this codebase.
+- **`./build.sh` is brittle to host `dirhelper`/userdir I/O faults.**
+  `xcodebuild` calls `confstr(_CS_DARWIN_USER_CACHE_DIR)` very early
+  in startup; when that returns `EIO`, xcodebuild aborts before any
+  scheme resolution (Abort trap: 6 / rc=134). No CLI escape hatch.
+  If `getconf DARWIN_USER_CACHE_DIR` fails for >2 minutes, abandon
+  local sim verification for the session and lean on CI.
