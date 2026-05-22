@@ -7736,3 +7736,163 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
         "OO2 post-clear invariant: lastRoundedCoordinateKey MUST be removed by clearStoredPreferences — this is the GDPR Art.17 erasure key lifted into UserPreferenceStorage by Bundle R / Kwame L13-3. If this fires, the GDPR Art.17 erasure-path completeness regressed; restore the `defaults.removeObject(forKey: lastRoundedCoordinateKey)` line at UVBurnTimerSession.swift line 114. (Kwame L13-4 partial closure — extended — Loop-24)"
     )
 }
+
+// MARK: - Group PP: SPFLevel policy invariants (WI-bundleEE Loop-24)
+//
+// PP was free at cycle-start on `main` (verified 2026-05-22 mid-cycle
+// by `grep -cE "test_PP[0-9]" app/Tests/UVBurnTimerCoreTests/*.swift`
+// returning 0). OO was consumed earlier in Loop-24 by the snapToNearest
+// leaf pins (PR #89). Group PP is consumed by the SPFLevel public-surface
+// policy pins below.
+//
+// These tests pin SPFLevel's user-facing API surface against silent
+// regressions in a channel NOT previously covered by KK1/KK2 + MM1/MM2 +
+// NN1/NN2 (which all focus on the `ForecastPickerLogic` leaves) or by the
+// existing 5–8 `SPFLevel.*contextLabel`/`allCases`/`rawValue` checks
+// scattered through this file (which cover surface fragments but not the
+// closed-set policy as a whole). The README §"User scenarios captured" §3
+// promises: "SPF defaults to 30 and can be changed to 15, 30, 50, or 70+."
+// That single sentence is a load-bearing contract for the picker UI, for
+// `UserPreferenceStorage.restoredSPF(from:)`, and for the multiplier math
+// in `BurnTimeCalculator`. The pins below lock down each axis of that
+// promise so a refactor cannot silently mutate the option set, the default,
+// the display labels, the rawValue mapping, the modelMultiplier policy, the
+// `Identifiable` synthesis, or `Codable` round-trip identity.
+
+/// OO1 — `SPFLevel.displayName` is pinned per-case against the README §3
+/// option list "15, 30, 50, or 70+" plus the unprotected reference label
+/// used in disclosure copy. `contextLabel` is already pinned (lines
+/// 298–302); `displayName` is its peer that ships into the accessibility
+/// label `"SPF \(displayName)"` (line 3543, JJ1 pin) and the SPF chip
+/// menu. A silent rename ("70+" → "70" or "SPF 70+", "Unprotected
+/// reference" → "No sunscreen", etc.) would slip past `contextLabel`'s
+/// coverage because `unprotectedReference.contextLabel == "unprotected
+/// reference"` while `unprotectedReference.displayName == "Unprotected
+/// reference"` (capital U). This pin nails down the exact strings.
+@Test func test_PP1_spfLevelDisplayNameIsPinnedAgainstReadmeOptionList() {
+    #expect(
+        SPFLevel.unprotectedReference.displayName == "Unprotected reference",
+        "SPFLevel.unprotectedReference.displayName MUST be 'Unprotected reference' (capital U). This string flows into disclosure copy and any UI that distinguishes the modeled-reference baseline from a user-selectable sunscreen choice. If this fires, SPFLevel.swift line 16 was edited — restore it. (WI-bundleEE Loop-24, PP1)"
+    )
+    #expect(SPFLevel.spf15.displayName == "15", "SPFLevel.spf15.displayName MUST be '15' — README §3 option list. (WI-bundleEE Loop-24, PP1)")
+    #expect(SPFLevel.spf30.displayName == "30", "SPFLevel.spf30.displayName MUST be '30' — README §3 option list and default. (WI-bundleEE Loop-24, PP1)")
+    #expect(SPFLevel.spf50.displayName == "50", "SPFLevel.spf50.displayName MUST be '50' — README §3 option list. (WI-bundleEE Loop-24, PP1)")
+    #expect(
+        SPFLevel.spf70Plus.displayName == "70+",
+        "SPFLevel.spf70Plus.displayName MUST be '70+' (with the literal plus sign) — README §3 option list. The trailing '+' is load-bearing: it signals the conservative SPF-50 cap modeled by `modelMultiplier` (pinned by OO2). If this fires, SPFLevel.swift line 20 was edited or the option label was renamed without updating the README. (WI-bundleEE Loop-24, PP1)"
+    )
+}
+
+/// OO2 — `SPFLevel.modelMultiplier` policy is pinned for all five cases.
+/// Existing line 318 covers only spf70Plus → 50. The other four cases
+/// fall through to `rawValue` via the `default` branch (SPFLevel.swift
+/// lines 35–42). A refactor that, say, switched `unprotectedReference`'s
+/// multiplier from 1 to 0 (treating it as "no SPF effect") would silently
+/// break `BurnTimeCalculator`'s unprotected-reference math because the
+/// calculator multiplies by `selectedSPF.modelMultiplier`. Pin all five.
+@Test func test_PP2_spfLevelModelMultiplierIsPinnedForAllFiveCases() {
+    #expect(SPFLevel.unprotectedReference.modelMultiplier == 1, "SPFLevel.unprotectedReference.modelMultiplier MUST be 1 — the modeled unprotected baseline is MED × 1. If this fires, the default branch of SPFLevel.swift modelMultiplier (lines 39–41) was changed, breaking the unprotected reference math in BurnTimeCalculator. (WI-bundleEE Loop-24, PP2)")
+    #expect(SPFLevel.spf15.modelMultiplier == 15, "SPFLevel.spf15.modelMultiplier MUST be 15 — Schalka & Reis (2011) SPF-as-multiplier model. (WI-bundleEE Loop-24, PP2)")
+    #expect(SPFLevel.spf30.modelMultiplier == 30, "SPFLevel.spf30.modelMultiplier MUST be 30 — Schalka & Reis (2011) SPF-as-multiplier model. (WI-bundleEE Loop-24, PP2)")
+    #expect(SPFLevel.spf50.modelMultiplier == 50, "SPFLevel.spf50.modelMultiplier MUST be 50 — Schalka & Reis (2011) SPF-as-multiplier model. (WI-bundleEE Loop-24, PP2)")
+    #expect(
+        SPFLevel.spf70Plus.modelMultiplier == 50,
+        "SPFLevel.spf70Plus.modelMultiplier MUST be 50 — README §3 + ProductCopy.howItWorksDetail line 244 ('SPF 70+ is conservatively modeled as SPF 50'). This is the regulatory-conservatism cap. If this fires, SPFLevel.swift lines 37–38 were edited or the cap was raised, which would over-promise sunscreen-protected burn time and violate the conservatism contract. (WI-bundleEE Loop-24, PP2)"
+    )
+}
+
+/// OO3 — `SPFLevel(rawValue:)` round-trip closure: the five valid
+/// rawValues {1, 15, 30, 50, 70} round-trip to the five cases, and any
+/// rawValue OUTSIDE that closed set returns nil. This is the failure
+/// surface that `UserPreferenceStorage.restoredSPF(from:)` (already pinned
+/// to coerce nil → .spf30 at lines 1301–1308) depends on. If a future
+/// edit added a `case spf100 = 100` or renumbered `spf70Plus = 100`, the
+/// coercion fallback would silently change behavior. This pin nails the
+/// closed set against the README §3 promise.
+@Test func test_PP3_spfLevelRawValueInitIsClosedOverReadmeOptionSet() {
+    #expect(SPFLevel(rawValue: 1) == .unprotectedReference, "SPFLevel(rawValue: 1) MUST be .unprotectedReference. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 15) == .spf15, "SPFLevel(rawValue: 15) MUST be .spf15. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 30) == .spf30, "SPFLevel(rawValue: 30) MUST be .spf30. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 50) == .spf50, "SPFLevel(rawValue: 50) MUST be .spf50. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 70) == .spf70Plus, "SPFLevel(rawValue: 70) MUST be .spf70Plus. (WI-bundleEE Loop-24, PP3)")
+    // Closed-set negative pins: any rawValue OUTSIDE {1, 15, 30, 50, 70}
+    // MUST return nil. If a case were added (e.g. `case spf100 = 100`),
+    // one of these would start returning non-nil and the test would
+    // catch the silent option-set expansion.
+    #expect(SPFLevel(rawValue: 0) == nil, "SPFLevel(rawValue: 0) MUST be nil — coercion fallback at UserPreferenceStorage line 1301 depends on this. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 2) == nil, "SPFLevel(rawValue: 2) MUST be nil — README §3 closed set has no rawValue 2. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 25) == nil, "SPFLevel(rawValue: 25) MUST be nil — README §3 closed set does not include SPF 25. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 45) == nil, "SPFLevel(rawValue: 45) MUST be nil — README §3 closed set does not include SPF 45. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 60) == nil, "SPFLevel(rawValue: 60) MUST be nil — README §3 closed set does not include SPF 60. (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: 100) == nil, "SPFLevel(rawValue: 100) MUST be nil — README §3 closed set caps at 70+ (modeled as 50). (WI-bundleEE Loop-24, PP3)")
+    #expect(SPFLevel(rawValue: -1) == nil, "SPFLevel(rawValue: -1) MUST be nil — negative rawValues are invalid. (WI-bundleEE Loop-24, PP3)")
+}
+
+/// OO4 — `SPFLevel.id` (Identifiable conformance) is pinned to `rawValue`
+/// for all five cases. The Identifiable conformance is what allows
+/// `ForEach(SPFLevel.allCases)` in the picker UI to produce stable cells
+/// without `id: \.self`. If a refactor switched `id` from `rawValue` to,
+/// say, `displayName.hashValue`, SwiftUI's diffing would silently churn
+/// the picker on every redraw — a perf regression that no current test
+/// would catch. Pin id == rawValue across all five cases.
+@Test func test_PP4_spfLevelIdentifiableIdEqualsRawValueAcrossAllCases() {
+    let allFive: [SPFLevel] = [.unprotectedReference, .spf15, .spf30, .spf50, .spf70Plus]
+    for level in allFive {
+        #expect(level.id == level.rawValue, "SPFLevel.\(level).id MUST equal rawValue (\(level.rawValue)) — Identifiable synthesis at SPFLevel.swift line 12. Picker ForEach stability depends on this. (WI-bundleEE Loop-24, PP4)")
+    }
+}
+
+/// OO5 — `SPFLevel` Codable round-trip preserves identity for all five
+/// cases AND the on-disk JSON shape is the Int rawValue (not a string or
+/// keyed object). The enum derives Codable via the Int rawValue
+/// (SPFLevel.swift line 3 declaration). If a future edit, say, added a
+/// CodingKeys nested enum that re-encoded as a string, persisted
+/// SPFLevel values in `ForecastStore` cache files or `UserDefaults`
+/// archives would silently fail to decode on the next launch.
+@Test func test_PP5_spfLevelCodableRoundTripPreservesIdentityForAllCases() throws {
+    let allFive: [SPFLevel] = [.unprotectedReference, .spf15, .spf30, .spf50, .spf70Plus]
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    for level in allFive {
+        let encoded = try encoder.encode(level)
+        let decoded = try decoder.decode(SPFLevel.self, from: encoded)
+        let payloadString = String(data: encoded, encoding: .utf8) ?? "<non-UTF8>"
+        #expect(decoded == level, "SPFLevel.\(level) MUST round-trip through JSONEncoder → JSONDecoder unchanged. Encoded payload was \(payloadString). If this fires, the Codable synthesis at SPFLevel.swift line 3 was overridden by a custom encoder that breaks cache compatibility. (WI-bundleEE Loop-24, PP5)")
+    }
+    // Cross-check: the encoded payload for spf30 (the default) is the
+    // Int rawValue 30, NOT a string and NOT a keyed object. This pins
+    // the on-disk format that ForecastStore and UserDefaults rely on.
+    let spf30Encoded = try encoder.encode(SPFLevel.spf30)
+    let spf30String = String(data: spf30Encoded, encoding: .utf8) ?? "<non-UTF8>"
+    #expect(spf30String == "30", "SPFLevel.spf30 MUST encode as the literal JSON number 30 (not as a string and not as a keyed object). On-disk cache and UserDefaults compatibility depends on this. Got: \(spf30String). (WI-bundleEE Loop-24, PP5)")
+}
+
+/// OO6 — `SPFLevel.allCases` ordering matches the README §3 user-facing
+/// option list "15, 30, 50, or 70+" EXACTLY and excludes
+/// unprotectedReference. The existing line 306 pin asserts equality
+/// against `[.spf15, .spf30, .spf50, .spf70Plus]` but does NOT tie that
+/// ordering to the README source-of-truth or document WHY
+/// unprotectedReference is excluded (the README never offers it as a
+/// user-selectable option — it is the modeled baseline only). This pin
+/// makes the README↔code linkage explicit so a future contributor cannot
+/// re-order or expand allCases without consciously updating the README.
+@Test func test_PP6_spfLevelAllCasesMatchesReadmeUserFacingOrderAndExcludesUnprotectedReference() {
+    let userFacingOptions = SPFLevel.allCases
+    #expect(
+        userFacingOptions.map(\.displayName) == ["15", "30", "50", "70+"],
+        "SPFLevel.allCases MUST produce displayNames ['15', '30', '50', '70+'] in that exact order — matches README line 21 §'User scenarios captured' §3 verbatim: 'SPF defaults to 30 and can be changed to 15, 30, 50, or 70+.' If this fires, either SPFLevel.swift line 10 was reordered OR the README option set drifted from code — fix both together. (WI-bundleEE Loop-24, PP6)"
+    )
+    #expect(
+        !userFacingOptions.contains(.unprotectedReference),
+        "SPFLevel.allCases MUST NOT contain .unprotectedReference. The unprotected baseline is the MODELED reference used by BurnTimeCalculator math, not a user-selectable picker option. Surfacing it in the picker would let users 'choose unprotected' which contradicts the README §3 promise and would invalidate the disclaimer ('estimates assume … the labeled SPF is achieved'). If this fires, SPFLevel.swift line 10 was reverted to Swift's default CaseIterable synthesis which would include all 5 cases. Restore the explicit `public static let allCases: [SPFLevel] = [.spf15, .spf30, .spf50, .spf70Plus]`. (WI-bundleEE Loop-24, PP6)"
+    )
+    // Default-coercion linkage: .spf30 is at index 1 of allCases AND is
+    // the value that UserPreferenceStorage.restoredSPF coerces invalid
+    // inputs to (already pinned at line 1303). Pin the index so a
+    // reordering that, e.g., put `.spf15` at the default slot would be
+    // caught here.
+    #expect(
+        userFacingOptions[1] == .spf30,
+        "SPFLevel.allCases[1] MUST be .spf30 — the README §3 default, and the value UserPreferenceStorage.restoredSPF coerces invalid inputs to (line 1303 pin). If this fires, allCases was reordered in a way that desynchronizes the picker's default-selection index from the storage-coercion default. (WI-bundleEE Loop-24, PP6)"
+    )
+}
