@@ -51,3 +51,19 @@ Monetization-personas validation, design brief, persona overlay on flow diagram,
 **Skill extracted:** `feature-validation-jtbd-personas` — a six-section template (JTBD match / JTBD mismatch / competitor friction / cognitive risk / edge-case personas / verdict-with-conditions) for evaluating PM-proposed features against an existing persona inventory. Generalized from this pass. Confidence: medium (n=1 application, but the structure is portable).
 
 Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-context internal variant — for full-corpus photobiology consensus reviews).
+
+## 2026-05-22 — Loop-27 review
+
+**Goal 3 (User scenarios captured) verdict: PASS.**
+
+Loop-27 shipped HIG-only token cleanup — `@ScaledMetric` wiring so the ≥44×44pt tap-target rule already documented in the LANE 2 HIG note block (`user-flow-onboarding-main-spec.md` line 70: "≥44×44pt targets, … Dynamic Type AX5 reflow") is now *actually* honored at AX5 sizes, not just nominally at default size. No copy, IA, flow, or persona-keyed behavior moved. LANE 4 overlays describe *behavioral* annotations (L1 visibility loop, no-default Fitz picker, window-elapsed surfacing, pull-to-refresh) — none of which are pixel-bound. Loop-27 therefore strengthens the persona overlays it doesn't contradict.
+
+**Spot-checks against shipped behavior:**
+
+- **P4 Asha (row 4):** L1 disclaimer + toolbar ⓘ `EstimateInfoButton` → `AboutView(highlightEstimateApplicability: true)` is annotated as "MOST IMPORTANT L3 TAP." At AX5, the ⓘ now scales with the toolbar bar-button — it stays reachable instead of collapsing under a too-small chrome. The "load-bearing visibility loop" on L1 is unaffected by the scaling pass (it's a presentation policy, not a metric). **Overlay matches shipped behavior.** ✅
+- **P5 Tomás (row 5):** "His safety moment — window-elapsed" depends on the user *seeing and tapping* the elapsed-window surface in field conditions (trail, sweat, sometimes gloves, often a larger Dynamic Type bump because he's a 40-something runner). Loop-27's `@ScaledMetric` pass is the literal mechanism that makes this tap survive AX5. **Overlay matches shipped behavior, and is materially better-served post-Loop-27.** ✅
+- **P3 Devon (row 3, no-default Fitz picker):** Devon is the "I-understand validator" — at AX5 his confirmation button and Fitz row hit-tests both stay ≥44pt now. Reachability concern noted in the spawn context is satisfied. **Overlay matches.** ✅
+
+**Loop-28 persona-keyed gaps surfaced:** None new. The Loop-27 scope was narrow and clean; no inbox decision filed. The standing P6 Priya / P7 Vee gaps already tracked on the forecast surface (see 2026-05-20 entry) remain the live persona-keyed work — they predate this loop and aren't touched by it.
+
+**No-op for Suchi's domain confirmed.** Carrying forward.

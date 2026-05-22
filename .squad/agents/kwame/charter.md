@@ -39,7 +39,7 @@
 
 ## Model
 
-- **Preferred:** claude-opus-4.7
+- **Preferred:** auto
 - **Rationale:** Coordinator selects per task. Swift code → sonnet (default). Large refactors may switch to a code specialist.
 - **Fallback:** Standard chain — coordinator handles fallback automatically
 

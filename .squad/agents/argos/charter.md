@@ -39,7 +39,7 @@
 
 ## Model
 
-- **Preferred:** claude-opus-4.7-1m-internal
+- **Preferred:** claude-opus-4.7-xhigh
 - **Rationale:** User pinned. Strategic reasoning across pricing, persona, and competitive landscape benefits from deep reasoning.
 - **Fallback:** Standard chain — coordinator handles fallback automatically
 
