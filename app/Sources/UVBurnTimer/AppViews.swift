@@ -1461,8 +1461,19 @@ struct SettingsSheet: View {
                     .accessibilityHint(
                         hasSavedLocation ? "Clears the last saved rounded coordinate." : "No saved location is stored.")
 
-                    // Multi-line Button body; .frame(minHeight: minTap) on
-                    // Text label is outside SwiftLint's 200-char lookahead.
+                    // Reason: Button has multi-line action body
+                    // (WI-bundleR / Suchi L01 — `onClearStoredSkinType()`
+                    // defers the L1 re-fire + erasure to the parent so
+                    // the Settings sheet dismisses, then L1 takes over
+                    // the screen with the photosens reach-back Asha
+                    // needs to re-read). `@ScaledMetric`-backed
+                    // `.frame(minHeight: minTap)` is applied to the
+                    // `Text` label on the line above, but the
+                    // intervening Button-closure newlines push that
+                    // `.frame(...)` call outside SwiftLint's 200-char
+                    // regex lookahead from `Button {`. `minTap` is
+                    // declared on `SettingsSheet` and verified by
+                    // Group R / Group LU.
                     // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
                         // WI-bundleR / Suchi L01 — defer the L1 re-fire +
@@ -1479,8 +1490,17 @@ struct SettingsSheet: View {
                     .accessibilityHint("Removes your stored Fitzpatrick skin type and re-presents the informational disclaimer so you can re-attest before continuing.")
                     .accessibilityIdentifier("ClearStoredSkinTypeButton")
 
-                    // Multi-line Button body; .frame(minHeight: minTap) on
-                    // Text label is outside SwiftLint's 200-char lookahead.
+                    // Reason: Button has multi-line action body
+                    // (UserDefaults reset + in-memory session reset —
+                    // closes the GDPR Art.17 erasure-path loop on the
+                    // L1 SPF storage disclosure). `@ScaledMetric`-backed
+                    // `.frame(minHeight: minTap)` is applied to the
+                    // `Text` label on the line above, but the
+                    // intervening Button-closure newlines push that
+                    // `.frame(...)` call outside SwiftLint's 200-char
+                    // regex lookahead from `Button {`. `minTap` is
+                    // declared on `SettingsSheet` and verified by
+                    // Group R / Group LU.
                     // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
                         UserPreferenceStorage.persist(spf: .spf30, to: .standard)

@@ -1369,6 +1369,123 @@ private func _appViewsSourceForGroupR() throws -> String {
     return try String(contentsOf: appViewsURL, encoding: .utf8)
 }
 
+/// Returns the source substring of `source` that contains `struct {name}`
+/// from the `struct` keyword through the closing `}` of the struct body,
+/// bounding by matched braces rather than a fixed character offset.
+///
+/// The scan respects Swift line comments (`// ...`), block comments
+/// (`/* ... */`), single-line string literals (`"..."`), and multi-line
+/// string literals (`"""..."""`) so `{` / `}` inside strings or comments do
+/// not affect nesting depth. Accepts unqualified, `private`, or
+/// `fileprivate` struct declarations; the struct-name match is bounded by
+/// a non-identifier suffix so `struct Foo` does not match `struct FooBar`.
+///
+/// Returns `nil` if no matching struct declaration is found or if the
+/// scan reaches end-of-source without depth returning to zero.
+///
+/// Introduced in Loop-28 WI-4 to replace brittle fixed-offset scan
+/// windows (e.g., the prior 7000-char window on test_U2) which forced
+/// shrinking of swiftlint:disable:next justification comments at AV-12 /
+/// AV-13 to stay inside the window. With matched-brace bounding the
+/// scan grows with the struct, so verbose justifications no longer push
+/// the disclaimer line out of range.
+private func _substringOfAppViewsStruct(_ name: String, in source: String) -> String? {
+    let chars = Array(source)
+    guard let declStart = _findStructDeclStart(name: name, in: chars) else {
+        return nil
+    }
+
+    enum LexState { case normal, lineComment, blockComment, string, multilineString }
+    var state: LexState = .normal
+    var depth = 0
+    var sawOpeningBrace = false
+    var i = declStart
+    let n = chars.count
+
+    while i < n {
+        let c = chars[i]
+        switch state {
+        case .normal:
+            if c == "/", i + 1 < n, chars[i + 1] == "/" {
+                state = .lineComment
+                i += 2
+                continue
+            }
+            if c == "/", i + 1 < n, chars[i + 1] == "*" {
+                state = .blockComment
+                i += 2
+                continue
+            }
+            if c == "\"" {
+                if i + 2 < n, chars[i + 1] == "\"", chars[i + 2] == "\"" {
+                    state = .multilineString
+                    i += 3
+                    continue
+                }
+                state = .string
+                i += 1
+                continue
+            }
+            if c == "{" {
+                depth += 1
+                sawOpeningBrace = true
+            } else if c == "}" {
+                depth -= 1
+                if sawOpeningBrace, depth == 0 {
+                    return String(chars[declStart..<(i + 1)])
+                }
+            }
+        case .lineComment:
+            if c == "\n" { state = .normal }
+        case .blockComment:
+            if c == "*", i + 1 < n, chars[i + 1] == "/" {
+                state = .normal
+                i += 2
+                continue
+            }
+        case .string:
+            if c == "\\", i + 1 < n {
+                i += 2
+                continue
+            }
+            if c == "\"" { state = .normal }
+        case .multilineString:
+            if c == "\"", i + 2 < n, chars[i + 1] == "\"", chars[i + 2] == "\"" {
+                state = .normal
+                i += 3
+                continue
+            }
+        }
+        i += 1
+    }
+    return nil
+}
+
+private func _findStructDeclStart(name: String, in chars: [Character]) -> Int? {
+    let needle = Array("struct \(name)")
+    let n = chars.count
+    let m = needle.count
+    guard m > 0, n >= m else { return nil }
+    var i = 0
+    while i <= n - m {
+        var match = true
+        for j in 0..<m where chars[i + j] != needle[j] {
+            match = false
+            break
+        }
+        if match {
+            let after = i + m
+            let nextChar: Character = after < n ? chars[after] : " "
+            let isIdentTail = nextChar.isLetter || nextChar.isNumber || nextChar == "_"
+            if !isIdentTail {
+                return i
+            }
+        }
+        i += 1
+    }
+    return nil
+}
+
 /// R1 — `HeroTimerCard` View struct still exists as a wrapper around the hero card.
 ///
 /// **Why this guard matters:** an earlier refactor attempt (`9da54cf`) inlined the
@@ -5061,18 +5178,13 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
 
     // Anchor on the DisclaimerCover declaration so we scope the
     // assertions to the L1 cover render site and not, e.g., the
-    // Settings sheet or About sheet.
-    guard let coverStart = source.range(of: "struct DisclaimerCover: View")?.lowerBound else {
+    // Settings sheet or About sheet. Loop-28 WI-4: bound by matched
+    // braces (see `_substringOfAppViewsStruct`) so the scan tracks
+    // the real struct body rather than a brittle fixed offset.
+    guard let coverRegion = _substringOfAppViewsStruct("DisclaimerCover", in: source) else {
         Issue.record("DisclaimerCover struct declaration not found in AppViews.swift")
         return
     }
-
-    // Scan ~6000 chars into the body — DisclaimerCover's body is
-    // approximately 100 LOC (~4500 chars) including the comment block,
-    // so 6000 chars is a comfortable upper bound that stops well
-    // before the next top-level struct.
-    let coverScanEnd = source.index(coverStart, offsetBy: 6000, limitedBy: source.endIndex) ?? source.endIndex
-    let coverRegion = String(source[coverStart..<coverScanEnd])
 
     // (a) The text render must use `.foregroundStyle(.primary)` —
     // this is the WCAG-compliant rendering. Look for the Text node
@@ -5292,18 +5404,16 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
 
     // Anchor on the SettingsSheet declaration so the assertion is
     // scoped to the Settings sheet and not, e.g., the AboutView.
-    guard let settingsStart = source.range(of: "struct SettingsSheet: View")?.lowerBound else {
+    // Loop-28 WI-4: bound by matched braces (see
+    // `_substringOfAppViewsStruct`) so the scan grows with the struct
+    // body. The prior 7000-char fixed window forced shrinking of the
+    // AV-12 / AV-13 swiftlint:disable:next justification comments to
+    // stay inside the window; matched-brace bounding removes that
+    // pressure.
+    guard let settingsRegion = _substringOfAppViewsStruct("SettingsSheet", in: source) else {
         Issue.record("SettingsSheet struct declaration not found in AppViews.swift")
         return
     }
-
-    // Scan ~7000 chars into the body — SettingsSheet's body is ~130
-    // LOC (~5500 chars after Bundle R's Asha P4 routing additions and
-    // Bundle U's Disclaimer Section), so 7000 chars is a comfortable
-    // upper bound that stops before the next top-level struct
-    // (SkinTypeEditView).
-    let settingsScanEnd = source.index(settingsStart, offsetBy: 7000, limitedBy: source.endIndex) ?? source.endIndex
-    let settingsRegion = String(source[settingsStart..<settingsScanEnd])
 
     // (a) The Settings sheet must render `Text(ProductCopy
     // .disclaimerLinkLabel)` — the same line the PersistentFooter
@@ -5463,18 +5573,14 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
 @Test func test_V4_heroTimerCardKeepsCuratedParentAccessibilityLabelAndContainElement() throws {
     let source = try _appViewsSourceForGroupR()
 
-    guard let cardStart = source.range(of: "struct HeroTimerCard: View {")?.lowerBound else {
+    // Loop-28 WI-4: bound by matched braces (see
+    // `_substringOfAppViewsStruct`) so the scan captures the entire
+    // HeroTimerCard struct — body + helpers + computed properties +
+    // accessibilityLabel computation — without a brittle fixed offset.
+    guard let cardRegion = _substringOfAppViewsStruct("HeroTimerCard", in: source) else {
         Issue.record("HeroTimerCard struct not found in AppViews.swift")
         return
     }
-    // Scan ~14000 chars into the struct. HeroTimerCard's body +
-    // helpers + computed properties + accessibilityLabel computation
-    // total ~250 LOC (~10000 chars) on `e813a6c`, so 14000 chars is
-    // a comfortable upper bound that captures the full struct body
-    // including the trailing `accessibilityLabel` computed property
-    // at line 1020+.
-    let cardScanEnd = source.index(cardStart, offsetBy: 14000, limitedBy: source.endIndex) ?? source.endIndex
-    let cardRegion = String(source[cardStart..<cardScanEnd])
 
     // (a) The hero card's `body` must keep `.accessibilityElement(
     // children: .contain)` so static children stay individually
@@ -8125,4 +8231,117 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
             "Regime (d) on \(dayLabel): filtered hours MUST preserve original order. Expected: [00, 06, 12, 18, 23], got: \(resultHourOffsets). (WI-bundleFF Loop-25, UU2-regime-d-order)"
         )
     }
+}
+
+// MARK: - Group SU — `_substringOfAppViewsStruct` helper guards
+//
+// WI-loop28-4 introduced `_substringOfAppViewsStruct(_:in:)` so the
+// source-text contract tests in Groups T / U / V no longer rely on
+// hand-picked fixed-character scan windows (6000 / 7000 / 14000
+// chars) that grow brittle every time a struct's body or its
+// neighbours edit. Group SU pins the helper's behaviour: bounded by
+// real braces (with a lexer that respects line / block / string /
+// multiline-string contexts), nil on missing names, and
+// identifier-tail-aware so `struct Foo` does not match `struct
+// FooBar`.
+
+@Test func test_SU1_substringHelperResolvesSettingsSheetBoundedByBraces() throws {
+    let source = try _appViewsSourceForGroupR()
+    guard let region = _substringOfAppViewsStruct("SettingsSheet", in: source) else {
+        Issue.record("`_substringOfAppViewsStruct` returned nil for `SettingsSheet` — helper or AppViews layout drifted.")
+        return
+    }
+    #expect(
+        !region.isEmpty,
+        "Helper must return a non-empty substring for an existing struct (SettingsSheet)."
+    )
+    #expect(
+        region.hasSuffix("}"),
+        "Helper must terminate at the struct's matching closing brace (last char `}`) — got: ...\(region.suffix(40))"
+    )
+    #expect(
+        region.contains("struct SettingsSheet"),
+        "Helper must include the `struct SettingsSheet` declaration as the leading content."
+    )
+}
+
+@Test func test_SU2_substringHelperStaysInsideSettingsSheetBody() throws {
+    let source = try _appViewsSourceForGroupR()
+    guard let region = _substringOfAppViewsStruct("SettingsSheet", in: source) else {
+        Issue.record("Helper returned nil for SettingsSheet.")
+        return
+    }
+    #expect(
+        region.contains("Text(ProductCopy.disclaimerLinkLabel)"),
+        "SettingsSheet body must render `Text(ProductCopy.disclaimerLinkLabel)` — U2 contract overlap. The substring helper's bounded region must still capture U2's source-level anchor."
+    )
+    #expect(
+        !region.contains("struct SkinTypeEditView"),
+        "Helper must stop at SettingsSheet's closing brace — must not leak into the next sibling struct (e.g. SkinTypeEditView)."
+    )
+    #expect(
+        !region.contains("struct PersistentFooter"),
+        "Helper must stop at SettingsSheet's closing brace — must not leak into PersistentFooter further down the file."
+    )
+}
+
+@Test func test_SU3_substringHelperReturnsNilForMissingStructName() throws {
+    let source = try _appViewsSourceForGroupR()
+    let region = _substringOfAppViewsStruct("ThisStructDoesNotExistInAppViews_kwame", in: source)
+    #expect(
+        region == nil,
+        "Helper must return nil when the named struct is absent — defensive guard against silent empty-scan regressions."
+    )
+}
+
+@Test func test_SU4_substringHelperRespectsIdentifierTailBoundary() {
+    let synthetic = """
+    struct FooBar {
+        let value: Int = 1
+        var body: Int { 42 }
+    }
+
+    struct Foo {
+        let marker: String = "kwame-SU4-marker"
+    }
+    """
+    guard let region = _substringOfAppViewsStruct("Foo", in: synthetic) else {
+        Issue.record("Helper failed to resolve `struct Foo` in synthetic source — identifier-tail boundary regression.")
+        return
+    }
+    #expect(
+        region.contains("kwame-SU4-marker"),
+        "Helper must match `struct Foo` (not `struct FooBar`) — got region: \(region)"
+    )
+    #expect(
+        !region.contains("FooBar"),
+        "Helper must not slip into `struct FooBar` when asked for `struct Foo`."
+    )
+}
+
+@Test func test_SU5_substringHelperRespectsCommentAndStringLexerContexts() {
+    let synthetic = """
+    struct Trickster {
+        // A closing brace in a line comment: }
+        /* And one in a block comment: } */
+        let plain = "string with a brace } inside"
+        let multiline = \"\"\"
+        triple-quoted with a brace } inside
+        and another line
+        \"\"\"
+        let realEnd = "kwame-SU5-marker"
+    }
+    """
+    guard let region = _substringOfAppViewsStruct("Trickster", in: synthetic) else {
+        Issue.record("Helper failed to resolve `struct Trickster` — lexer state machine regressed (comment/string context).")
+        return
+    }
+    #expect(
+        region.contains("kwame-SU5-marker"),
+        "Helper must skip `}` characters that live inside line/block comments, string literals, and multiline-string literals — got region prefix/suffix: \(region.prefix(80))…\(region.suffix(80))"
+    )
+    #expect(
+        region.hasSuffix("}"),
+        "Helper must still terminate at the real outer `}` — got suffix: ...\(region.suffix(40))"
+    )
 }
