@@ -49,3 +49,12 @@ No GitHub assignee was set because the repo currently exposes only `yashasg` as 
 
 Kwame completed SwiftLint 0.63.2 install and pushed branch `squad/swiftlint-hig-error-gate` with 4 starter HIG rules (error severity) integrated into CI; 16 baseline violations confirmed. Iris produced 20-rule HIG SwiftLint catalog. Likely next: orchestrate branch merge after Iris HIG-pass and integrate all 20 rules (10 immediate error, 5 grace-period warn→error).
 Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always-on — overrides prior auto selection).
+
+## 2026-05-22T04:05:00-07:00 — Loop-26 plan filed
+
+Filed `gaia-loop-26-plan.md`. Key learnings from the planning pass:
+
+- **The spec is a poor source of "outstanding work" this iteration.** LANE 1–4 is so heavily reconciled (Loop-10 WI-cc + later patches) that every gap in-canvas is already retired or shipped. Real gaps live in cross-cutting gates: SwiftLint HIG enforcement (PR #98 + #95/#96 cleanup) and the two manual physical-device checklists. Future loop-planning should default to scanning cross-cutting quality gates first, not the canvas spec, once a design is this mature.
+- **Goal 5 will remain FAIL until a human with an OLED iPhone + WCAG measurement tool + linear polarizing filter signs off both checklists.** No agent loop can close it. This needs to be surfaced in every loop report so it doesn't quietly drift into "PARTIAL" — the checklists explicitly say blank = fail.
+- **Loop-scope realism:** with PR #98 in flight and red CI by design, attempting both #95 and #96 in one Squad session risks landing #98 alone with no cleanup, leaving `main` red. Recommend strict 1-cleanup-PR-per-loop pacing. AppViews (#96) chosen first over ForecastPicker (#95) because the disclaimer `.padding(32)` is the highest-impact single fix and the file is the L1 entry surface.
+- **Privacy Policy hosting (Plunder WI-plunder-m1) is the silent Goal-4 blocker.** It's outside the iOS code scope but blocks "Expert approved" from going green. Flagged as WI-loop-26-G owned by yashasg.

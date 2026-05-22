@@ -1,6 +1,8 @@
 # Iris — History (Summarized)
 
-**Latest Status (2026-05-21):** WI-7 forecast card redesign v3 fully locked and ready for implementation. All UX specs complete: loading-state skeleton rows, picker UX, polar-night collapsed state (now superseded to plain nighttime rendering per 2026-05-21T01:58:19Z polar-treat-as-nighttime directive), error handling. Copy MODIFY from Wheeler: replace "latitude" with "this place" (archived in v1 per polar-as-nighttime). All five prior WI-7 decisions confirmed. Design ready for Kwame implementation; Iris review gate on each surface.
+**Latest Status (2026-05-22):** Loop-26 HIG cleanup playbook produced for PR #98 — 31 violations (18 AppViews, 13 ForecastPickerView) mapped to mechanical replacements for Kwame. See `.squad/decisions/inbox/iris-loop-26-hig-cleanup-playbook.md`.
+
+**Previous Status (2026-05-21):** WI-7 forecast card redesign v3 fully locked and ready for implementation. All UX specs complete: loading-state skeleton rows, picker UX, polar-night collapsed state (now superseded to plain nighttime rendering per 2026-05-21T01:58:19Z polar-treat-as-nighttime directive), error handling. Copy MODIFY from Wheeler: replace "latitude" with "this place" (archived in v1 per polar-as-nighttime). All five prior WI-7 decisions confirmed. Design ready for Kwame implementation; Iris review gate on each surface.
 
 **Full History Archive:** See `history-archive-2026-05-21T02:07:30Z.md`
 
@@ -121,7 +123,24 @@ Iris-6 consolidated Plunder/Wheeler/Suchi consensus into executable spec for Kwa
 **All 10 Iris §8 items now complete.** Branch feature/wi-7-uv-forecast ready for user GitLab MR.
 ---
 
-## Learnings — 2026-05-22T00:44:46.015-07:00 (Apple layout audit)
+## Learnings — 2026-05-22T04:10:00-07:00 (Loop-26 HIG cleanup playbook)
+
+**Context:** PR #98 gated by 31 `severity: error` SwiftLint violations across `AppViews.swift` (18) and `ForecastPickerView.swift` (13). Policy: all HIG rules at `severity: error`, day 1; `@ScaledMetric`-backed touch targets mandatory.
+
+**Key patterns confirmed:**
+
+- **`@ScaledMetric` consolidation:** When multiple violations are in the same struct, declare all scaled vars at the struct top in one block — keeps diffs reviewable and avoids per-site repetition. Group by function: touch targets (`minTap`), named geometry (`pillWidth`, `cellWidth`), icon sizes (`chevronSize`), skeleton anatomy (`skeletonRowHeight`).
+- **Semantic font > `@ScaledMetric` for icons paired with text:** When a decorative icon sits directly inside a `Label` alongside text styled with a semantic style (e.g., `.subheadline`), use the same semantic style on the icon — they scale identically and no new `@ScaledMetric` var is needed. Reserve `@ScaledMetric` for icon sizing in tightly-specced layout cells where a semantic style would decouple the icon from the cell geometry contract.
+- **`navigation_stack_in_sheet` resolution — `.fullScreenCover` when there's already a navigation bar + Done button + `interactiveDismissDisabled`:** A sheet with a `NavigationStack`, toolbar title, and explicit Done button is functionally a full-screen cover. Upgrading to `.fullScreenCover` is the correct HIG fix, not removing the navigation structure. The parent's `.interactiveDismissDisabled(true)` context confirms this is a gated task flow.
+- **UI test probe buttons — correct use of `// swiftlint:disable:next`:** Test infrastructure behind a `ProcessInfo` launch-argument guard is a legitimate exception — add the disable comment with a one-line justification. This is the policy escape hatch, not a workaround.
+- **Form/List row buttons need explicit `minHeight`:** SwiftUI's Form/List provides system row padding but does NOT guarantee a Dynamic-Type-scaled touch target. All destructive Settings buttons need `.frame(minHeight: minTap)` on their label content.
+- **Skeleton rows must scale with their live counterparts:** If a live row has `@ScaledMetric`-backed dimensions, the skeleton placeholder must use the same vars. Otherwise the loading→loaded transition reflowing is a visual regression.
+- **Toolbar `ToolbarItem` buttons require `@ScaledMetric` backing for the lint gate:** The system guarantees adequate toolbar tap areas, but the regex-based lint rule cannot prove this. Add `.frame(minHeight: minTap)` rather than using a disable comment — it's harmless and keeps the gate green without introducing exceptions.
+
+**Files covered:** `app/Sources/UVBurnTimer/ForecastPickerView.swift`, `app/Sources/UVBurnTimer/AppViews.swift`  
+**Playbook:** `.squad/decisions/inbox/iris-loop-26-hig-cleanup-playbook.md`
+
+
 
 **Verdict:** ⚠️ Mostly Apple-idiomatic. The codebase has strong HIG scaffolding (safe-area insets, Dynamic Type reflow branches, system text styles, `@ScaledMetric`) but still carries repeated raw numeric padding plus fixed forecast cell/chip dimensions.
 
