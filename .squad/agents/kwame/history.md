@@ -72,3 +72,78 @@ This third attempt keeps the visual cleanup the user originally asked for (no `B
 These are the priority cleanup targets when a dedicated UI-pass PR is scheduled. The existing structure (safe area handling, `@ScaledMetric` for hero/gauge, no `GeometryReader` misuse) is sound; only the repeated numeric padding and forecast component sizing need refactor. See `.squad/decisions.md` → 2026-05-22 Apple-idiom SwiftUI layout policy for full detail.
 
 Model assignment updated 2026-05-22T04:01: claude-opus-4.7 (premium Opus, always-on — overrides prior auto selection).
+
+## Loop-26 — HIG cleanup (PR #98) — 2026-05-22
+
+Cleaned 31 SwiftLint HIG violations mechanically per Iris's playbook
+(`.squad/decisions/inbox/iris-loop-26-hig-cleanup-playbook.md`). PR #98
+CI green; PR body updated with `Closes #95` / `Closes #96`.
+
+Methodology learnings for future HIG passes:
+
+- **Canonical `@ScaledMetric` pattern.** For each touch target use
+  `@ScaledMetric private var minTap: CGFloat = 44` declared on the
+  hosting struct, then `.frame(minHeight: minTap)` on the rendered
+  label or directly on `Button(...)`. Same shape generalises to
+  `pillWidth`/`pillHeight`, `cellWidth`/`cellHeight`, `chipWidth`,
+  `warningIconSize`, `numeralColWidth`, etc. — one `@ScaledMetric` per
+  semantically distinct dimension.
+
+- **Semantic-font mapping for icons.** Icons paired with a Text label
+  (HStack/Label) → use SwiftUI semantic font (`.subheadline`,
+  `.caption`, `.title2`). Standalone icons that don't anchor to text
+  → `@ScaledMetric` for the dimension. Iris's playbook documents the
+  full table.
+
+- **`navigation_stack_in_sheet` → `.fullScreenCover`.** When a sheet
+  presents an `AboutView()` or similar destination wrapped in its own
+  `NavigationStack`, the modal-on-modal collapses gesture
+  affordances. Convert the `.sheet(isPresented:)` modifier to
+  `.fullScreenCover(isPresented:)`. The inner NavigationStack now owns
+  the navigation chrome cleanly. Pin with a source-text guard.
+
+- **SwiftLint `:next` ordering quirk.** `// swiftlint:disable:next
+  {rule}` disables the *immediately* following line — including if the
+  next line is a comment. Wrong order yields a
+  `superfluous_disable_command` violation. Correct shape: **reason
+  comments first, then the disable directive on the line directly
+  above the rule-violating statement**:
+
+  ```swift
+  // Multi-line Button body; .frame(minHeight: minTap) on Text
+  // label is outside SwiftLint's 200-char lookahead.
+  // swiftlint:disable:next missing_min_touch_target
+  Button(role: .destructive) { … } label: { … }
+  ```
+
+- **`missing_min_touch_target` regex 200-char lookahead.** The rule
+  regex `(?:\.onTapGesture\b|\bButton\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)`
+  only looks 200 chars ahead. Long Button bodies push the
+  `@ScaledMetric` `.frame(minHeight: minTap)` outside that window and
+  trigger false positives. Mitigate with documented per-line disable
+  (with reason); long-term replace the regex with a swift-syntax AST
+  rule.
+
+- **Line-number-fragile tests are tech debt.** `test_S5_adr0001*`
+  pins ADR-0001 citations against current source line numbers. Any
+  `@ScaledMetric` declaration drift inside a cited struct breaks the
+  test. Similarly `test_U2_settingsSheet*` has a fixed 7000-char scan
+  window from `struct SettingsSheet: View`. Both required workarounds
+  during cleanup (shrink reason comments to fit; refresh ADR
+  citations). Future refactor: swap integer-line citations for symbol
+  anchors; replace fixed scan windows with struct-boundary detection.
+
+- **Pre-existing literal `minHeight: 44` sites that pass SwiftLint.**
+  AppViews.swift:295/315/337 (locationChip/spfChip/skinTypeChip
+  Labels) and 2135 (PersistentFooter) carry `.frame(maxWidth:
+  .infinity, minHeight: 44)`. They escape the rule because (a) their
+  host wrapper is `Button { … }` / `Menu` / `NavigationLink` — none
+  of which match `\bButton\s*\(`, and (b) within the 200-char window
+  the lookahead also catches `.infinity` (an identifier!) on the
+  preceding `maxWidth:` parameter and incorrectly considers the rule
+  satisfied. Both are tech-debt artifacts of the regex rule, NOT a
+  signal that literal `44` is permitted. Source-text guards must be
+  scoped to Iris's playbook targets (the specific CTAs being
+  transformed), not the entire file, or false positives will fire on
+  pre-existing legitimate sites.
+
