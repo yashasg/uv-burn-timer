@@ -182,4 +182,59 @@ When adding a new toolbar item to any navigation bar in the app
 3. Confirm S4's guard still passes after the change; extend S4 to
    cover the new item if the new screen lives outside `RootView`.
 
+## Extension — iOS 26.4 toolbar Image floor (PR #99 / loop-29 WI-29-4)
+
+**Discovered:** 2026-05-22, PR **#99** (Loop-28 WI-0, RootView toolbar
+minTap regression). The base HIG ≥44pt tap-target rule decided above
+governs *placement*; this extension covers *sizing* of toolbar `Image`
+labels under iOS 26.4 Dynamic Type. On the iOS 26.4 simulator,
+`RootView`'s gear (`gearshape`) toolbar `Image` regressed below 44pt
+at accessibility Dynamic Type sizes (AX1–AX5) even though it was
+declared via `ToolbarItem(placement: .topBarTrailing)` per the decision
+above. Root cause: toolbar items written as
+`Button { ... } label: { Image(systemName: ...) }` /
+`NavigationLink { ... } label: { Image(...) }` interleave
+accessibility modifiers (`.accessibilityLabel`, `.accessibilityHint`,
+traits) between the `Image` and the outer closure, pushing the bare
+`Image` past the 200-char lookahead of `.swiftlint.yml`'s base
+`missing_min_touch_target` regex — so the missing-floor violation was
+not caught by lint and only surfaced as a manual a11y audit failure on
+device.
+
+- **Symptom:** RootView gear toolbar `Image` measured <44×44pt at
+  AX3+ on iOS 26.4 simulator; XCUI hittability passed (ADR-0002
+  decision held) but Dynamic Type a11y audit failed.
+- **Floor pattern (required adjacent to every toolbar `Image`
+  label):**
+  ```swift
+  @ScaledMetric private var minTap: CGFloat = 44
+  // ...
+  Image(systemName: "gearshape")
+      .frame(minWidth: minTap, minHeight: minTap)
+  ```
+  The `@ScaledMetric` declaration must live inside the *declaring
+  struct's* body (per Group LT contract-test pattern, loop-29
+  Learnings) so it scales with the user's chosen Dynamic Type size.
+- **Enforcement chain:**
+  - **PR #99** — minimum-diff product fix: applied the floor pattern
+    to RootView's gear `Button` and `EstimateInfoButton`
+    `NavigationLink`.
+  - **PR #104** — WI-29-2: widened `missing_min_touch_target` regex
+    to catch `Button { ... } label: { ... }` trailing-closure form.
+  - **PR #106** — WI-29-7: widened the same regex to catch
+    `NavigationLink` and `Link` trailing-closure forms.
+  - **PR #108 / WI-29-4** — adds a toolbar-scoped custom SwiftLint
+    rule `toolbar_image_needs_scaled_frame` that fires when a bare
+    `Image(systemName:)` appears inside a `ToolbarItem` `label:`
+    closure without an adjacent `.frame(minWidth:minHeight:)` backed
+    by an `@ScaledMetric` symbol. This is the canonical enforcement
+    mechanism for this extension; the base rule cannot see inside
+    the toolbar-label closure.
+
+- **Audit addendum (this ADR):** When adding a new `ToolbarItem`
+  whose `label:` is an `Image`, the author must (a) apply the
+  `@ScaledMetric minTap` + `.frame(minWidth:minHeight:)` floor
+  pattern adjacent to the `Image`, and (b) confirm the WI-29-4
+  custom rule (`toolbar_image_needs_scaled_frame`) passes.
+
 *Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>*
