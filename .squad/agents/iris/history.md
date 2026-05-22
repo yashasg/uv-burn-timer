@@ -120,3 +120,5 @@ The rule is intentionally conservative — it does not honor "implicit decoratio
 No code changes to `app/` or `.swiftlint.yml` made (per scope constraint). Catalog is the deliverable.
 
 ### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
+
+### 2026-05-22T22:39:04Z — Batch-1 rule #1 (`reduce_motion_unguarded_animation`) shipped via WI-loop31-1 / PR #122 / merge 91736a3. No catalog fixture file existed pre-PR; contract authored in the rule's doc-comment and PR body. 5 assumptions for Iris's review: (1) lenient `reducemotion`/`reducedmotion` substring identifier match, (2) `.opacity` allowed silently per Apple HIG, (3) plain DeclReference arg deferred to author's computed property, (4) both `swiftlint:disable:this` and `REDUCE_MOTION_OK` markers accepted, (5) `if`/`guard` ancestor silencer is branch-agnostic. Batch-1 now complete (rules #1+#2+#3 all shipped).
