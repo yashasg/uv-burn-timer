@@ -5315,4 +5315,186 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
     )
 }
 
+// MARK: - Group V: Iris L04 — hero VoiceOver double-bind closure
+//
+// Iris L04 (Loop-13 → Loop-14 deferred → Loop-15) — the hero card's
+// parent `.accessibilityElement(children: .contain) +
+// .accessibilityLabel(HeroAccessibilitySummary.text(...))` composes a
+// curated VoiceOver read-out that already includes
+// `estimate.accessibilitySummary` (verbatim, see ProductCopy.swift
+// line ~412). The inner `estimateText` View helper in turn applies
+// its own `.accessibilityLabel(estimate.accessibilitySummary)` on the
+// big numeric `Text(estimate.displayText)`. With `.contain`, VoiceOver
+// reads the parent container's curated label on focus, then descends
+// into children on swipe — the child estimateText re-announces the
+// same `estimate.accessibilitySummary` string. The result is a
+// "double-bind": the screen-reader user hears "~55 min ... Estimated
+// burn time: 55 minutes. Current UV index: 6.0. Moderate tier.
+// Estimated only, not medical advice." at the container, then swipes
+// once and hears "Estimated burn time: 55 minutes." again from the
+// static numeric.
+//
+// Bundle V's fix is to mark the inner numeric Text with
+// `.accessibilityHidden(true)` so the static numeric drops out of the
+// accessibility tree. The parent's curated summary remains the
+// canonical read-out. The TierBadge, contextLine, SafetyStatusCard,
+// burnRiskGauge, and any failure-state Buttons stay reachable because
+// they carry information NOT in the parent summary (severity suffix,
+// inputs recap, safety hedges, retry affordances).
+//
+// XCUI compatibility note: the `.accessibilityIdentifier(estimate
+// .displayText)` modifier is retained on the inner Text. XCUI's
+// element lookup does not need the element to be visible to VoiceOver
+// — the identifier metadata persists. No existing XCUI test queries
+// the numeric by displayText identifier (verified across
+// UVBurnTimerUITests.swift on the e813a6c-era main), so hiding the
+// Text from VO carries no XCUI risk.
+
+/// V3 — HeroTimerCard.estimateText hides its static numeric from
+/// VoiceOver to avoid the Iris L04 double-bind with the parent's
+/// curated `HeroAccessibilitySummary.text(...)` label.
+///
+/// Numbered V3 (not V1) to disambiguate from the pre-existing
+/// Loop-7 / Group V `test_V1_heroForecastDateContextRendersClockArrowIcon`
+/// + `test_V2_forecastDateContextLabelStaysCaptionTypography` at lines
+/// 1811 + 1838, which guard a different surface (the forecast date
+/// caption above the gauge). Mirrors the Bundle S §S5/S6/S7
+/// disambiguation pattern from the Loop-14 closure log.
+///
+/// **Why this guard matters:** the parent HeroTimerCard already
+/// announces `estimate.accessibilitySummary` (e.g., "Estimated burn
+/// time: 55 minutes.") as part of its curated multi-sentence summary.
+/// The pre-V3 shape attached the SAME string as
+/// `.accessibilityLabel(estimate.accessibilitySummary)` to the static
+/// numeric Text, causing VoiceOver to read the burn-time twice (once
+/// at container focus, again on swipe into the static numeric). The
+/// `.accessibilityHidden(true)` modifier collapses the read-out to a
+/// single canonical pass through the parent summary. A future
+/// refactor that drops the modifier — or re-attaches an
+/// `.accessibilityLabel` to the inner Text — would regress Iris L04
+/// and re-introduce the double-bind for every blind / low-vision user
+/// who focuses the hero card. (Iris L04 — Loop-13 deferred / Loop-15)
+@Test func test_V3_heroTimerCardEstimateTextIsHiddenFromVoiceOverToAvoidParentLabelDoubleBind() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    // Anchor on the estimateText helper inside HeroTimerCard. The
+    // helper is unique to HeroTimerCard (no other View has a
+    // `private func estimateText(_ estimate: BurnTimeEstimate)`
+    // signature on `e813a6c`-era AppViews.swift).
+    guard let helperStart = source.range(
+        of: "private func estimateText(_ estimate: BurnTimeEstimate) -> some View {"
+    )?.lowerBound else {
+        Issue.record(
+            "HeroTimerCard.estimateText helper not found in AppViews.swift — Iris L04 fix anchors on this helper; if it has been renamed or inlined, update the V3 test to follow the new render site."
+        )
+        return
+    }
+
+    // Scan ~2000 chars into the helper body. The helper body is
+    // ~30 LOC (~1000 chars) on `e813a6c`, so 2000 chars is a
+    // comfortable upper bound that stops before the next helper.
+    let helperScanEnd = source.index(
+        helperStart, offsetBy: 2000, limitedBy: source.endIndex
+    ) ?? source.endIndex
+    let helperRegion = String(source[helperStart..<helperScanEnd])
+
+    // (a) The inner Text must carry `.accessibilityHidden(true)` so
+    // it drops out of the VoiceOver tree. The parent's curated
+    // HeroAccessibilitySummary owns the canonical read-out.
+    #expect(
+        helperRegion.contains(".accessibilityHidden(true)"),
+        "HeroTimerCard.estimateText must apply `.accessibilityHidden(true)` to the static numeric Text — the parent HeroTimerCard's `.accessibilityElement(children: .contain) + .accessibilityLabel(HeroAccessibilitySummary.text(...))` already speaks `estimate.accessibilitySummary` verbatim. Leaving the inner Text exposed (with its own .accessibilityLabel(estimate.accessibilitySummary)) double-binds VoiceOver: the user hears the burn-time once at the container and again on swipe into the numeric. (WI-bundleV / Iris L04 — Loop-15)"
+    )
+
+    // (b) The pre-V3 shape — an explicit
+    // `.accessibilityLabel(estimate.accessibilitySummary)` on the
+    // inner Text — must NOT be re-introduced. Together with (a) this
+    // pins the fix shape: hide the Text from VO; do not also leave a
+    // duplicate accessibility label dangling.
+    #expect(
+        !helperRegion.contains(".accessibilityLabel(estimate.accessibilitySummary)"),
+        "HeroTimerCard.estimateText must NOT attach `.accessibilityLabel(estimate.accessibilitySummary)` to the inner Text — that label re-announces the burn-time on swipe even when the parent summary already speaks it. The accessibility surface for the static numeric is the parent's curated HeroAccessibilitySummary. (WI-bundleV / Iris L04 — Loop-15)"
+    )
+
+    // (c) The accessibility identifier MUST be retained so XCUI's
+    // element lookup remains intact. `.accessibilityIdentifier` and
+    // `.accessibilityHidden(true)` are orthogonal: the identifier is
+    // metadata that XCUI's underlying accessibility runtime preserves
+    // across hidden elements, and no existing XCUI test searches the
+    // numeric by displayText, but pinning the identifier guards
+    // against a future XCUI test that wants to assert "the on-screen
+    // numeric is `~55 min`" without going through the parent label.
+    #expect(
+        helperRegion.contains(".accessibilityIdentifier(estimate.displayText)"),
+        "HeroTimerCard.estimateText must retain `.accessibilityIdentifier(estimate.displayText)` on the inner Text — the identifier survives `.accessibilityHidden(true)` and remains available to XCUI. Dropping it would regress XCUI compatibility for any future hero-text snapshot test. (WI-bundleV / Iris L04 — Loop-15)"
+    )
+}
+
+/// V4 — The HeroTimerCard parent container retains its curated
+/// `HeroAccessibilitySummary.text(...)` accessibilityLabel and its
+/// `.accessibilityElement(children: .contain)` shape, so the V3 fix's
+/// premise — that the parent summary is the canonical VoiceOver
+/// read-out — keeps holding.
+///
+/// Numbered V4 (not V2) to disambiguate from the pre-existing
+/// Loop-7 / Group V `test_V2_forecastDateContextLabelStaysCaptionTypography`
+/// at line 1838. Same disambiguation rationale as V3 above.
+///
+/// **Why this guard matters:** if a future refactor drops the parent
+/// label, V3's hide-the-numeric fix would leave the burn-time
+/// completely silent to VoiceOver. If a refactor changes `.contain`
+/// to `.combine`, the static children would be folded into a single
+/// element under the parent label — including Buttons inside the
+/// stale / failure states — which collapses Recalculate-style retry
+/// affordances into the parent element and breaks targeted Button
+/// focus for VO. Pinning the shape keeps both halves of the Iris L04
+/// design intact: curated parent summary + still-navigable
+/// interactive descendants. (Iris L04 — Loop-15)
+@Test func test_V4_heroTimerCardKeepsCuratedParentAccessibilityLabelAndContainElement() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    guard let cardStart = source.range(of: "struct HeroTimerCard: View {")?.lowerBound else {
+        Issue.record("HeroTimerCard struct not found in AppViews.swift")
+        return
+    }
+    // Scan ~14000 chars into the struct. HeroTimerCard's body +
+    // helpers + computed properties + accessibilityLabel computation
+    // total ~250 LOC (~10000 chars) on `e813a6c`, so 14000 chars is
+    // a comfortable upper bound that captures the full struct body
+    // including the trailing `accessibilityLabel` computed property
+    // at line 1020+.
+    let cardScanEnd = source.index(cardStart, offsetBy: 14000, limitedBy: source.endIndex) ?? source.endIndex
+    let cardRegion = String(source[cardStart..<cardScanEnd])
+
+    // (a) The hero card's `body` must keep `.accessibilityElement(
+    // children: .contain)` so static children stay individually
+    // navigable when they carry information not in the parent summary
+    // (TierBadge severity suffix, contextLine inputs recap,
+    // SafetyStatusCard hedges, retry Buttons).
+    #expect(
+        cardRegion.contains(".accessibilityElement(children: .contain)"),
+        "HeroTimerCard.body must retain `.accessibilityElement(children: .contain)` so children remain individually navigable for VoiceOver — switching to `.combine` would fold the Recalculate / Try-again / Open-Settings Buttons into a single accessibility element under the parent label, collapsing their tap affordances. V3's hide-the-numeric fix relies on this pairing: parent owns the summary, children remain interactive. (WI-bundleV / Iris L04 — Loop-15)"
+    )
+
+    // (b) The hero card's `body` must keep the curated
+    // `.accessibilityLabel(accessibilityLabel)` so the parent
+    // summary is the canonical read-out V3's hide-the-numeric fix
+    // routes through.
+    #expect(
+        cardRegion.contains(".accessibilityLabel(accessibilityLabel)"),
+        "HeroTimerCard.body must retain `.accessibilityLabel(accessibilityLabel)` (the curated HeroAccessibilitySummary.text(...) read-out) — dropping it would leave the hero card with no canonical VoiceOver summary, because V3 hides the inner numeric from VO. The parent label IS the summary; the inner Text defers to it. (WI-bundleV / Iris L04 — Loop-15)"
+    )
+
+    // (c) The accessibilityLabel computation must keep routing
+    // through `HeroAccessibilitySummary.text(...)` — the pure
+    // function pinned by `heroAccessibilitySummaryCombinesSafetyCriticalVerdictContext`
+    // and friends in the existing test contract. A future refactor
+    // that inlines a bespoke string would silently drop the
+    // verdict-tier + "Estimated only, not medical advice." trailer
+    // that the curated summary guarantees.
+    #expect(
+        cardRegion.contains("HeroAccessibilitySummary.text("),
+        "HeroTimerCard's accessibilityLabel computed property must route through `HeroAccessibilitySummary.text(...)` so the curated multi-sentence summary (estimate.accessibilitySummary + UV + verdict + safety footer + forecast date context) keeps composing through the single audited pure function. Inlining a bespoke string would silently drop the safety footer / verdict / forecast-context elements the test contract pins. (WI-bundleV / Iris L04 — Loop-15)"
+    )
+}
 
