@@ -28,3 +28,27 @@ Iris's image-a11y fixture catalog (`.squad/decisions/inbox/iris-image-accessibil
 **PR #120:** https://github.com/yashasg/uv-burn-timer/pull/120 — CI runs `26312959589` (push) and `26313088707` (PR) in flight at write time. Decision-inbox file: `.squad/decisions/inbox/kwame-iris-3sites-opened.md` (full before/after snippets, HIG choice per site, CI capture).
 
 ### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
+
+## 2026-05-22 — WI-loop31-2 / WI-L31-01: Location-Rationale Onboarding screen (PR #123, MERGED)
+
+**Spec ref:** `.squad/files/user-flow-onboarding-main-spec.md` LANE 1 #4 — "Privacy rationale BEFORE iOS prompt; CTA in `.safeAreaInset(.bottom)`".
+
+Closed the only LANE 1 surface missing from `main`: a privacy-rationale sheet that explains why the app needs location access, shown once between the Fitzpatrick skin-type picker and the first `CLLocationManager.requestWhenInUseAuthorization()` call. Once the user taps Continue, the acknowledgement persists via `UserPreferenceStorage.persist(locationPromptGate:to:)` and the sheet never re-fires on subsequent cold launches.
+
+**Changes shipped:**
+
+- `LocationRationaleOnboardingView.swift` (new) — `ScrollView` + `VStack` header/body + `.safeAreaInset(edge: .bottom)` CTA. SF Symbol `lock.shield` with explicit `.accessibilityLabel("Privacy")`; title with `.isHeader` VoiceOver trait; `@ScaledMetric` 44pt touch target; `accessibilityReduceMotion`-gated fade-in; two XCUI identifiers (`LocationRationaleHeader`, `LocationRationaleContinueButton`); `.interactiveDismissDisabled(true)`.
+- `UVWorkflow.swift` — `LocationPromptGate.acknowledgeRationale()` idempotent setter.
+- `UVBurnTimerSession.swift` — `UserPreferenceStorage.restoredLocationPromptGate(from:)` and `.persist(locationPromptGate:to:)`.
+- `ProductCopy.swift` — four strings (`locationRationale{Title,Body,ContinueLabel,AccessibilityHint}`); all enrolled in `auditCopySurfaces`.
+- `UVBurnTimerApp.swift` — `@State locationPromptGate`, `@State showLocationRationale`, `.locationRationalePresentation(isPresented:)` extension, `presentLocationRationaleIfNeeded(deferred:)` with 500ms defer to avoid cover-slot collision.
+- `LocationRationaleOnboardingTests.swift` (new) — 13 XCTest cases: `acknowledgeRationale` idempotency, UserPreferences round-trips, `clearStoredPreferences` GDPR erasure, gating semantics, ProductCopy copy pins, `auditCopySurfaces` enrolment.
+- `BurnTimeCalculatorTests.swift` — HH2 test inverted: `test_HH2_readmePrivacyDeclaresRationaleAcknowledgmentPersistence` now asserts README DOES contain "location-rationale acknowledgment" AND production code DOES write `locationRationaleAcknowledgedKey`.
+- `README.md` — privacy guardrail updated to include "the location-rationale acknowledgment" in the persist sentence.
+- `ADR-0001` — refreshed `.skinTypePresentation(isPresented: $showSkinTypeOnboarding)` citation line 106 → 111 after UVBurnTimerApp.swift line shift.
+- `UVBurnTimerUITests.swift` — `acknowledgeLocationRationale` helper + `waitForNonExistence(timeout: 5)` post-tap guard; calls added to `acknowledgeDisclaimerAndChooseTypeIII` and `testSkinTypePickerEndToEnd`; new `testLocationRationaleOnboardingAppearsBetweenSkinTypeAndMain` smoke test.
+- `project.pbxproj` — 13B (view) and 13C (test) file registration in all 5 required sections.
+
+**Verification:** `./build.sh` — SwiftLint HIG gate ✓, AST gate ✓, Debug + Release builds clean, all tests pass (14 core + 10 UI, 0 failures).
+
+**PR #123:** https://github.com/yashasg/uv-burn-timer/pull/123 — MERGED.
