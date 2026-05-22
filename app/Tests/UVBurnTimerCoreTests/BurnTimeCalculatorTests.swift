@@ -5691,3 +5691,296 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
     )
 }
 
+// MARK: - Group X: WI-bundleX — Loop-17 Ma-Ti L03 + L04 + L05 closure
+//
+// Closes three of the five remaining Ma-Ti test-coverage gaps surfaced
+// by the Loop-13 gap-analysis pass (claude-opus-4.7-xhigh) and carried
+// forward through Loops 14–16. The deferred backlog (Loop-16 closure
+// log §"Backlog state (entering Loop-17)") enumerates them as
+// "L03/L04/L05/L07/L08 — persist coercion, picker retry, DST gap,
+// override guard, eighth". Bundle X closes L03 (write-time SPF
+// coercion), L04 (forecast-picker Retry affordance), and L05 (DST /
+// missing-hour absent-slot coercion to `.nighttime`).
+//
+//   X1 — Ma-Ti L03 (persist coercion):
+//        `UserPreferenceStorage.persist(spf:)` is the SettingsSheet
+//        write path for the SPF chip. It MUST coerce any non-sunscreen
+//        SPF (`SPFLevel.unprotectedReference`, raw value 1) to
+//        `SPFLevel.spf30` on disk so the next cold launch's
+//        `restoredSPF` lookup sees a sunscreen value and Maya (P2 swimmer
+//        persona) never reopens the app with the modelling-only
+//        "Unprotected reference" SPF as her last selection. The
+//        Ma-Ti L13-5 guard at line 1296 pins the read-side coercion
+//        (`restoredSPF` collapses raw-value 0 or out-of-range to
+//        `.spf30`). X1 pins the symmetric write-side coercion so a
+//        future refactor cannot silently change `persist(spf:)` to
+//        `defaults.set(spf.rawValue, forKey:)` (the naive form) and
+//        leave non-sunscreen SPF on disk.
+//
+//   X2 — Ma-Ti L04 (picker retry):
+//        `ForecastPickerView` renders a Retry button in the
+//        `ForecastRefreshState.error` banner per Iris §8 item 9.
+//        The button MUST (a) read "Retry", (b) invoke the
+//        owner-supplied `onRetry()` closure, and (c) maintain a
+//        44pt minimum-height frame so the HIG tap target Iris §8
+//        item 9 + the WCAG 2.2 SC 2.5.8 minimum-target-size guidance
+//        both stay satisfied. Without the Retry affordance a failed
+//        forecast refresh would strand the user on stale snapshot
+//        data with no recovery path — the Maya P2 stale-hero risk
+//        Suchi L02 + L03 warn about. X2 anchors on
+//        ForecastPickerView.swift `case .error:` and pins the three
+//        contract elements.
+//
+//   X3 — Ma-Ti L05 (DST / absent-slot coercion):
+//        `ForecastPickerLogic.uvResult(from:at:now:)` distinguishes
+//        "missing hour inside window" (which it coerces to
+//        `.nighttime`, matching the Yashas 2026-05-21 polar-night
+//        = UVI 0 = `.nighttime` directive) from "missing hour
+//        outside window" (which returns `.unavailable(.snapshotExpired)`).
+//        The inside-window case fires on (a) DST spring-forward gap
+//        where the 02:00 local-time hour is dropped from WeatherKit's
+//        hourly array, (b) polar-night days where WeatherKit omits
+//        the entire night-half of the day, and (c) any other
+//        provider-side missing slot that lands inside the snapshot
+//        window. Without the coercion the burn calculator would see
+//        `.unavailable(.snapshotExpired)` for a DST-skipped hour and
+//        Maya's swim-planning UX would show the "Forecast unavailable
+//        for this time — Retry" banner instead of the correct
+//        "No UV at this hour" hero state. X3 is a functional test
+//        of the pure function rather than a source-text guard
+//        because the existing `makePickerSnapshot` factory is
+//        already exercised by Groups H–M (`ForecastPickerLogicTests`)
+//        and the absent-slot case is straightforward to set up
+//        without fixture DayForecast scaffolding.
+//
+// Test names use the X1/X2/X3 suffix to anchor the bundle name. The
+// `_forecastPickerSourceForGroupR()` helper already loaded by Group
+// R is reused by X2.
+//
+// Naming note (matches the W-bundle precedent): there is a prior
+// "Group X" at line 1868 ("Hero ↔ UVIndex separator", WI-t / AX5
+// pass) with a single test `test_X1_navigationStackBaseSeparatesHeroFromUVIndexCard`.
+// The prior test's full name is distinct from this bundle's X1
+// (`test_X1_persistSPFCoercesNonSunscreenSPFToSpf30RawValueOnDisk`),
+// so there is no compile-time collision; `swift test --filter
+// "test_X1_"` will run both. That is acceptable per the same
+// convention Bundle W documented at line 5543–5547 for the
+// pre-existing W-prefixed UVIndexCard chrome-inversion group.
+
+/// X1 — Ma-Ti L03: `UserPreferenceStorage.persist(spf:)` coerces a
+/// non-sunscreen SPF (`.unprotectedReference`, rawValue 1) to
+/// `.spf30` on disk so the next cold launch's `restoredSPF` lookup
+/// always returns a sunscreen value.
+///
+/// **Why this guard matters:** `SPFLevel.unprotectedReference` is a
+/// modelling-only value used internally by `BurnTimeCalculator` to
+/// compute the no-sunscreen baseline. The SettingsSheet SPF chip
+/// only offers `.spf15 / .spf30 / .spf50 / .spf70Plus` (per
+/// `SPFLevel.allCases` at line 10 of SPFLevel.swift, which
+/// excludes `.unprotectedReference`). A future refactor that
+/// inadvertently lets `.unprotectedReference` reach `persist(spf:)`
+/// — e.g., by changing the SettingsSheet picker source to
+/// `SPFLevel.unprotectedReference + SPFLevel.allCases` for the
+/// "Reference" debug surface — would write rawValue 1 to defaults,
+/// and the next cold launch would surface that value through
+/// `restoredSPF`'s `spf.isSunscreen` guard back to `.spf30` (read-side
+/// coercion at line 79 of UVBurnTimerSession.swift). That round-trip
+/// already protects the user from seeing the modelling value, but
+/// the write-side coercion at line 97 means the on-disk state stays
+/// consistent: `(spf.isSunscreen ? spf : .spf30).rawValue`.
+///
+/// X1 pins that write-side ternary so a future refactor to a naive
+/// `defaults.set(spf.rawValue, forKey:)` form cannot silently land
+/// a `.unprotectedReference` rawValue (1) on disk.
+@Test func test_X1_persistSPFCoercesNonSunscreenSPFToSpf30RawValueOnDisk() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    UserPreferenceStorage.persist(spf: .unprotectedReference, to: defaults)
+
+    let onDiskRawValue = defaults.integer(forKey: UserPreferenceStorage.selectedSPFKey)
+    #expect(
+        onDiskRawValue == SPFLevel.spf30.rawValue,
+        "UserPreferenceStorage.persist(spf:) must coerce a non-sunscreen SPF (`.unprotectedReference`, rawValue 1) to `.spf30` rawValue (30) on disk — landing rawValue 1 would either crash a future read path that didn't have the same `isSunscreen` guard or expose the modelling-only \"Unprotected reference\" to users. The fix has shipped since the SPFLevel.isSunscreen-aware persist rewrite; X1 pins the ternary form `(spf.isSunscreen ? spf : .spf30).rawValue` at line 97 of UVBurnTimerSession.swift against a regression to `defaults.set(spf.rawValue, forKey:)`. (Ma-Ti L03 — Loop-13 deferred / Loop-17)"
+    )
+    #expect(
+        onDiskRawValue != SPFLevel.unprotectedReference.rawValue,
+        "The on-disk SPF rawValue must NOT be `.unprotectedReference` (rawValue 1) — write-side coercion in `persist(spf:)` is the only barrier against a non-sunscreen SPF being persisted across cold launches; the read-side `restoredSPF` `spf.isSunscreen` guard at line 79 of UVBurnTimerSession.swift is the symmetric protection X1's sibling guard (Ma-Ti L13-5) already pins. (Ma-Ti L03 — Loop-13 deferred / Loop-17)"
+    )
+
+    let restored = UserPreferenceStorage.restoredSPF(from: defaults)
+    #expect(
+        restored == .spf30,
+        "Round-trip: persist(spf: .unprotectedReference) followed by restoredSPF must return `.spf30` — the write-side coercion + the on-disk rawValue together guarantee no modelling-only SPF ever surfaces to the user. (Ma-Ti L03 — Loop-13 deferred / Loop-17)"
+    )
+}
+
+/// X2 — Ma-Ti L04: `ForecastPickerView` renders the Retry button
+/// in the `ForecastRefreshState.error` banner with three locked
+/// contract elements:
+///   (a) the literal label `"Retry"`,
+///   (b) invocation of the owner-supplied `onRetry()` closure,
+///   (c) a 44pt minimum-height frame.
+///
+/// **Why this guard matters:** when WeatherKit's forecast refresh
+/// fails (network error, throttling, location-permission revoke,
+/// etc.) the existing snapshot stays visible but is potentially
+/// stale. The Retry button is the only in-banner recovery
+/// affordance per Iris §8 item 9 — without it the only path to
+/// re-fetch is force-quit + relaunch, which is the failure mode
+/// Suchi L03 (Maya pull-to-refresh) calls out as a Maya P2 risk.
+/// The 44pt minimum-height also satisfies WCAG 2.2 SC 2.5.8 and
+/// HIG tap-target sizing — folding the button into a `.font(.footnote)`
+/// without the explicit frame would drop the height below 44pt and
+/// regress the audit-ready posture.
+///
+/// **Anchor:** the `case .error:` branch in ForecastPickerView.swift
+/// `refreshBanner` (line ~190). The substring searches assume the
+/// `case .error:` + `Button("Retry")` + `onRetry()` + `.frame(minHeight: 44)`
+/// all live in the same file (they do — ForecastPickerView.swift
+/// is a single-file standalone View per the R8b guard at line 1634).
+/// A future refactor that lifts the banner into a separate struct
+/// must keep all four substrings in the same file for X2 to remain
+/// accurate; if the banner moves to a new file, update the helper
+/// `_forecastPickerSourceForGroupR()` resolution or the X2 anchor.
+@Test func test_X2_forecastPickerErrorBannerKeepsRetryButtonWithOnRetryAnd44ptFrame() throws {
+    let source = try _forecastPickerSourceForGroupR()
+
+    #expect(
+        source.contains("case .error:"),
+        "ForecastPickerView must keep a `case .error:` branch in its `refreshBanner` `switch forecastRefreshState` — without the explicit case the `ForecastRefreshState.error(String)` arm would either compile-fail or fall through to `.idle`/`.refreshing`, leaving the user with no Retry affordance after a failed WeatherKit refresh. (Ma-Ti L04 — Loop-13 deferred / Loop-17)"
+    )
+    #expect(
+        source.contains(#"Button("Retry")"#),
+        "ForecastPickerView's `.error` banner must keep a literal `Button(\"Retry\")` — the user-facing string is the Iris §8 item 9 contract and is what XCUI smoke tests + accessibility audits target. Replacing it with a `Button(retryActionLabel)` indirection silently risks a copy regression. (Ma-Ti L04 — Loop-13 deferred / Loop-17)"
+    )
+    #expect(
+        source.contains("onRetry()"),
+        "ForecastPickerView's `.error` banner Retry button must invoke the owner-supplied `onRetry()` closure — dropping the call (e.g., to `onRetry` without parentheses, or to a stale `Task { … }` that doesn't escalate to the RootView refresh coordinator) would render the banner inert. RootView wires `onRetry: { Task { await performForecastRefresh() } }` at AppViews.swift line 257; X2 pins the receiving end. (Ma-Ti L04 — Loop-13 deferred / Loop-17)"
+    )
+    #expect(
+        source.contains(".frame(minHeight: 44)"),
+        "ForecastPickerView's `.error` banner Retry button must keep `.frame(minHeight: 44)` so the HIG / WCAG 2.2 SC 2.5.8 44pt tap-target floor is met. The `.font(.footnote)` modifier shrinks the intrinsic content height below 44pt — without the explicit frame the tap target drops to ~22pt. (Ma-Ti L04 — Loop-13 deferred / Loop-17)"
+    )
+}
+
+/// X3 — Ma-Ti L05: `ForecastPickerLogic.uvResult(from:at:now:)`
+/// returns `.nighttime` for a target hour that falls **inside**
+/// `[firstHour, lastHour]` but has no matching `HourForecast` entry
+/// (DST spring-forward gap, polar-night provider omission, or any
+/// other absent-slot edge).
+///
+/// **Why this guard matters:** WeatherKit's hourly forecast can be
+/// sparse — in particular the DST spring-forward day (typically
+/// 02:00 local) and polar-night days where the entire night-half
+/// is omitted. The pure-function distinction at ForecastPickerLogic.swift
+/// lines 103–108 routes these "inside window but missing" hours
+/// to `.nighttime` (so the burn calculator's `.nighttime → 0.0`
+/// path produces the "No UV at this hour" hero state) rather than
+/// to `.unavailable(.snapshotExpired)` (which would surface the
+/// red "Could not update" error banner with a Retry button that
+/// cannot actually fill the gap — WeatherKit will not provide a
+/// 02:00 slot on a spring-forward day on retry either).
+///
+/// **Test scaffolding:** a minimal `ForecastSnapshot` with two
+/// adjacent hour entries that leave a gap of one hour between
+/// them. The target date is the gapped hour; the result must be
+/// `.nighttime`. This satisfies the "absent slot inside window"
+/// branch at ForecastPickerLogic.swift line 107 without needing
+/// fixture DayForecast scaffolding — the function does not consult
+/// `snap.days`.
+///
+/// The convergent ForecastPickerLogicTests.swift suite (Groups
+/// H–M, line 1–448) already covers the happy path (`.value(uvi)`)
+/// and the snapshot-expired path (`.unavailable(.snapshotExpired)`);
+/// X3 closes the DST/polar absent-slot leg of the same contract.
+@Test func test_X3_uvResultMapsAbsentSlotInsideWindowToNighttimeForDSTAndPolarCoercion() throws {
+    // Window: 2026-05-21T10:00:00Z and 2026-05-21T12:00:00Z (two adjacent
+    // hour entries with an absent slot at 11:00:00Z inside the window).
+    let firstEpoch: TimeInterval = 1_779_357_600  // 2026-05-21T10:00:00Z
+    let absentEpoch: TimeInterval = firstEpoch + 3600   // 2026-05-21T11:00:00Z (absent slot)
+    let lastEpoch: TimeInterval = firstEpoch + 2 * 3600  // 2026-05-21T12:00:00Z
+
+    let firstHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: firstEpoch),
+        uvIndex: 5
+    )
+    let lastHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: lastEpoch),
+        uvIndex: 6
+    )
+    // Note: no entry at `absentEpoch` — the inside-window gap that
+    // exercises the DST/polar coercion branch.
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: Date(timeIntervalSince1970: firstEpoch),
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: [firstHour, lastHour]
+    )
+
+    // `now` is set inside the snapshot window so `isStale` returns false
+    // (the snapshot's `expirationDate: .distantFuture` guarantees this,
+    // but pinning `now` keeps the test independent of wall-clock).
+    let now = Date(timeIntervalSince1970: firstEpoch)
+    let absentTarget = Date(timeIntervalSince1970: absentEpoch)
+
+    let result = ForecastPickerLogic.uvResult(from: snapshot, at: absentTarget, now: now)
+
+    #expect(
+        result == .nighttime,
+        "ForecastPickerLogic.uvResult must return `.nighttime` for an absent hour entry that falls inside `[firstHour, lastHour]` — this is the DST spring-forward + polar-night coercion path at ForecastPickerLogic.swift line 107. Returning `.unavailable(.snapshotExpired)` here would surface the red \"Could not update\" Retry banner for a hour that WeatherKit will never provide on retry (DST gap, polar omission), stranding the user. (Ma-Ti L05 — Loop-13 deferred / Loop-17)"
+    )
+}
+
+/// X3-negative — convergent guard: the same `uvResult` function
+/// MUST continue to return `.unavailable(.snapshotExpired)` (NOT
+/// `.nighttime`) when the target hour falls **outside** the
+/// `[firstHour, lastHour]` window. Without this negative guard a
+/// regression that broadened the absent-slot coercion to cover
+/// out-of-range targets would silently mask the "snapshot doesn't
+/// cover this date" error and produce a wrong "No UV at this hour"
+/// hero for, e.g., a D+12 selection on an 8-day cached snapshot.
+///
+/// This negative case is already pinned by ForecastPickerLogicTests's
+/// snapshot-expired test; X3-negative restates it adjacent to X3
+/// so the symmetric branching at ForecastPickerLogic.swift lines
+/// 103–109 (inside-window → `.nighttime`; outside-window →
+/// `.unavailable(.snapshotExpired)`) is locked from both sides in
+/// the same test group.
+@Test func test_X3neg_uvResultMapsAbsentSlotOutsideWindowToUnavailableNotNighttime() throws {
+    let firstEpoch: TimeInterval = 1_779_357_600  // 2026-05-21T10:00:00Z
+    let lastEpoch: TimeInterval = firstEpoch + 3600  // 2026-05-21T11:00:00Z (2-hour window)
+
+    let firstHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: firstEpoch),
+        uvIndex: 5
+    )
+    let lastHour = HourForecast(
+        timestamp: Date(timeIntervalSince1970: lastEpoch),
+        uvIndex: 6
+    )
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: Date(timeIntervalSince1970: firstEpoch),
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: [firstHour, lastHour]
+    )
+
+    // Target hour 3 hours after lastHour — clearly outside window.
+    let outOfRangeTarget = Date(timeIntervalSince1970: lastEpoch + 3 * 3600)
+    let now = Date(timeIntervalSince1970: firstEpoch)
+
+    let result = ForecastPickerLogic.uvResult(from: snapshot, at: outOfRangeTarget, now: now)
+
+    #expect(
+        result == .unavailable(reason: .snapshotExpired),
+        "ForecastPickerLogic.uvResult must return `.unavailable(.snapshotExpired)` for a target hour outside `[firstHour, lastHour]` — broadening the absent-slot `.nighttime` coercion at line 107 to cover out-of-range targets would mask legitimate \"snapshot doesn't cover this date\" errors as nighttime, producing wrong \"No UV at this hour\" hero states for D+8+ selections on a stale 7-day snapshot. (Ma-Ti L05 negative — Loop-17)"
+    )
+}
+
