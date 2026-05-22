@@ -175,25 +175,30 @@ final class UVBurnTimerUITests: XCTestCase {
             "Main screen nav bar must be visible before asserting toolbar buttons"
         )
 
-        let settingsGear = app.buttons["Settings"]
+        // WI-loop29-5: drive the existence + hittability assertions through
+        // a shared toolbar-settled helper. On iOS 26 the toolbar's Liquid
+        // Glass composition can take a moment to settle into a hittable
+        // frame after the onboarding cover-chain tears down (per ADR-0002).
+        // The helper re-queries both buttons together with a generous
+        // budget so a stale first-query miss does not flake the suite.
+        let toolbar = waitForMainToolbarSettled(in: app, timeout: 20)
+
         XCTAssertTrue(
-            settingsGear.waitForExistence(timeout: 10),
+            toolbar.settingsExists,
             "Toolbar must contain the Settings gear Button (accessibilityLabel \"Settings\") — entry point to SettingsSheet."
         )
-
-        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
         XCTAssertTrue(
-            infoButton.waitForExistence(timeout: 10),
+            toolbar.infoExists,
             "Toolbar must contain the EstimateInfoButton (info.circle) — entry point to About highlight reach-back."
         )
 
         // Both must be hittable on the same screen (not collapsed behind a menu).
         XCTAssertTrue(
-            waitForHittable(settingsGear, timeout: 5),
+            toolbar.settingsHittable,
             "Settings gear must be hittable — toolbar should not collapse it behind a menu."
         )
         XCTAssertTrue(
-            waitForHittable(infoButton, timeout: 5),
+            toolbar.infoHittable,
             "EstimateInfoButton must be hittable — toolbar should not collapse it behind a menu."
         )
     }
@@ -210,11 +215,16 @@ final class UVBurnTimerUITests: XCTestCase {
         let app = launchApp()
         acknowledgeDisclaimerAndChooseTypeIII(in: app)
 
-        let infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+        // WI-loop29-5: gate on the shared toolbar-settled helper so the
+        // EstimateInfoButton hittable check survives the iOS 26 Liquid
+        // Glass settle window before we synthesize the navigation tap.
+        let toolbar = waitForMainToolbarSettled(in: app, timeout: 20)
         XCTAssertTrue(
-            waitForHittable(infoButton, timeout: 10),
+            toolbar.infoHittable,
             "EstimateInfoButton must be hittable before navigating"
         )
+
+        let infoButton = toolbar.infoButton
 
         // NavigationLink in ToolbarItem can drop the first synthesized tap
         // on iOS 26 simulator — retry until About appears.
@@ -301,6 +311,78 @@ final class UVBurnTimerUITests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         }
         return element.exists && element.isHittable
+    }
+
+    /// Snapshot of the main-screen toolbar's two trailing buttons.
+    /// Returned by `waitForMainToolbarSettled` so tests can interrogate
+    /// existence + hittability without re-querying the buttons mid-assertion
+    /// (which is the racy pattern the WI-loop29-5 stabilisation removes).
+    private struct ToolbarSettleSnapshot {
+        let settingsButton: XCUIElement
+        let infoButton: XCUIElement
+        let settingsExists: Bool
+        let infoExists: Bool
+        let settingsHittable: Bool
+        let infoHittable: Bool
+    }
+
+    /// WI-loop29-5: poll for the main screen's two toolbar buttons
+    /// (`Settings` gear + `EstimateInfoButton` info.circle) to BOTH reach
+    /// the `exists && isHittable` state, with a generous total budget and
+    /// a small idle settle after a positive read. This is the toolbar-suite
+    /// analogue of the Loop-20 `tapWithRetry` cover-chain helper: the iOS 26
+    /// Liquid Glass toolbar composition can lag the navigation bar's arrival
+    /// by several hundred ms (per ADR-0002), and querying the buttons on
+    /// the first nav-bar tick races that composition. Re-querying within
+    /// a single helper keeps both buttons resolved against the same UI
+    /// snapshot once it stabilises.
+    ///
+    /// ADR-0001 non-regression: this helper only reads from XCUI queries.
+    /// It does not perturb the toolbar identity contract or any production
+    /// hit-test surface — the production toolbar code is untouched.
+    @discardableResult
+    private func waitForMainToolbarSettled(
+        in app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> ToolbarSettleSnapshot {
+        let deadline = Date().addingTimeInterval(timeout)
+        var settingsButton = app.buttons["Settings"]
+        var infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+
+        while Date() < deadline {
+            settingsButton = app.buttons["Settings"]
+            infoButton = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+
+            let bothExist = settingsButton.exists && infoButton.exists
+            let bothHittable = bothExist && settingsButton.isHittable && infoButton.isHittable
+            if bothHittable {
+                // Brief idle settle so a subsequent tap lands on the
+                // composed, non-animating frame.
+                RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+                let s = app.buttons["Settings"]
+                let i = app.buttons.matching(identifier: "EstimateInfoButton").firstMatch
+                return ToolbarSettleSnapshot(
+                    settingsButton: s,
+                    infoButton: i,
+                    settingsExists: s.exists,
+                    infoExists: i.exists,
+                    settingsHittable: s.exists && s.isHittable,
+                    infoHittable: i.exists && i.isHittable
+                )
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+        }
+
+        // Final read on timeout — return whatever state we have so the
+        // caller's XCTAssert messages can pinpoint which button missed.
+        return ToolbarSettleSnapshot(
+            settingsButton: settingsButton,
+            infoButton: infoButton,
+            settingsExists: settingsButton.exists,
+            infoExists: infoButton.exists,
+            settingsHittable: settingsButton.exists && settingsButton.isHittable,
+            infoHittable: infoButton.exists && infoButton.isHittable
+        )
     }
 
     private func tapWithRetry(_ element: XCUIElement, retries: Int = 2) {
