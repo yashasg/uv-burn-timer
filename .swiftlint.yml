@@ -72,7 +72,18 @@ custom_rules:
     # line 122) slipped through SwiftLint because the original alternation
     # only recognized the paren form. The 200-char lookahead window and
     # identifier-backed `min(Width|Height):` floor check are unchanged.
-    regex: '(?:\.onTapGesture\b|\bButton\s*\(|\bButton\s*\{)(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
+    #
+    # Iris loop-29 GAP-7 / WI-29-7: the alternation is further widened to
+    # catch `NavigationLink { ... }`, `NavigationLink(...)`, and
+    # `Link(...)` — SwiftUI's other primary tap-target primitives. Before
+    # WI-29-7 a regression that swapped a `Button` for a `NavigationLink`
+    # (or added a new standalone `Link` outside of inline body copy)
+    # silently bypassed the HIG ≥44pt tap-target floor lint. Inline body
+    # `Link("...", destination:)` calls inside paragraph copy and
+    # `NavigationLink` rows inside Form/List system chrome are excused via
+    # per-line `// swiftlint:disable:this missing_min_touch_target`
+    # directives (with a Reason: annotation) at the call site.
+    regex: '(?:\.onTapGesture\b|\bButton\s*\(|\bButton\s*\{|\bNavigationLink\s*\{|\bNavigationLink\s*\(|\bLink\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
     message: "HIG: touch targets need @ScaledMetric-backed minWidth/minHeight identifiers near Button/onTapGesture. Literals like 44/56 are violations."
     severity: error
 
