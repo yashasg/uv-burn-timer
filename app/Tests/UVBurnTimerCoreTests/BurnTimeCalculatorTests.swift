@@ -7056,3 +7056,320 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
         "KK2 post-clear invariant: lastRoundedCoordinateKey MUST be removed by clearStoredPreferences — this is the GDPR Art.17 erasure key lifted into UserPreferenceStorage by Bundle R / Kwame L13-3. If this fires, the GDPR Art.17 erasure-path completeness regressed; restore the `defaults.removeObject(forKey: lastRoundedCoordinateKey)` line at UVBurnTimerSession.swift line 114. (Kwame L13-4 partial closure — Loop-21)"
     )
 }
+
+// MARK: - Group MM: Loop-22 deferred-HIGH partial closures (Bundle CC — Group MM test prefix)
+//
+// Note on the MM doubled-letter name: the natural next-cycle name
+// after Loop-21's Group KK (which itself was renamed from the
+// natural Bundle-BB → BB cascade) would be Group CC for Loop-22's
+// "Bundle CC", but per the Loop-19/20/21 closure logs the BB / CC
+// / DD / EE / FF / GG / HH / II / JJ / KK / LL doubled-letter
+// prefixes plus QQ / RR / SS / TT / ZZ are ALL already taken
+// elsewhere in the suite. The next free doubled letter at
+// cycle-start (verified 2026-05-22T04:36Z by a `grep -rE
+// "test_(MM|NN|OO|PP|UU|VV|WW|XX|YY)[0-9]" app/Tests/`) is MM
+// (zero collisions). The Loop-21 closure log §"Local-environment
+// notes" pre-predicted this: "the next free doubled letter at
+// cycle-start (post Loop-21 KK consumption) is MM (KK consumed,
+// LL taken with 9 hits, MM free with 0 hits at last scan)". So
+// Bundle CC in Loop-22 uses Group MM as the test function prefix
+// following the same doubled-letter collision-avoidance
+// convention the Loop-19/20/21 closure logs documented for ZZ,
+// DD, and KK respectively. The PR / branch / closure-log
+// references continue to call this "Bundle CC" — only the test
+// function prefix is MM to keep the suite namespace
+// collision-free. The cumulative cascade is now AA→BB→CC→DD→EE→
+// FF→GG→HH→II→JJ→KK→LL→MM (LL was taken since before Loop-19;
+// MM is the first free letter past LL at cycle-start).
+//
+// Group MM bundles two pure-function guards that progress the
+// deferred-HIGH backlog carried forward from Loops 13–21 without
+// requiring multi-file Swift refactors or convergent design
+// ratification. Per the Loop-21 closure log §"Backlog state
+// (entering Loop-22)", the remaining deferred HIGH items beyond
+// KK1/KK2 are blocked by either (a) hardware (WI-21 sign-offs,
+// Plunder L02 EU-rep designation), (b) reviewer input not
+// authorable solo (Suchi L02/L03 persona-coverage updates beyond
+// source-text guards), (c) larger code refactors (Kwame L13-2
+// cold-start race + L13-4 picker state on clear — each touches
+// the ForecastPickerLogic + UVBurnTimerSession state machines
+// across multiple files), or (d) convergent design (Plunder L05
+// additional hero-card-region L3 reach-back link — Iris+Plunder
+// ratification needed for the WHERE decision on the hero card
+// region). Group MM picks the two items in that backlog whose
+// closure can be expressed as a pure-function pin against the
+// EXISTING live production code, without changing implementation,
+// and extends Bundle BB's coverage from the picker-leaf functions
+// (`defaultSelectedDate`, `snapToNearest`) to the THIRD picker
+// leaf (`uvResult`) which Bundle BB did not cover:
+//
+//   MM1  Kwame L13-2 (extended) — cold-start race contract for
+//        the uvResult leaf. Bundle BB's KK1 closed the cold-start
+//        nil-snapshot fallback for `defaultSelectedDate` (lines
+//        124–126) and `snapToNearest` (lines 67–70) but did NOT
+//        cover the third picker leaf `uvResult(from:at:now:)`,
+//        which has its own nil-snapshot early guard at
+//        ForecastPickerLogic.swift lines 91–93:
+//          guard let snap = snapshot else {
+//              return .unavailable(reason: .noSnapshot)
+//          }
+//        During the cold-start window (between app launch and the
+//        first ForecastSnapshot landing in
+//        `RootView.forecastSnapshot`), ANY call into `uvResult`
+//        receives a nil snapshot. The contract is stronger than
+//        KK1's: the result MUST be EXACTLY
+//        `.unavailable(reason: .noSnapshot)` — NOT `.snapshotExpired`,
+//        NOT `.nighttime`, NOT `.value(0)`. Distinguishing
+//        `.noSnapshot` from `.snapshotExpired` matters because
+//        the UI banner copy differs (Ma-Ti L01/W2 fallback paths
+//        in `activeUVIndex` depend on this distinction — see
+//        BurnTimeCalculatorTests.swift test_W1 + test_W2). The
+//        result MUST also be INDEPENDENT of the `date` and `now`
+//        arguments — the nil-snapshot branch returns before any
+//        date arithmetic happens, so probing with past / current
+//        / future / .distantPast / .distantFuture dates MUST all
+//        produce the same `.unavailable(.noSnapshot)` value. MM1
+//        pins all five probe-date cells across nil-snapshot to
+//        close the silent-regression channel where a future
+//        refactor could (i) substitute `.snapshotExpired` and
+//        confuse the banner copy, (ii) fall through to the
+//        snapshot-bounded branch and crash on
+//        `snap.hours.first(where:)`, or (iii) make the result
+//        depend on `date`/`now` (e.g. by computing
+//        `roundedDownToHour(date)` before the nil-guard).
+//        Together with KK1, MM1 closes the cold-start race
+//        leaf-function set: all three picker leaves
+//        (`defaultSelectedDate`, `snapToNearest`, `uvResult`) now
+//        have their nil-snapshot fallback explicitly pinned.
+//
+//   MM2  Kwame L13-4 (extended) — picker state on clear contract
+//        for the uvResult leaf. Bundle BB's KK2 pinned referential
+//        transparency for `defaultSelectedDate` and `snapToNearest`
+//        but did NOT cover `uvResult(from:at:now:)`. When a user
+//        invokes `UserPreferenceStorage.clearStoredPreferences(...)`,
+//        the next-rendered burn-card and risk-gauge values
+//        (which both flow from `uvResult` via `activeUVIndex`)
+//        MUST NOT silently change for an unchanged
+//        (snapshot, date, now) input — otherwise a Settings →
+//        "Clear everything" tap could swap the user's burn time
+//        from "23 min" to ".nighttime" while the same UV
+//        forecast is on screen. The leaf-level invariant that
+//        makes this hold is the same referential transparency
+//        KK2 pinned for the other two picker leaves: `uvResult`
+//        depends ONLY on its explicit (snapshot, date, now)
+//        arguments, NEVER on UserDefaults. MM2 pins this across
+//        THREE distinct outcome cells (value branch, nighttime
+//        branch, unavailable branch) so any future regression
+//        that makes `uvResult` ambient-state-dependent in even
+//        ONE branch is caught — KK2's two-output sample would
+//        miss a regression that only affected the
+//        `.unavailable(.snapshotExpired)` outside-window branch
+//        without affecting the value/nighttime branches. The
+//        full multi-file picker-state refactor that L13-4
+//        targets is still deferred to a future loop; MM2
+//        guarantees the third leaf's purity those call sites
+//        rely on cannot drift in the meantime.
+//
+// Cross-reference: ForecastPickerLogic.swift `uvResult` body at
+// lines 86–113 (nil guard line 91, stale guard line 94, target
+// computation line 98, value/nighttime branch line 112);
+// UVBurnTimerSession.swift `clearStoredPreferences` body at
+// lines 100–116; Loop-21 closure log §"Backlog state (entering
+// Loop-22)" Kwame L13-2/L13-4 row. The 286-test baseline this
+// bundle extends to 288 was confirmed locally on f61eeab via
+// `swift test --package-path app` reporting "Test run with 286
+// tests in 0 suites passed after 0.332 seconds with 2 known
+// issues" (the two known issues are unrelated to picker logic —
+// `test_selecting_new_day_when_target_day_does_not_have_that_hour`
+// and `test_reveal_is_collapsed_by_default`).
+
+/// MM1 — Kwame L13-2 (extended) cold-start race contract for the uvResult leaf.
+///
+/// `ForecastPickerLogic.uvResult(from: nil, at:, now:)` MUST
+/// return `.unavailable(reason: .noSnapshot)` for ANY combination
+/// of `(at, now)` inputs. This pins the third picker-leaf
+/// nil-snapshot fallback (lines 91–93) that KK1 did not cover —
+/// KK1 covered `defaultSelectedDate` (lines 124–126) and
+/// `snapToNearest` (lines 67–70). The five probe-date cells
+/// pinned together close the silent-regression channel where a
+/// future refactor could (a) confuse `.noSnapshot` with
+/// `.snapshotExpired` (different banner copy), (b) fall through
+/// to the snapshot-bounded branch and crash on
+/// `snap.hours.first(where:)`, or (c) make the result depend on
+/// `date`/`now` arithmetic that should not run before the
+/// nil-guard.
+@Test func test_MM1_uvResultColdStartNilSnapshotContract() throws {
+    // Stable mid-day UTC `now` (matches the BurnTimeCalculatorTests
+    // epoch convention used by DD2 at line 6719 and KK1 at line 6905).
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+    let now = Date(timeIntervalSince1970: nowEpoch)
+
+    // Five distinct probe dates spanning the realistic input range
+    // plus the two extremes. Each probe must produce the IDENTICAL
+    // `.unavailable(.noSnapshot)` result against a nil snapshot.
+    let probeDates: [(label: String, date: Date)] = [
+        ("currentHour",   now),
+        ("pastHour",      Date(timeIntervalSince1970: nowEpoch - 3 * 3600)),
+        ("futureHour",    Date(timeIntervalSince1970: nowEpoch + 6 * 3600)),
+        ("distantPast",   Date.distantPast),
+        ("distantFuture", Date.distantFuture)
+    ]
+
+    for probe in probeDates {
+        let result = ForecastPickerLogic.uvResult(from: nil, at: probe.date, now: now)
+        #expect(
+            result == .unavailable(reason: .noSnapshot),
+            "ForecastPickerLogic.uvResult(from: nil, at: \(probe.label) (\(probe.date)), now:) MUST return .unavailable(reason: .noSnapshot) — this is the cold-start nil-snapshot fallback at ForecastPickerLogic.swift lines 91–93 that the burn-card + risk-gauge UI rely on during the window between app launch and the first ForecastSnapshot landing in RootView.forecastSnapshot. Actual: \(result). If this assertion fires, the early `guard let snap = snapshot else { return .unavailable(reason: .noSnapshot) }` was either (a) refactored to fall through to the snapshot-bounded branch (which would crash on `snap.hours.first(where:)` because `snap` is nil), (b) refactored to return `.unavailable(reason: .snapshotExpired)` instead — which would corrupt the activeUVIndex banner copy distinction Ma-Ti pinned in W1/W2 — or (c) made conditional on the `date` / `now` arguments before the nil-guard runs. Restore the explicit `return .unavailable(reason: .noSnapshot)` early fallback at lines 91–93. (Kwame L13-2 partial closure — extended — Loop-13 deferred / Loop-22)"
+        )
+    }
+
+    // Also pin that the nil-snapshot branch is INDEPENDENT of `now`
+    // — vary `now` across the same five values and confirm every
+    // (probe, now) pair still produces `.noSnapshot`. Catches a
+    // regression where the nil-guard accidentally reads `now`
+    // (e.g. `if snapshot == nil && now > probeDate` style logic).
+    let nowVariants: [(label: String, date: Date)] = [
+        ("now",           now),
+        ("nowMinus3h",    Date(timeIntervalSince1970: nowEpoch - 3 * 3600)),
+        ("nowPlus6h",     Date(timeIntervalSince1970: nowEpoch + 6 * 3600)),
+        ("distantPast",   Date.distantPast),
+        ("distantFuture", Date.distantFuture)
+    ]
+    for nowVariant in nowVariants {
+        let result = ForecastPickerLogic.uvResult(
+            from: nil,
+            at: Date(timeIntervalSince1970: nowEpoch + 3 * 3600),
+            now: nowVariant.date
+        )
+        #expect(
+            result == .unavailable(reason: .noSnapshot),
+            "ForecastPickerLogic.uvResult(from: nil, at:, now: \(nowVariant.label)) MUST return .unavailable(reason: .noSnapshot) — the nil-snapshot branch must NOT depend on `now`. Actual: \(result). If this fires, the nil-guard was made conditional on `now` (e.g. `snapshot?.isStale(now: now) ?? .someOtherReason`). Restore the unconditional nil-guard at ForecastPickerLogic.swift lines 91–93. (Kwame L13-2 partial closure — extended — Loop-22)"
+        )
+    }
+}
+
+/// MM2 — Kwame L13-4 (extended) picker state on clear contract for the uvResult leaf.
+///
+/// `ForecastPickerLogic.uvResult(from:at:now:)` MUST be
+/// referentially transparent — its output depends ONLY on the
+/// explicit (snapshot, date, now) arguments, NEVER on
+/// UserDefaults state. KK2 pinned this for
+/// `defaultSelectedDate` and `snapToNearest`; MM2 extends to the
+/// third picker leaf. The test exercises THREE distinct outcome
+/// branches (`.value`, `.nighttime`, `.unavailable`) so a
+/// regression that makes `uvResult` ambient-state-dependent in
+/// even ONE branch is caught — a smaller two-branch sample would
+/// miss a regression that only affected the outside-window
+/// `.snapshotExpired` branch.
+@Test func test_MM2_uvResultReferentialTransparencyAcrossPreferencesClear() throws {
+    // Isolated suite — guarantees no leakage into / from .standard,
+    // matching the KK2 isolation pattern at line 6970.
+    let suiteName = "test_MM2_uvResultRefTransparency_\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer {
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    // Stable mid-day UTC `now` (matches DD2 / KK1 / KK2 / MM1 convention).
+    let nowEpoch: TimeInterval = 1_779_368_400  // 2026-05-21T13:00:00Z
+    let now = Date(timeIntervalSince1970: nowEpoch)
+    let probeHourEpoch: TimeInterval = nowEpoch + 2 * 3600   // 2026-05-21T15:00Z
+
+    // Populated fresh snapshot with three hour rows that exercise
+    // the three distinct outcome branches of `uvResult`:
+    //   1. probe at 15:00Z, uvIndex 7    → .value(7)
+    //   2. probe at 16:00Z, uvIndex 0    → .nighttime
+    //   3. probe at 02:00Z (next day, outside window) → .unavailable(.snapshotExpired)
+    let valueHour     = HourForecast(timestamp: Date(timeIntervalSince1970: probeHourEpoch),               uvIndex: 7)
+    let nighttimeHour = HourForecast(timestamp: Date(timeIntervalSince1970: probeHourEpoch + 1 * 3600),    uvIndex: 0)
+    let snapshot = ForecastSnapshot(
+        schemaVersion: ForecastSnapshot.currentSchemaVersion,
+        latitude: 37.77,
+        longitude: -122.42,
+        fetchedAt: now,
+        expirationDate: Date.distantFuture,
+        days: [],
+        hours: [valueHour, nighttimeHour]
+    )
+    let valueProbe        = Date(timeIntervalSince1970: probeHourEpoch)
+    let nighttimeProbe    = Date(timeIntervalSince1970: probeHourEpoch + 1 * 3600)
+    let outOfWindowProbe  = Date(timeIntervalSince1970: probeHourEpoch + 13 * 3600)  // 13h past last hour → outside [first, last]
+
+    // Baseline computation — with isolated defaults entirely empty.
+    let baselineValue        = ForecastPickerLogic.uvResult(from: snapshot, at: valueProbe,       now: now)
+    let baselineNighttime    = ForecastPickerLogic.uvResult(from: snapshot, at: nighttimeProbe,   now: now)
+    let baselineOutOfWindow  = ForecastPickerLogic.uvResult(from: snapshot, at: outOfWindowProbe, now: now)
+
+    // Sanity: confirm each branch produced its expected outcome —
+    // catches a setup error where the snapshot construction
+    // accidentally short-circuits all three probes to the same
+    // result and would make the post-clear equality assertions
+    // vacuously hold for the wrong reason.
+    #expect(
+        baselineValue == .value(7),
+        "MM2 setup invariant: baseline uvResult at the valueProbe MUST be .value(7) — confirms the snapshot construction landed and the value-branch (line 112: `entry.uvIndex == 0 ? .nighttime : .value(entry.uvIndex)`) is being exercised. Actual: \(baselineValue)."
+    )
+    #expect(
+        baselineNighttime == .nighttime,
+        "MM2 setup invariant: baseline uvResult at the nighttimeProbe MUST be .nighttime — confirms the nighttime-branch (line 112, uvIndex == 0) is being exercised. Actual: \(baselineNighttime)."
+    )
+    #expect(
+        baselineOutOfWindow == .unavailable(reason: .snapshotExpired),
+        "MM2 setup invariant: baseline uvResult at the outOfWindowProbe MUST be .unavailable(.snapshotExpired) — confirms the outside-window branch (line 109) is being exercised. Actual: \(baselineOutOfWindow)."
+    )
+
+    // Heavy mutation of isolated defaults — mirrors KK2's mutation
+    // set (every persisted key that `clearStoredPreferences` is
+    // responsible for, plus the two GDPR-Art.17 keys lifted into
+    // UserPreferenceStorage by Bundle R / Kwame L13-3).
+    UserPreferenceStorage.persist(skinType: .typeIII, to: defaults)
+    UserPreferenceStorage.persist(spf: .spf50, to: defaults)
+    defaults.set(true, forKey: UserPreferenceStorage.locationRationaleAcknowledgedKey)
+    defaults.set(
+        UserPreferenceStorage.currentDisclaimerPolicyVersion,
+        forKey: UserPreferenceStorage.disclaimerPolicyVersionKey
+    )
+    defaults.set("37.77,-122.42", forKey: UserPreferenceStorage.lastRoundedCoordinateKey)
+    defaults.set(Data([0xDE, 0xAD, 0xBE, 0xEF]), forKey: UserPreferenceStorage.legacyUVSnapshotKey)
+
+    // Sanity: confirm mutation landed — same KK2 pattern at line 7024.
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) != nil,
+        "MM2 setup invariant: selectedSkinTypeKey must be present in the isolated defaults before clearStoredPreferences runs — otherwise the post-clear equality check is vacuous. If this fires, `UserPreferenceStorage.persist(skinType:to:)` was refactored to a no-op for non-nil values; restore the `defaults.set(skinType.rawValue, forKey:)` branch."
+    )
+
+    // Invoke the clear path under test.
+    UserPreferenceStorage.clearStoredPreferences(from: defaults)
+
+    // Recompute against identical (snapshot, date, now) inputs.
+    let postClearValue       = ForecastPickerLogic.uvResult(from: snapshot, at: valueProbe,       now: now)
+    let postClearNighttime   = ForecastPickerLogic.uvResult(from: snapshot, at: nighttimeProbe,   now: now)
+    let postClearOutOfWindow = ForecastPickerLogic.uvResult(from: snapshot, at: outOfWindowProbe, now: now)
+
+    // The uvResult function is pure — every branch's output MUST be byte-identical.
+    #expect(
+        postClearValue == baselineValue,
+        "ForecastPickerLogic.uvResult(from:at:now:) MUST be referentially transparent on the .value branch — it must return the same UVResult for the same (snapshot, date, now) input regardless of any UserDefaults mutations or clear operations performed between calls. Baseline was \(baselineValue); post-clear was \(postClearValue). If this assertion fires, the function gained a hidden dependency on UserDefaults (or another piece of ambient state) — most likely via a default-parameter-evaluated singleton, a global cache layer, or a refactor that started routing uvIndex through `restoredSPF(from:)` or `restoredSkinType(from:)`. Remove the hidden dependency; the only inputs allowed are the explicit (snapshot, date, now) parameters. (Kwame L13-4 partial closure — extended — Loop-13 deferred / Loop-22)"
+    )
+    #expect(
+        postClearNighttime == baselineNighttime,
+        "ForecastPickerLogic.uvResult(from:at:now:) MUST be referentially transparent on the .nighttime branch. Baseline was \(baselineNighttime); post-clear was \(postClearNighttime). If this assertion fires, the function gained a hidden dependency on UserDefaults specifically in the uvIndex==0 collapse path at line 112. Remove the hidden dependency. (Kwame L13-4 partial closure — extended — Loop-22)"
+    )
+    #expect(
+        postClearOutOfWindow == baselineOutOfWindow,
+        "ForecastPickerLogic.uvResult(from:at:now:) MUST be referentially transparent on the .unavailable(.snapshotExpired) outside-window branch. Baseline was \(baselineOutOfWindow); post-clear was \(postClearOutOfWindow). If this assertion fires, the function gained a hidden dependency on UserDefaults specifically in the outside-window branch at line 109 — a regression that KK2's two-output sample would have missed because KK2 only exercised the leaves that don't reach the outside-window path. (Kwame L13-4 partial closure — extended — Loop-22)"
+    )
+
+    // Additionally pin that `clearStoredPreferences` did its job —
+    // catches a regression where the body silently no-ops and the
+    // post-clear assertions above pass vacuously (matches KK2's
+    // post-clear erasure invariants at lines 7051 + 7055).
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSkinTypeKey) == nil,
+        "MM2 post-clear invariant: selectedSkinTypeKey MUST be removed by clearStoredPreferences (UVBurnTimerSession.swift lines 100–116). If this fires, the `defaults.removeObject(forKey: selectedSkinTypeKey)` line was dropped — restore it. Without this, the uvResult-purity assertions above would pass vacuously after a regression in clearStoredPreferences itself. (Kwame L13-4 partial closure — extended — Loop-22)"
+    )
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.lastRoundedCoordinateKey) == nil,
+        "MM2 post-clear invariant: lastRoundedCoordinateKey MUST be removed by clearStoredPreferences — this is the GDPR Art.17 erasure key lifted into UserPreferenceStorage by Bundle R / Kwame L13-3. If this fires, the GDPR Art.17 erasure-path completeness regressed; restore the `defaults.removeObject(forKey: lastRoundedCoordinateKey)` line at UVBurnTimerSession.swift line 114. (Kwame L13-4 partial closure — extended — Loop-22)"
+    )
+}
