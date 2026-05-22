@@ -191,8 +191,8 @@ enough to materially change the parent's diff signature.
   - `RootView` `NavigationStack` wrapper — line **99** (referenced in
     Alternative 3)
 - `app/Tests/UVBurnTimerCoreTests/BurnTimeCalculatorTests.swift`
-  - `test_R1_heroTimerCardWrapperStructStillExists` — line **1383**
-  - `test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1395**
+  - `test_R1_heroTimerCardWrapperStructStillExists` — line **1500**
+  - `test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1512**
 - `.squad/log/2026-05-21T10-30-00Z-hero-card-wrapper-restore-cycle.md`
   — 8th-loop closure log; "Ratified architectural decision" section is
   the informal source of this ADR.
@@ -240,7 +240,7 @@ toolbar item. Resulting `AppViews.swift` positions on this commit:
 - `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
   (was 138 pre-Loop-28-WI-0)
 - `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
-  push — line **2150**
+  push — line **2170**
 - `skinTypeChip` — line **339**, `locationChip` — line **301**,
   `spfChip` — line **320**
 
@@ -282,6 +282,25 @@ SwiftLint `hardcoded_frame_dimensions` regex was widened to
 gate catches all six axes — the inline-frame-axis blind spot
 Iris's Loop-29 gap analysis flagged. The *rule* this ADR encodes
 is unchanged.
+
+**Loop-28 WI-4 — line-number refresh (AV-12 / AV-13 verbose
+justification restored):** the `PersistentFooter` `AboutView` push
+citation was bumped from line **2150** → line **2170** (body block
+2149–2151 → 2169–2171) after the `clearStoredSkinType` (AV-12) and
+`clearStoredSPF` (AV-13) `// swiftlint:disable:next
+missing_min_touch_target` justifications inside `struct SettingsSheet`
+had their "Reason: Button has multi-line action body …" comments
+restored to the canonical verbose form (two-line shrunken stubs
+expanded back to 11–13 line "Reason:" blocks matching their sibling
+sites). The expansion is purely a comment change — no code semantics
+moved — and was driven by a contract-test refactor: the brittle fixed
+character-offset scan windows in `test_T1`, `test_U2`, and `test_V4`
+(6000 / 7000 / 14000 chars) were replaced by a brace-counted
+`_substringOfAppViewsStruct(name:in:)` helper so the comment-prose
+budget is no longer a function of how far the next `}` happens to
+fall. The matching helper guards are Group SU
+(`test_SU1`…`test_SU5`) in `BurnTimeCalculatorTests.swift`. The
+*rule* this ADR encodes is unchanged.
 
 ## Audit
 
@@ -333,8 +352,8 @@ identity:
   at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
   at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2150` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2149–2151), rendered inside the
+  `AppViews.swift:2170` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2169–2171), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 143–151.
 
 ### Rule (extended)

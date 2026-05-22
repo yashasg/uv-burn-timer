@@ -255,3 +255,77 @@ delta — the four sites passed SwiftLint baseline pre-migration too).
   cover R2's intent without leaving a guard whose name no longer
   describes its job. Inline `// X — REMOVED in Loop-Y` comment
   blocks preserve the audit trail without code clutter.
+
+---
+
+## Loop-28 WI-4 — `_substringOfAppViewsStruct` helper replaces fixed scan windows
+
+**Closed** on `squad/wi-loop28-4-test-u2-scan-window` (base
+`d028ea8` = github/main). Brittle hand-picked fixed-character-offset
+scan windows in three source-text contract tests were replaced with
+a brace-counted helper, freeing the AV-12 / AV-13
+`swiftlint:disable:next missing_min_touch_target` justifications to
+return to their canonical verbose "Reason:" form.
+
+**Changes:**
+
+- **`_substringOfAppViewsStruct(_:in:) -> String?`** — ~110 LOC,
+  inserted after `_appViewsSourceForGroupR()` in
+  `BurnTimeCalculatorTests.swift`. Lexer state machine
+  (`normal | lineComment | blockComment | string | multilineString`)
+  so `}` characters living inside comments or string literals don't
+  prematurely close the scan. Pairs with
+  `_findStructDeclStart(name:in:)` which matches `struct {name}`
+  bounded by a non-identifier tail so `struct Foo` doesn't drift
+  into `struct FooBar`.
+- **`test_T1_photosensitizerLineLabelOnL1CoverUsesPrimaryTextColor`**
+  — replaced 6000-char fixed window with helper call for
+  `DisclaimerCover`.
+- **`test_U2_settingsSheetRendersDisclaimerLineFromProductCopy`** —
+  replaced 7000-char fixed window with helper call for
+  `SettingsSheet`. This is the window that had forced AV-12 / AV-13
+  to shrink in the first place.
+- **`test_V4_heroTimerCardKeepsCuratedParentAccessibilityLabelAndContainElement`**
+  — replaced 14000-char fixed window with helper call for
+  `HeroTimerCard`.
+- **Group SU (`test_SU1`…`test_SU5`)** — new helper guards:
+  resolves a real struct bounded by braces, stays inside the body
+  (no leak into `SkinTypeEditView` / `PersistentFooter`), returns
+  nil for missing names, respects identifier-tail boundary, and
+  respects comment / string / multiline-string lexer contexts on a
+  synthetic `struct Trickster` fixture.
+- **AV-12 / AV-13 verbose comment restoration** — both
+  `clearStoredSkinType` and `clearStoredSPF` Button-attached
+  `// swiftlint:disable:next missing_min_touch_target` justifications
+  expanded back from 2-line shrunken stubs to ~11–13 line
+  "Reason: Button has multi-line action body …" blocks matching
+  their sibling sites (AppViews.swift lines 946-951 / 1548-1553).
+- **ADR-0001 line-citation refresh** — `PersistentFooter`'s
+  `AboutView(highlightEstimateApplicability: true)` push citation
+  bumped from line **2144** → **2164** (body block 2143–2145 →
+  2163–2165) in the References and Worked-example sections. A new
+  audit-trail paragraph documents the Loop-28 WI-4 line drift +
+  rationale.
+
+**Build status:** `./build.sh` per-test results green; SwiftLint
+strict gate at 0 violations; warnings-as-errors clean. Exit code
+flake on IOHIDLib kext arch-mismatch runner restart was disregarded
+per the established convention (see Loop-27 closure).
+
+### Learnings
+
+- **Fixed-character scan windows are a comment-prose tax.** Every
+  time a struct body grows, the next-door justification comments
+  must shrink to fit — and the shrink propagates to every cohort
+  agent who later reads them. A brace-counted bound (with lexer
+  state machine) is ~110 LOC and removes that pressure permanently.
+- **Lex `}` carefully inside Swift strings.** Multiline
+  `"""..."""` literals are the easy gotcha: triple-quote inside a
+  triple-quoted test fixture has to be escaped as `\"\"\"` to keep
+  the Swift compiler from terminating the literal early. Group
+  SU5's synthetic fixture exists specifically to pin this.
+- **Identifier-tail boundary matters more than the "struct"
+  keyword.** A naive `range(of: "struct Foo")` would match
+  `struct FooBar` — the failure is silent (you get *too much*
+  text). Always check the character after the name and reject when
+  it's `[A-Za-z0-9_]`.
