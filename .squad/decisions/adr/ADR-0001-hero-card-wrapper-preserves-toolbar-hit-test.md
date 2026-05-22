@@ -184,15 +184,15 @@ enough to materially change the parent's diff signature.
 ## References
 
 - `app/Sources/UVBurnTimer/AppViews.swift`
-  - `RootView.heroTimerCardView` delegation site — lines **218–232**
+  - `RootView.heroTimerCardView` delegation site — lines **221–235**
     (the `private var heroTimerCardView: some View` that calls
     `HeroTimerCard(...)`)
-  - `struct HeroTimerCard: View` declaration — lines **748–985**
-  - `RootView` `NavigationStack` wrapper — line **88** (referenced in
+  - `struct HeroTimerCard: View` declaration — lines **783–1032**
+  - `RootView` `NavigationStack` wrapper — line **91** (referenced in
     Alternative 3)
 - `app/Tests/UVBurnTimerCoreTests/BurnTimeCalculatorTests.swift`
-  - `test_R1_heroTimerCardWrapperStructStillExists` — line **1307**
-  - `test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1319**
+  - `test_R1_heroTimerCardWrapperStructStillExists` — line **1383**
+  - `test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1395**
 - `.squad/log/2026-05-21T10-30-00Z-hero-card-wrapper-restore-cycle.md`
   — 8th-loop closure log; "Ratified architectural decision" section is
   the informal source of this ADR.
@@ -208,6 +208,14 @@ bumped from their original WI-l-era positions (211–231 / 737–969 / 1090 /
 1102) to the current `a691734`-era positions after the 13 Loop-10 source-
 text + unit guards (Y/Z/AA/BB/GD) added ~1027 lines to the test file.
 The *rule* the ADR encodes is unchanged; only the pointer numerics moved.
+
+**WI-bundleS / Gaia L13a/b/c (Loop-14) — line-number refresh:** the
+References block + Addendum + worked-example citations were re-bumped
+from their Loop-10/11-era positions to the current `690046f`-era
+positions after Loop-12 + Loop-13 churn (Bundles G/I/J/L/M/P/Q/R/RR +
+WI-loop14-high). Forward-pinning guard
+`test_S5_adr0001CitationsMatchLiveSourceLineNumbers` reads each cited
+symbol's live source line and fails CI if the ADR ever drifts again.
 
 ## Audit
 
@@ -233,18 +241,18 @@ When this ADR was ratified (2026-05-21), `RootView` carried a single
 surface area expanded to **four** presentation modifiers and **two**
 `NavigationLink` push routes all resolving against `RootView`'s identity:
 
-1. `.sheet(isPresented: $showSettings)` — `AppViews.swift:68`
+1. `.sheet(isPresented: $showSettings)` — `AppViews.swift:70`
    (Settings sheet, owned by `RootView`).
-2. `.sheet(isPresented: $showSkinTypeEdit)` — `AppViews.swift:77`
+2. `.sheet(isPresented: $showSkinTypeEdit)` — `AppViews.swift:80`
    (Pattern-B skin-type edit sheet; added by WI-ff / Group GD).
 3. `.fullScreenCover(isPresented: $showDisclaimer)` — attached **from the
-   parent `App`** at `UVBurnTimerApp.swift:82` via the
+   parent `App`** at `UVBurnTimerApp.swift:94` via the
    `disclaimerPresentation(...)` view extension. Even though the binding
    lives on `UVBurnTimerApp`, the cover anchors to `RootView`'s view tree.
 4. `.fullScreenCover(isPresented: $showSkinTypeOnboarding)` — also
-   attached from the parent at `UVBurnTimerApp.swift:94` via
+   attached from the parent at `UVBurnTimerApp.swift:106` via
    `skinTypePresentation(...)`. Note the deliberate 500 ms
-   `Task { @MainActor in }` defer at `UVBurnTimerApp.swift:113–124` —
+   `Task { @MainActor in }` defer at `UVBurnTimerApp.swift:129–136` —
    iOS swallows a second `fullScreenCover` set while the first is still
    tearing down its transition. This is **not** an identity-collapse
    bug; it is a presentation-slot serialisation issue. We mention it
@@ -256,11 +264,12 @@ The two `NavigationLink` push routes that also key on `RootView`'s
 identity:
 
 - toolbar ⓘ `EstimateInfoButton` → `AboutView(highlightEstimateApplicability: true)`
-  at `AppViews.swift:120` (accessibility identifier `EstimateInfoButton`
-  at line 125).
+  at `AppViews.swift:123` (accessibility identifier `EstimateInfoButton`
+  at line 128).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:1917–1922`, rendered inside the
-  `.safeAreaInset(edge: .bottom)` at line 128–136.
+  `AppViews.swift:2010` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2009–2011), rendered inside the
+  `.safeAreaInset(edge: .bottom)` at line 131–139.
 
 ### Rule (extended)
 
@@ -273,21 +282,21 @@ L1 cover stuck open, About push unresponsive, ⓘ tap dead).
 
 ### Lightweight-inlining clarification (worked examples)
 
-- ✅ `mainNavigationStack` / `navigationStackBase` (`AppViews.swift:56-138`)
+- ✅ `mainNavigationStack` / `navigationStackBase` (`AppViews.swift:58-140`)
   — these are `RootView`'s *own modifier chain*, decomposed into two
   computed properties purely for Swift's expression-complexity budget
-  (see the comment at lines 53–55). They are not children. The
+  (see the comment at lines 55–57). They are not children. The
   decomposition does not introduce a new identity boundary and cannot
   trigger identity-collapse.
-- ✅ `skinTypeChip` (`AppViews.swift:323-348`), `locationChip` (286–303),
-  `spfChip` (305–321) — each is a small `Button` whose action mutates
+- ✅ `skinTypeChip` (`AppViews.swift:327-356`), `locationChip` (289-306),
+  `spfChip` (308-325) — each is a small `Button` whose action mutates
   `RootView`'s `@State`. They are permitted as inline computed properties
   **as long as** they (a) carry no `@State`/`@StateObject`, (b) own no
   gestures beyond `Button` action, and (c) stay short. **WI-gaia-ii**
   (Loop-11) adds source-text guard `R8 — chip watchlist` (Group R8c
   in `BurnTimeCalculatorTests.swift`) that fires if any of these grow
   past those limits.
-- ❌ `heroTimerCardView` (218–232) inlining the full `HeroTimerCard`
+- ❌ `heroTimerCardView` (221-235) inlining the full `HeroTimerCard`
   body — explicitly forbidden, guarded by R1/R2.
 
 ### Operational

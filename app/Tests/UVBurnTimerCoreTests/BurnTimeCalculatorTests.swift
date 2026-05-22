@@ -4628,3 +4628,358 @@ private func _forecastPickerSourceForGroupR_bundleR() throws -> String {
         "clearStoredSkinTypeAndRequireReattestation must set `showDisclaimer = true` so L1 re-presents immediately after the Settings sheet dismisses."
     )
 }
+
+// MARK: - Group S: Loop-14 Bundle S — convergent HIGH closure
+//
+// Closes three HIGH-severity findings carried forward from the Loop-13
+// gap-analysis pass (claude-opus-4.7-xhigh) and listed in the Loop-13
+// closure log §"Backlog state (entering Loop-14)":
+//
+//   S5 — Gaia L13a/b/c (architecture / ADR drift x3):
+//        ADR-0001 References § + Addendum + Lightweight-inlining
+//        worked-example line citations drifted vs. the live
+//        AppViews.swift / UVBurnTimerApp.swift / BurnTimeCalculatorTests.swift
+//        positions during Loop-12/13 churn. The pre-existing EK2 guard
+//        only fired against the original WI-l-era sentinels (1090/1102)
+//        and silently accepted further drift. Bundle S refreshes the
+//        citations to current values and adds a forward-pinning guard
+//        (S5) that asserts the cited symbols actually resolve at the
+//        current source positions — closing the silent-drift escape
+//        hatch.
+//
+//   S6 — Plunder L01 (privacy-policy {TBD} placeholders):
+//        `.squad/files/privacy-policy.md` ships with `{LAUNCH_DATE_TBD}`
+//        and `{CONTACT_EMAIL_TBD}` placeholders that an automated agent
+//        cannot fill (the launch date is a business decision; the
+//        contact email is the repo owner's). Bundle S adds a
+//        WI-21-style `Automation status` block to the stub explaining
+//        the manual-completion gate, and adds a contract test that
+//        keeps the TBDs visible (blank-sign-off = fail) until a
+//        hardware/business-owner pass replaces them.
+//
+//   S7 — Ma-Ti L06 (test coverage — SPF on forecast):
+//        The picker-driven `activeEstimate` path in
+//        `RootView` feeds `session.selectedSPF` into
+//        `BurnTimeCalculator.estimate(...)` so SPF applies symmetrically
+//        to the live-now reading AND any future-hour forecast
+//        selection. A regression that hardcoded `.unprotectedReference`
+//        (or omitted the SPF parameter) would silently produce wrong
+//        numbers for sunscreen-protected forecast hours. Bundle S adds
+//        a source-text guard that pins the SPF wiring at the
+//        `activeEstimate` call site.
+//
+// Test names use the S5/S6/S7 suffix to disambiguate from the
+// pre-existing Loop-12 `test_S1`/`test_S2`/`test_S3` triad at lines
+// 1715/1731/1762 and ADR-0002's reserved-but-unlanded `S4` slot.
+
+// MARK: - Helper: resolve repo-root URLs for Group S source-text guards.
+
+/// Returns the absolute URL of `<repo-root>/.squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md`.
+private func _adr0001URLForGroupS() -> URL {
+    URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .deletingLastPathComponent()  // <repo-root>
+        .appendingPathComponent(".squad/decisions/adr/ADR-0001-hero-card-wrapper-preserves-toolbar-hit-test.md")
+}
+
+/// Returns the absolute URL of `<repo-root>/.squad/files/privacy-policy.md`.
+private func _privacyPolicyURLForGroupS() -> URL {
+    URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent(".squad/files/privacy-policy.md")
+}
+
+/// Returns the absolute URL of `<repo-root>/app/Sources/UVBurnTimer/UVBurnTimerApp.swift`.
+private func _uvBurnTimerAppSwiftURLForGroupS() -> URL {
+    URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()  // app/
+        .appendingPathComponent("Sources/UVBurnTimer/UVBurnTimerApp.swift")
+}
+
+/// Returns the 1-based line number of the first line in `source` that
+/// contains `needle`, or nil if none.
+private func _firstLineNumberContaining(_ needle: String, in source: String) -> Int? {
+    let lines = source.components(separatedBy: "\n")
+    for (idx, line) in lines.enumerated() where line.contains(needle) {
+        return idx + 1
+    }
+    return nil
+}
+
+// MARK: - S5 — ADR-0001 line citations refreshed and forward-pinned
+
+/// S5 — Gaia L13a/b/c (ADR drift x3): the ADR-0001 References § +
+/// Addendum citations + Lightweight-inlining worked-example line
+/// citations must match the *current* AppViews.swift /
+/// UVBurnTimerApp.swift / BurnTimeCalculatorTests.swift positions.
+/// This guard reads each cited symbol's actual source line and asserts
+/// the ADR cites that same line, so further silent drift fails CI
+/// instead of accumulating.
+///
+/// The pre-existing EK2 guard (`test_EK2_adr0001ReferencesPointAtCurrentLineNumbers`)
+/// only checked that the *retired* WI-l-era sentinels (1090 / 1102)
+/// were absent — that left the door open to unbounded forward drift
+/// from the WI-gaia-gg refresh. S5 closes the door by anchoring each
+/// citation to the symbol it is supposed to point at.
+///
+/// Test name uses the S5 suffix to disambiguate from the pre-existing
+/// Loop-12 `test_S1_toolbarInfoButtonRoutesToHighlightedAboutView` /
+/// `test_S2_aboutEstimateApplicabilityHeaderHasStableIdentifier` /
+/// `test_S3_toolbarKeepsBothSettingsAndEstimateInfoButtons` triad
+/// (BurnTimeCalculatorTests.swift line 1715+). ADR-0002 reserved an
+/// `S4_toolbarGearButtonUsesTopBarTrailingNotPrimaryAction` slot that
+/// has not yet landed in the test suite; S5 is therefore the next
+/// available number in the S-prefixed bundle.
+@Test func test_S5_adr0001CitationsMatchLiveSourceLineNumbers() throws {
+    let adr = try String(contentsOf: _adr0001URLForGroupS(), encoding: .utf8)
+    let appViews = try _appViewsSourceForGroupR()
+    let appSwift = try String(contentsOf: _uvBurnTimerAppSwiftURLForGroupS(), encoding: .utf8)
+    let tests = try String(contentsOf: URL(fileURLWithPath: #filePath), encoding: .utf8)
+
+    // Each citation is (description, ADR substring, source string, anchor).
+    // The ADR must contain the substring; the anchor must resolve at the
+    // line stated in the substring.
+    struct Citation {
+        let description: String
+        let adrSubstring: String
+        let source: String
+        let anchor: String
+        let expectedLine: Int
+    }
+
+    // Pre-compute current lines for each anchor so the test mirrors the
+    // file rather than re-hard-coding numerics.
+    let heroStructLine = _firstLineNumberContaining("struct HeroTimerCard: View", in: appViews)
+    let heroDelegateLine = _firstLineNumberContaining("private var heroTimerCardView: some View", in: appViews)
+    // RootView's NavigationStack wrapper — the first `NavigationStack {`
+    // occurrence in AppViews.swift is RootView's (inside `navigationStackBase`).
+    // The ADR Alternative 3 + References § both cite this line as the
+    // identity wrapper that *did not* substitute for the struct boundary.
+    let navStackBaseLine = _firstLineNumberContaining("NavigationStack {", in: appViews)
+    let r1Line = _firstLineNumberContaining("@Test func test_R1_heroTimerCardWrapperStructStillExists()", in: tests)
+    let r2Line = _firstLineNumberContaining("@Test func test_R2_rootViewDelegatesToHeroTimerCardConstructor()", in: tests)
+    let settingsSheetLine = _firstLineNumberContaining(".sheet(isPresented: $showSettings)", in: appViews)
+    let skinTypeEditSheetLine = _firstLineNumberContaining(".sheet(isPresented: $showSkinTypeEdit)", in: appViews)
+    let disclaimerCoverLine = _firstLineNumberContaining("isPresented: $showDisclaimer,", in: appSwift)
+    let skinTypeOnboardingCoverLine = _firstLineNumberContaining(".skinTypePresentation(isPresented: $showSkinTypeOnboarding)", in: appSwift)
+    let estimateInfoButtonLine = _firstLineNumberContaining("NavigationLink(destination: AboutView(highlightEstimateApplicability: true)) {", in: appViews)
+    let estimateInfoIdentifierLine = _firstLineNumberContaining(".accessibilityIdentifier(\"EstimateInfoButton\")", in: appViews)
+    // PersistentFooter's AboutView push — search for the AboutView call
+    // AFTER the `struct PersistentFooter: View` declaration so we don't
+    // pick up the toolbar ⓘ at line 123 or the DisclaimerCover sheet push
+    // at line 1263.
+    let persistentFooterAboutLine = { () -> Int? in
+        let lines = appViews.components(separatedBy: "\n")
+        guard let pfStart = lines.firstIndex(where: { $0.contains("struct PersistentFooter: View") }) else {
+            return nil
+        }
+        for idx in pfStart..<lines.count where lines[idx].contains("AboutView(highlightEstimateApplicability: true)") {
+            return idx + 1
+        }
+        return nil
+    }()
+    let skinTypeChipLine = _firstLineNumberContaining("private var skinTypeChip: some View", in: appViews)
+    let locationChipLine = _firstLineNumberContaining("private var locationChip: some View", in: appViews)
+    let spfChipLine = _firstLineNumberContaining("private var spfChip: some View", in: appViews)
+
+    #expect(heroStructLine != nil, "struct HeroTimerCard must exist in AppViews.swift")
+    #expect(heroDelegateLine != nil, "RootView.heroTimerCardView must exist in AppViews.swift")
+    #expect(navStackBaseLine != nil, "RootView NavigationStack wrapper must exist in AppViews.swift")
+    #expect(r1Line != nil, "test_R1_heroTimerCardWrapperStructStillExists must exist in BurnTimeCalculatorTests.swift")
+    #expect(r2Line != nil, "test_R2_rootViewDelegatesToHeroTimerCardConstructor must exist in BurnTimeCalculatorTests.swift")
+    #expect(settingsSheetLine != nil, "Settings .sheet(isPresented: $showSettings) must exist in AppViews.swift")
+    #expect(skinTypeEditSheetLine != nil, "SkinTypeEdit .sheet(isPresented: $showSkinTypeEdit) must exist in AppViews.swift")
+    #expect(disclaimerCoverLine != nil, "$showDisclaimer cover binding must exist in UVBurnTimerApp.swift")
+    #expect(skinTypeOnboardingCoverLine != nil, ".skinTypePresentation must exist in UVBurnTimerApp.swift")
+    #expect(estimateInfoButtonLine != nil, "EstimateInfoButton NavigationLink must exist in AppViews.swift")
+    #expect(estimateInfoIdentifierLine != nil, "EstimateInfoButton accessibility identifier must exist in AppViews.swift")
+    #expect(persistentFooterAboutLine != nil, "PersistentFooter's AboutView push must exist in AppViews.swift (second occurrence of AboutView(highlightEstimateApplicability: true))")
+    #expect(skinTypeChipLine != nil, "private var skinTypeChip must exist in AppViews.swift")
+    #expect(locationChipLine != nil, "private var locationChip must exist in AppViews.swift")
+    #expect(spfChipLine != nil, "private var spfChip must exist in AppViews.swift")
+
+    // The ADR's References § block + Addendum + worked examples must
+    // mention the current line numbers. The test refuses to be brittle
+    // about column-precise formatting: it only asserts the integer line
+    // is present in the file. Each ADR-author convention (e.g. `lines
+    // **218–232**` or `at `AppViews.swift:68`` or `at line **88**`) is
+    // tolerated as long as the integer appears somewhere in the ADR.
+    let expectations: [(label: String, line: Int?)] = [
+        ("struct HeroTimerCard: View declaration line",     heroStructLine),
+        ("RootView.heroTimerCardView delegation site line", heroDelegateLine),
+        ("navigationStackBase NavigationStack wrapper",     navStackBaseLine),
+        ("test_R1 line in BurnTimeCalculatorTests.swift",   r1Line),
+        ("test_R2 line in BurnTimeCalculatorTests.swift",   r2Line),
+        ("$showSettings .sheet line in AppViews.swift",     settingsSheetLine),
+        ("$showSkinTypeEdit .sheet line in AppViews.swift", skinTypeEditSheetLine),
+        ("$showDisclaimer cover line in UVBurnTimerApp.swift",        disclaimerCoverLine),
+        ("$showSkinTypeOnboarding cover line in UVBurnTimerApp.swift", skinTypeOnboardingCoverLine),
+        ("EstimateInfoButton NavigationLink line in AppViews.swift", estimateInfoButtonLine),
+        ("EstimateInfoButton accessibility identifier line",         estimateInfoIdentifierLine),
+        ("PersistentFooter AboutView push line",            persistentFooterAboutLine),
+        ("skinTypeChip line",                                skinTypeChipLine),
+        ("locationChip line",                                locationChipLine),
+        ("spfChip line",                                     spfChipLine),
+    ]
+    for expectation in expectations {
+        guard let line = expectation.line else { continue }
+        #expect(
+            adr.contains(String(line)),
+            "ADR-0001 must mention the current source line \(line) for \(expectation.label). If you moved the symbol, refresh the citation in the ADR; do not let drift accumulate silently (Gaia L13a/b/c)."
+        )
+    }
+
+    // The retired WI-l-era sentinels (1090/1102) — kept as a guard so we
+    // don't accidentally re-introduce them.
+    #expect(
+        !adr.contains("line **1090**"),
+        "ADR-0001 must not cite the retired pre-Loop-10 R1 line (1090)."
+    )
+    #expect(
+        !adr.contains("line **1102**"),
+        "ADR-0001 must not cite the retired pre-Loop-10 R2 line (1102)."
+    )
+
+    // The pre-Loop-13 R1/R2 sentinels (1307/1319) — must also not appear
+    // in the current ADR; the test_EK2 retired-line guard would still
+    // pass if someone left those in by accident, but the citations
+    // should follow the live test positions.
+    #expect(
+        !adr.contains("test_R1_heroTimerCardWrapperStructStillExists` — line **1307**"),
+        "ADR-0001 must not cite the retired Loop-13-era R1 line (1307); refresh to the current line."
+    )
+    #expect(
+        !adr.contains("test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1319**"),
+        "ADR-0001 must not cite the retired Loop-13-era R2 line (1319); refresh to the current line."
+    )
+}
+
+// MARK: - S6 — Privacy-policy {TBD} automation-status block
+
+/// S6 — Plunder L01: `.squad/files/privacy-policy.md` carries two
+/// load-bearing placeholders — `{LAUNCH_DATE_TBD}` (the Effective date
+/// header) and `{CONTACT_EMAIL_TBD}` (the developer contact +
+/// privacy-questions footer). Neither can be filled by an automated
+/// agent: the launch date is a business decision the repo owner makes
+/// at App Store submission time, and the contact email is the repo
+/// owner's personal/business email.
+///
+/// To keep this gate visible (and prevent the policy from shipping
+/// with literal `{...TBD}` markers in the App Store URL), Bundle S
+/// adds a WI-21-style `Automation status` block to the policy stub
+/// that explicitly calls out the manual-completion ownership. This
+/// guard asserts:
+///
+/// 1. The placeholders are still present (the policy has not shipped
+///    yet — replacing them prematurely with fake values would be
+///    worse than the visible TBD).
+/// 2. The `Automation status` block exists and names the manual-
+///    completion gate.
+/// 3. The block also names the responsible role (Plunder + repo
+///    owner) so future loops know who to ping.
+@Test func test_S6_privacyPolicyTBDsCarryAutomationStatusBlock() throws {
+    let policy = try String(contentsOf: _privacyPolicyURLForGroupS(), encoding: .utf8)
+
+    // (1) Placeholders are still visible — blank "fill it in or ship
+    //     broken" is the gate.
+    #expect(
+        policy.contains("{LAUNCH_DATE_TBD}"),
+        "privacy-policy.md must keep `{LAUNCH_DATE_TBD}` until the repo owner fills the App Store launch date at submission. A premature replacement (e.g. literal `TBD`, `2026-01-01`, or a guess) violates the truthfulness contract (Plunder L01)."
+    )
+    #expect(
+        policy.contains("{CONTACT_EMAIL_TBD}"),
+        "privacy-policy.md must keep `{CONTACT_EMAIL_TBD}` until the repo owner fills a real contact email. Faking the address would violate GDPR Art.12 transparency + App Store §5.1.1 (Plunder L01)."
+    )
+
+    // (2) The Automation status block must exist and explain the gate.
+    #expect(
+        policy.contains("Automation status (WI-21"),
+        "privacy-policy.md must carry a WI-21-style `Automation status` block explaining why the {LAUNCH_DATE_TBD} + {CONTACT_EMAIL_TBD} placeholders cannot be filled by an automated agent (Plunder L01)."
+    )
+
+    // (3) The block names the responsible role(s).
+    #expect(
+        policy.contains("repo owner"),
+        "privacy-policy.md Automation status block must name the repo owner as the responsible role for filling the App Store launch date + contact email (Plunder L01)."
+    )
+
+    // (4) The block names the load-bearing placeholders directly so a
+    //     future reader can search for either marker and land on the
+    //     block.
+    #expect(
+        policy.contains("LAUNCH_DATE_TBD") && policy.contains("CONTACT_EMAIL_TBD"),
+        "privacy-policy.md Automation status block must name BOTH `LAUNCH_DATE_TBD` and `CONTACT_EMAIL_TBD` so either grep lands on the block."
+    )
+
+    // (5) The block must say a blank/TBD-still-present block is a
+    //     submission-blocker, mirroring the iris-contrast-qa-checklist
+    //     and iris-launch-readiness-checklist conventions.
+    #expect(
+        policy.contains("blocks") || policy.contains("blocker") || policy.contains("must be filled"),
+        "privacy-policy.md Automation status block must mark unfilled TBDs as a submission blocker (mirrors `iris-*-checklist.md` blocking-on-blank convention)."
+    )
+}
+
+// MARK: - S7 — ForecastPicker SPF wiring contract
+
+/// S7 — Ma-Ti L06: `RootView.activeEstimate` (the SPF-aware burn
+/// estimate driven by the WI-7 forecast picker) must feed
+/// `session.selectedSPF` into `BurnTimeCalculator.estimate(...)`.
+/// A regression that hardcoded `.unprotectedReference` (or any
+/// other constant) would silently strip sunscreen protection from
+/// every future-hour selection while leaving the live-now reading
+/// correct — the worst kind of inconsistency for a safety surface.
+///
+/// This guard pins the SPF wiring at the activeEstimate call site so
+/// the next refactor cannot omit `session.selectedSPF` without
+/// breaking CI.
+@Test func test_S7_activeEstimateAppliesSelectedSPFToForecastSelection() throws {
+    let source = try _appViewsSourceForGroupR()
+
+    // The activeEstimate computed property is the canonical forecast-
+    // aware estimate source for the hero card.
+    guard let activeEstimateRange = source.range(of: "private var activeEstimate: BurnTimeEstimate?") else {
+        Issue.record("RootView.activeEstimate computed property not found in AppViews.swift")
+        return
+    }
+
+    // Body slice — look ~500 chars after the declaration. The body is
+    // small (≤ 10 lines) so 500 chars is generous.
+    let bodyStart = activeEstimateRange.upperBound
+    let bodyEnd = source.index(bodyStart, offsetBy: 500, limitedBy: source.endIndex) ?? source.endIndex
+    let body = String(source[bodyStart..<bodyEnd])
+
+    // It must invoke BurnTimeCalculator.estimate(...).
+    #expect(
+        body.contains("BurnTimeCalculator.estimate("),
+        "RootView.activeEstimate must invoke `BurnTimeCalculator.estimate(...)` (Ma-Ti L06)."
+    )
+
+    // It must pass `session.selectedSPF` as the spf parameter —
+    // hardcoding `.unprotectedReference`, `.spf30`, etc. would silently
+    // break SPF wiring for forecast picks.
+    #expect(
+        body.contains("spf: session.selectedSPF"),
+        "RootView.activeEstimate must pass `spf: session.selectedSPF` so SPF applies symmetrically to live + forecast estimates (Ma-Ti L06). Hardcoding any other SPFLevel would strip sunscreen protection from forecast picks."
+    )
+
+    // It must also pass the active UV index (forecast value or live
+    // fallback) — `activeUVIndex` is the source-of-truth here.
+    #expect(
+        body.contains("activeUVIndex"),
+        "RootView.activeEstimate must read `activeUVIndex` (the forecast-or-live UV) — not the bare `uvIndex` live state (Ma-Ti L06)."
+    )
+
+    // And the skin type must come from `session.selectedSkinType`.
+    #expect(
+        body.contains("session.selectedSkinType"),
+        "RootView.activeEstimate must read `skinType:` from `session.selectedSkinType` (Ma-Ti L06)."
+    )
+}
