@@ -5984,3 +5984,247 @@ private func _activeUVIndexBodyForGroupW() throws -> String {
     )
 }
 
+// MARK: - Group Y: WI-bundleY — Loop-18 Ma-Ti L07 + Suchi L05 closure
+//
+// Closes two of the remaining HIGH-priority test-coverage gaps surfaced
+// by the Loop-13 gap-analysis pass (claude-opus-4.7-xhigh) and carried
+// forward through Loops 14–17. The Loop-17 closure log §"Backlog state
+// (entering Loop-18)" enumerates the remaining items as
+// "Ma-Ti L07/L08 — override guard + eighth" + "Suchi L02/L03/L05 —
+// Maya stale-hero + Maya pull-to-refresh + Greta default-SPF-chip".
+// Bundle Y closes Ma-Ti L07 (skin-type clear override surface guard)
+// and Suchi L05 (Greta default-SPF-chip cold-launch fallback).
+//
+//   Y1 — Ma-Ti L07 (override guard):
+//        `RootView.clearStoredSkinTypeAndRequireReattestation()` is the
+//        Settings-sheet override surface that powers Asha P4's
+//        erasure-with-re-attestation flow (Suchi L01, closed in
+//        Bundle R / Loop-13 R3). The function MUST execute four
+//        contract elements in sequence to satisfy the D-2026-05-19-007
+//        photosensitization safety boundary on the override path:
+//          (a) `UserPreferenceStorage.persist(skinType: nil, …)` —
+//              wipe the Fitzpatrick rawValue on disk,
+//          (b) `session.selectedSkinType = nil` — wipe the in-memory
+//              state so the binding redraws to the unset state,
+//          (c) `removeObject(forKey: …disclaimerPolicyVersionKey)` —
+//              clear the L1 ack version so the next cold launch (or
+//              the immediate `showDisclaimer = true` below) re-fires
+//              L1 with the photosensitizer line freshly attested,
+//          (d) `session.requireDisclaimerReattestation()` — flip
+//              `acknowledgedDisclaimer = false` so the cover binding
+//              gates the verdict surface until L1 is re-attested,
+//          (e) `showDisclaimer = true` — immediately present the L1
+//              cover so the photosens reach-back is on screen before
+//              the next user interaction.
+//        Without all five elements the Asha P4 erasure flow regresses
+//        in one of three ways:
+//          (1) the on-disk rawValue survives → stale Fitzpatrick
+//              re-applies on cold launch (R3 base regression),
+//          (2) the L1 cover is bypassed → photosens disclaimer not
+//              re-attested → Plunder D-2026-05-19-013 plain-terms
+//              violation on the override path,
+//          (3) the in-memory state is stale → the SettingsSheet UI
+//              continues showing the wiped type until next launch.
+//        Bundle R (Loop-13) shipped the underlying fix; Y1 pins the
+//        five-element contract as a source-text guard so a future
+//        refactor cannot silently drop any one of them.
+//
+//   Y2 — Suchi L05 (Greta default-SPF-chip):
+//        `UserPreferenceStorage.restoredSPF(from:)` MUST return
+//        `SPFLevel.spf30` on a fresh `UserDefaults` suite where no
+//        SPF key has been persisted. Greta (P1 disclaimer-cautious /
+//        repeating-use persona, see `.squad/files/suchi-persona-
+//        annotations.md` §"Greta — JTBD: reapplication cadence")
+//        opens the app for the FIRST time and the SPF chip on
+//        the main screen must show a sunscreen-positive default —
+//        not a blank "Choose SPF" prompt, not `.unprotectedReference`,
+//        and not `.spf15` (which would understate the protection she
+//        actually uses). The Loop-13 SPFLevel.isSunscreen-aware
+//        rewrite of `restoredSPF` (Bundle SS / Loop-12 + Loop-13
+//        L13-5 read-side coercion at line 79–82 of
+//        UVBurnTimerSession.swift) shipped the `.spf30` fallback;
+//        Y2 pins it as a pure-function contract test on the
+//        cold-launch zero-state.
+//
+//        This is the symmetric read-side contract to Bundle X's
+//        X1 write-side coercion test (line 5795) — together X1 + Y2
+//        lock the SPF default-chip invariant from both sides:
+//          • X1 — write side: any non-sunscreen SPF that reaches
+//            `persist(spf:)` is coerced to `.spf30` on disk.
+//          • Y2 — read side: a missing or non-sunscreen SPF on disk
+//            is coerced to `.spf30` at the next read.
+//        Either coercion alone would close Greta's L05 concern; both
+//        coercions together also defend against legacy installs that
+//        landed a non-sunscreen rawValue on disk before the write-side
+//        coercion shipped.
+//
+// Test names use the Y1/Y2 suffix to anchor the bundle. The
+// `_appViewsSourceForGroupR()` helper (line 1362) is reused by Y1;
+// Y2 uses the `makeIsolatedDefaults`/`tearDownIsolatedDefaults`
+// helpers (line 2128/2138) for a clean per-test `UserDefaults` suite,
+// matching X1's pattern.
+
+/// Y1 — Ma-Ti L07: `RootView.clearStoredSkinTypeAndRequireReattestation()`
+/// preserves the five-element override-surface contract:
+///   (a) `UserPreferenceStorage.persist(skinType: nil, to: .standard)`
+///   (b) `session.selectedSkinType = nil`
+///   (c) `UserDefaults.standard.removeObject(forKey: UserPreferenceStorage.disclaimerPolicyVersionKey)`
+///   (d) `session.requireDisclaimerReattestation()`
+///   (e) `showDisclaimer = true`
+///
+/// **Why this guard matters:** Bundle R (Loop-13 R3) shipped the
+/// erasure-with-re-attestation flow to close Suchi L01 (Asha P4
+/// erasure path). The underlying fix is in `AppViews.swift` lines
+/// 650–658 (the `clearStoredSkinTypeAndRequireReattestation()` private
+/// function), but no source-text guard pins its five-element shape
+/// against silent regression. A future refactor that:
+///   • drops the `requireDisclaimerReattestation()` call → in-memory
+///     `acknowledgedDisclaimer` stays `true`, the L1 cover is bypassed
+///     on the override path, and the photosens disclaimer is not
+///     re-attested (Plunder D-2026-05-19-013 plain-terms regression);
+///   • drops the `removeObject(forKey: disclaimerPolicyVersionKey)`
+///     call → the next cold launch sees the previously-acked policy
+///     version and does NOT re-fire L1, even though the user has
+///     wiped their skin type and is in a fresh attestation context
+///     (R3 base regression);
+///   • drops the `showDisclaimer = true` line → the L1 cover does
+///     not immediately present after Clear, leaving the user on
+///     SettingsSheet with a wiped type but no on-screen reach-back
+///     to re-attest before the next verdict render;
+///   • drops the `session.selectedSkinType = nil` line → the
+///     UI binding continues to read the stale in-memory type for
+///     the SettingsSheet picker even though the on-disk value is gone;
+///   • drops the `persist(skinType: nil, …)` call → the on-disk
+///     rawValue survives and re-applies on cold launch (R3 base
+///     regression);
+/// is a silent regression that CI must catch. Y1 pins all five
+/// elements as substrings in the function body slice.
+///
+/// **Anchor:** the unique `private func
+/// clearStoredSkinTypeAndRequireReattestation()` declaration in
+/// `AppViews.swift` (only one such function in the file as of the
+/// Loop-17 closure `84fdb2d`). The slice extends ~600 chars after
+/// the declaration, enough to cover the function body
+/// (~250 chars / 9 lines on the current main) plus the next
+/// `private func` declaration as a natural terminator.
+@Test func test_Y1_clearStoredSkinTypeAndRequireReattestationPreservesFiveElementOverrideContract() throws {
+    let source = try _appViewsSourceForGroupR()
+    guard let declRange = source.range(of: "private func clearStoredSkinTypeAndRequireReattestation()") else {
+        Issue.record(
+            "RootView.clearStoredSkinTypeAndRequireReattestation() declaration not found in AppViews.swift — the Y1 guard anchors on this name. If the function has been renamed (e.g., `wipeSkinTypeAndRefireDisclaimer`, `clearSkinTypeWithReAttestation`) update the helper to track the new name and verify the five-element contract has been preserved at the new call site."
+        )
+        return
+    }
+    let bodyStart = declRange.upperBound
+    let bodyEnd = source.index(bodyStart, offsetBy: 600, limitedBy: source.endIndex) ?? source.endIndex
+    let body = String(source[bodyStart..<bodyEnd])
+
+    // (a) Persist skinType: nil — wipe on-disk Fitzpatrick rawValue.
+    #expect(
+        body.contains("UserPreferenceStorage.persist(skinType: nil, to: .standard)"),
+        "clearStoredSkinTypeAndRequireReattestation() must call `UserPreferenceStorage.persist(skinType: nil, to: .standard)` — without this the on-disk Fitzpatrick rawValue survives the override and re-applies on cold launch, regressing the Bundle R / Suchi L01 erasure path that closed Asha P4's clear-skin-type flow. (Ma-Ti L07 — Loop-13 deferred / Loop-18)"
+    )
+
+    // (b) In-memory state wipe — session.selectedSkinType = nil.
+    #expect(
+        body.contains("session.selectedSkinType = nil"),
+        "clearStoredSkinTypeAndRequireReattestation() must assign `session.selectedSkinType = nil` — without this the in-memory UVBurnTimerSession continues to read the stale Fitzpatrick rawValue for the SettingsSheet picker binding even though the on-disk value is gone, presenting an inconsistent override surface to the user. (Ma-Ti L07 — Loop-13 deferred / Loop-18)"
+    )
+
+    // (c) Disclaimer policy version key removal — forces L1 re-fire
+    // on the next cold launch AND ensures `requireDisclaimerReattestation()`
+    // below is not silently negated by a leftover acked policy version.
+    #expect(
+        body.contains("UserPreferenceStorage.disclaimerPolicyVersionKey"),
+        "clearStoredSkinTypeAndRequireReattestation() must remove the `UserPreferenceStorage.disclaimerPolicyVersionKey` from `UserDefaults.standard` — without this the next cold launch reads the previously-acked policy version and does NOT re-fire L1, even though the user has wiped their Fitzpatrick type and is in a fresh attestation context. This is the R3 base regression Bundle R closed at Loop-13. (Ma-Ti L07 — Loop-13 deferred / Loop-18)"
+    )
+    #expect(
+        body.contains("removeObject(") && body.contains("disclaimerPolicyVersionKey"),
+        "clearStoredSkinTypeAndRequireReattestation() must invoke `UserDefaults.standard.removeObject(forKey: ...)` with the `disclaimerPolicyVersionKey` — replacing the removal with a `set(0, forKey:)` zeroing form would land an explicit rawValue 0 on disk, which the disclaimer-policy-version migration treats as a sentinel rather than an unset state, breaking the re-fire path. (Ma-Ti L07 — Loop-13 deferred / Loop-18)"
+    )
+
+    // (d) Disclaimer re-attestation — flips acknowledgedDisclaimer to false.
+    #expect(
+        body.contains("session.requireDisclaimerReattestation()"),
+        "clearStoredSkinTypeAndRequireReattestation() must call `session.requireDisclaimerReattestation()` — without this the in-memory `acknowledgedDisclaimer` stays `true`, the L1 cover binding does not gate the verdict surface, and the photosens disclaimer is not re-attested on the override path. This is a Plunder D-2026-05-19-013 plain-terms violation: photosensitization safety boundary requires re-attestation on any operation that materially changes the user's attestation context (clearing skin type is such an operation per Suchi L01). (Ma-Ti L07 — Loop-13 deferred / Loop-18)"
+    )
+
+    // (e) Immediate L1 cover presentation — showDisclaimer = true.
+    #expect(
+        body.contains("showDisclaimer = true"),
+        "clearStoredSkinTypeAndRequireReattestation() must set `showDisclaimer = true` so the L1 cover immediately presents after the Clear tap, putting the photosens reach-back on screen before the next user interaction. Relying solely on `requireDisclaimerReattestation()` would gate the verdict but leave the user on SettingsSheet with a wiped type and no on-screen prompt to re-attest. (Ma-Ti L07 — Loop-13 deferred / Loop-18)"
+    )
+}
+
+/// Y2 — Suchi L05: `UserPreferenceStorage.restoredSPF(from:)` returns
+/// `SPFLevel.spf30` on a fresh `UserDefaults` suite with no SPF key
+/// set, so Greta (P1 disclaimer-cautious / repeating-use persona)
+/// sees a sunscreen-positive default SPF chip on cold launch.
+///
+/// **Why this guard matters:** Greta's persona profile (see
+/// `.squad/files/suchi-persona-annotations.md` §"Greta — JTBD:
+/// reapplication cadence") opens the app for the FIRST time before
+/// putting on sunscreen. The SPF chip on the main screen must show
+/// a sensible sunscreen-positive default — not a blank "Choose SPF"
+/// prompt (which would force her to commit to an SPF before she
+/// can read the burn-time verdict, regressing the Apple-restraint
+/// visual cadence Suchi protected), not `SPFLevel.unprotectedReference`
+/// (the modelling-only reference value), and not `.spf15` (which
+/// understates the protection she actually uses, biasing the burn
+/// estimate too short).
+///
+/// The Loop-12 Bundle SS rewrite of `restoredSPF` made the function
+/// SPFLevel.isSunscreen-aware at lines 77–86 of
+/// `UVBurnTimerSession.swift`:
+///   ```
+///   guard defaults.object(forKey: selectedSPFKey) != nil,
+///         let spf = SPFLevel(rawValue: defaults.integer(forKey: selectedSPFKey)),
+///         spf.isSunscreen
+///   else {
+///       return .spf30
+///   }
+///   ```
+/// Y2 pins the cold-launch zero-state branch (the `defaults.object(…) != nil`
+/// guard fails immediately, falling through to `return .spf30`) as
+/// a pure-function test on an isolated `UserDefaults` suite.
+///
+/// **Convergence with sibling tests:**
+///   • Bundle X X1 (line 5795) pins the write-side coercion —
+///     non-sunscreen SPF → `.spf30` rawValue on disk.
+///   • Bundle Q Q? / Loop-13 L13-5 (line ~1296) pins the read-side
+///     coercion for an existing non-sunscreen rawValue on disk.
+///   • Y2 closes the third leg — read-side default for the zero-state
+///     (no key on disk at all).
+/// Together the three guards lock the Greta default-SPF-chip
+/// invariant from the cold-launch zero-state, the legacy non-sunscreen
+/// rawValue, and the future write path.
+@Test func test_Y2_restoredSPFReturnsSpf30OnColdLaunchZeroStateForGretaDefaultChip() throws {
+    let (defaults, suiteName) = makeIsolatedDefaults()
+    defer { tearDownIsolatedDefaults(defaults, suiteName: suiteName) }
+
+    // Precondition: the isolated suite has no SPF key — this is the
+    // cold-launch zero-state Greta hits on first install. The
+    // `makeIsolatedDefaults` helper already calls
+    // `removePersistentDomain` at construction time, so the absence
+    // of `selectedSPFKey` is guaranteed.
+    #expect(
+        defaults.object(forKey: UserPreferenceStorage.selectedSPFKey) == nil,
+        "Test precondition: the isolated UserDefaults suite must have no SPF key set so `restoredSPF` hits the cold-launch zero-state branch (the `defaults.object(forKey:) != nil` guard at UVBurnTimerSession.swift line 78 must fail). If this precondition fails the helper `makeIsolatedDefaults` regressed; Y2 cannot exercise the Greta default-chip contract without a clean suite. (Suchi L05 — Loop-13 deferred / Loop-18)"
+    )
+
+    let restored = UserPreferenceStorage.restoredSPF(from: defaults)
+
+    #expect(
+        restored == .spf30,
+        "UserPreferenceStorage.restoredSPF(from:) must return `.spf30` on a fresh UserDefaults suite with no SPF key set — Greta (P1, see suchi-persona-annotations.md §\"Greta — JTBD: reapplication cadence\") opens the app for the first time and the SPF chip MUST show a sunscreen-positive default. Returning a non-sunscreen `.unprotectedReference` would expose the modelling-only reference value; returning `.spf15` would understate Greta's actual protection and bias the burn-time estimate too short; returning `nil` (if the signature were ever changed to `SPFLevel?`) would force Greta to commit to an SPF before reading the verdict, breaking the Apple-restraint visual cadence Suchi protected. (Suchi L05 — Loop-13 deferred / Loop-18)"
+    )
+    #expect(
+        restored.isSunscreen,
+        "UserPreferenceStorage.restoredSPF(from:) cold-launch default MUST satisfy `.isSunscreen` — `.unprotectedReference` is the only non-sunscreen `SPFLevel` (per SPFLevel.swift). Greta's default-chip contract requires a sunscreen-positive value so the main-screen burn-time verdict applies sunscreen-aware protection from the first cold launch. (Suchi L05 — Loop-13 deferred / Loop-18)"
+    )
+    #expect(
+        restored.rawValue == 30,
+        "UserPreferenceStorage.restoredSPF(from:) cold-launch default MUST have rawValue 30 — both the symbolic `.spf30` check and the literal `30` rawValue must hold so a future refactor that adds a new sunscreen-positive case (e.g., `.spf40`, `.spf45`) cannot silently change the cold-launch default away from the Suchi-validated value. (Suchi L05 — Loop-13 deferred / Loop-18)"
+    )
+}
+
