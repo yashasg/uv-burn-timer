@@ -15,7 +15,8 @@ guard !args.isEmpty else {
 }
 
 var anyViolations = false
-let rule = ToolbarImageNeedsScaledFrameRule()
+let toolbarRule = ToolbarImageNeedsScaledFrameRule()
+let imageA11yRule = ImageSystemNameMissingAccessibilityLabelRule()
 
 for path in args {
     let url = URL(fileURLWithPath: path)
@@ -26,7 +27,10 @@ for path in args {
         FileHandle.standardError.write(Data("error: cannot read \(path): \(error)\n".utf8))
         exit(74)
     }
-    for v in rule.violations(in: source) {
+    var violations: [Violation] = []
+    violations.append(contentsOf: toolbarRule.violations(in: source))
+    violations.append(contentsOf: imageA11yRule.violations(in: source))
+    for v in violations {
         anyViolations = true
         let line = "\(path):\(v.line):\(v.column): error: \(v.message) [\(v.ruleID)]\n"
         FileHandle.standardOutput.write(Data(line.utf8))

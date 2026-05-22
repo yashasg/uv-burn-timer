@@ -24,6 +24,45 @@ final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
         return rule.violations(in: source)
     }
 
+    // MARK: - True negatives — silencer (d): sibling Text supplies label
+
+    func test_trueNegative_imageWithSiblingTextInHStack() {
+        // ForecastPickerView.swift:209 shape — refresh banner icon
+        // paired with descriptive Text.
+        let source = """
+        import SwiftUI
+        struct V: View {
+            var body: some View {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Text("Updating forecast…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+        }
+        """
+        XCTAssertEqual(violations(source).count, 0)
+    }
+
+    func test_trueNegative_imageWithSiblingTextInVStack() {
+        let source = """
+        import SwiftUI
+        struct V: View {
+            var body: some View {
+                VStack(spacing: 4) {
+                    Image(systemName: "moon.fill")
+                    Text("Nighttime")
+                }
+            }
+        }
+        """
+        XCTAssertEqual(violations(source).count, 0)
+    }
+
     // MARK: - True positives (rule MUST fire)
 
     func test_truePositive_bareImageSystemName_noWrappers() {
@@ -39,13 +78,15 @@ final class ImageSystemNameMissingAccessibilityLabelRuleTests: XCTestCase {
     }
 
     func test_truePositive_imageInPlainHStack_noLabels() {
+        // Sibling is NOT a Text (so silencer (d) does not apply) and
+        // there is no parent accessibility modifier → fire.
         let source = """
         import SwiftUI
         struct V: View {
             var body: some View {
                 HStack {
                     Image(systemName: "trash")
-                    Text("Some sibling text")
+                    Spacer()
                 }
             }
         }
