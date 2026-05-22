@@ -82,3 +82,9 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
 ## 2026-05-22 — Loop-27 review (no domain changes)
 
 **Verdict: PASS.** Loop-27 closed with HIG-only changes; no monetization logic, StoreKit, paywall surfaces, pricing copy, App Store subtitle/description, or attribution lockups were touched. $2.99 one-time wedge, 90-day no-IAP guardrail, and WeatherKit-era break-even math all remain intact. No action required from Argos.
+
+---
+
+## 2026-05-22: Loop-28 closure — No monetization changes; stable
+
+**Argos (monetization) perspective:** Loop-28 shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper). All HIG-only changes; no pricing, StoreKit, paywall surfaces, or App Store listing touched. $2.99 one-time wedge, 90-day no-IAP guardrail, and break-even math all intact. No monetization domain changes.

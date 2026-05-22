@@ -74,3 +74,9 @@ Filed `gaia-loop-26-plan.md`. Key learnings from the planning pass:
 SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 13 + AV 18). Issues #95/#96 closed. Post-merge audit PASS-WITH-NOTES (5 structural rule-coverage gaps deferred to Loop-28+). Privacy Policy hosting and physical-device sign-offs remain user-owned blockers.
 
 **Commits:** 66cc6c9 (TDD), a643523 (FPV), 174be71 (AV) → merged as a8b1ac8
+
+---
+
+## 2026-05-22: Loop-28 closure — 4 WIs shipped; Goal 5 remains hardware-gated
+
+**Gaia (Lead/Architect) perspective:** Loop-28 executed cleanly. Kwame shipped 4 refactoring WIs (toolbar, chip/footer, hardcoded-frame-dimensions audit, matched-brace helper); all PR CI green on re-run. Iris HIG-passed all 4. Plunder compliance verified (no new gaps). SwiftLint strict 0 violations post-merge. Goals 1–4 tracking PASS/PARTIAL (Goal 5 intentionally FAIL per WI-21 structural constraint — hardware-gated sign-offs remain blank). Carry-forward: WI-loop-28-A (14 HIG catalog rules pending, multi-cycle), WI-loop-28-C (Privacy Policy URL user-action-gated), WI-2-flake (UI cold-start flakiness investigation).
