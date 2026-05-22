@@ -10,6 +10,26 @@ SwiftLint HIG hard-gate wired and live on main. All 31 violations resolved (FPV 
 
 ---
 
+## Learnings — 2026-05-22T17:35:00Z (Loop-29 WI-6 close: ADR-0002 iOS 26.4 extension)
+
+**Context:** WI-loop29-6 closed via PR #107 (squash-merged as `fcdb196` to main). ADR-0002 at `.squad/decisions/adr/ADR-0002-toolbar-topbartrailing-ios26.md` now carries a new `## Extension — iOS 26.4 toolbar Image floor (PR #99 / loop-29 WI-29-4)` subsection (+55 lines).
+
+**Pattern generalised — HIG rule extension via layered ADR + custom SwiftLint rule:**
+
+The base HIG ≥44pt tap-target rule is itself untestable as a single guard — different declaration shapes need different enforcement. ADR-0002 now demonstrates the canonical layering:
+
+1. **Base decision (Loop-13, ADR-0002 body):** `.topBarTrailing` for iOS-26 hittability — guards *placement* of toolbar items. Enforced by source-text contract test S4.
+2. **Extension subsection (Loop-29, this PR):** `@ScaledMetric minTap = 44` + `.frame(minWidth: minTap, minHeight: minTap)` adjacent to every toolbar `Image` label, with `@ScaledMetric` declared **inside the declaring struct's body** (Group LT pattern) so it scales with Dynamic Type — guards *sizing* of toolbar Image labels under iOS 26.4. Enforced by a toolbar-scoped custom SwiftLint rule (`toolbar_image_needs_scaled_frame`, PR #108), because the base `missing_min_touch_target` regex's 200-char lookahead cannot see inside the `label:` closure past interleaved accessibility modifiers.
+3. **Pre-conditions for each new declaration shape (`Button { } label: { }`, `NavigationLink { } label: { }`, `Link { } label: { }`, `Image(...)`-in-toolbar):** widen the base regex per shape (PR #104, PR #106) AND/OR add a closure-scoped custom rule when the shape outruns regex's lookahead budget (PR #108).
+
+**Reusable rule of thumb (next time HIG-rule enforcement leaks):** if the lint regex needs >200 chars of lookahead to reach the relevant modifier from the trigger keyword, that's the signal to (a) write a closure-scoped custom rule for the specific declaration shape, (b) extend the governing ADR with a one-paragraph subsection naming the shape + the discovery PR + the enforcement rule, and (c) add an Audit-section addendum so future authors must verify the new rule passes when adding the shape.
+
+**Pointer:** ADR-0002 extension subsection — see `.squad/decisions/adr/ADR-0002-toolbar-topbartrailing-ios26.md` § "Extension — iOS 26.4 toolbar Image floor (PR #99 / loop-29 WI-29-4)". Closure summary at `.squad/decisions/inbox/iris-wi-loop29-6-close.md` (gitignored inbox — Scribe will merge).
+
+**Operational note:** when committing docs-only changes during a high-concurrency agent loop, always use explicit pathspec (`git commit <file>` not `git commit -a` and not `git add . && git commit`) — the index can be racing with parallel agents' staging operations, and a wide commit can pick up someone else's pending work. First attempt on PR #107 landed a 153-line test diff that belonged to another agent; force-reset + explicit-pathspec commit was the recovery.
+
+---
+
 ## Learnings — 2026-05-22T13:30:00Z (Loop-29 gap analysis)
 
 **Context:** Post-PR-#99 merge gap analysis. PR #99 (WI-loop28-0) was the minimum-diff product fix for the iOS 26.4 toolbar hittability regression — it applied `@ScaledMetric`-backed frames to the two RootView toolbar items (gear Button + EstimateInfoButton NavigationLink) but did NOT modify the underlying SwiftLint regex patterns.
