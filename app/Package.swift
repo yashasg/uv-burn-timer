@@ -10,11 +10,22 @@ let package = Package(
     products: [
         .library(name: "UVBurnTimerCore", targets: ["UVBurnTimerCore"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", exact: "0.63.2")
+    ],
     targets: [
-        .target(name: "UVBurnTimerCore"),
+        .target(
+            name: "UVBurnTimerCore",
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
+            ]
+        ),
         .testTarget(
             name: "UVBurnTimerCoreTests",
-            dependencies: ["UVBurnTimerCore"]
+            dependencies: ["UVBurnTimerCore"],
+            plugins: [
+                .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
+            ]
         )
     ]
 )

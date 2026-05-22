@@ -54,6 +54,36 @@ public struct ForecastPickerView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorSchemeContrast) private var contrast
 
+    // MARK: - HIG @ScaledMetric tokens (Iris loop-26 playbook §A)
+    //
+    // Touch-target floor and live-content geometry must scale with Dynamic
+    // Type. Literal CGFloats in `.frame(width:height:)` / `.font(.system(size:))`
+    // bypass @ScaledMetric and break iPhone SE / mini at AX5; the SwiftLint
+    // HIG hard-gate (.swiftlint.yml) enforces this at error severity.
+
+    // Touch targets
+    @ScaledMetric private var minTap: CGFloat = 44
+    // Badge and chip geometry (Iris §1 spec: 40×22 pill, 56×22 chip)
+    @ScaledMetric private var pillWidth: CGFloat = 40
+    @ScaledMetric private var pillHeight: CGFloat = 22
+    @ScaledMetric private var chipWidth: CGFloat = 56
+    // Hourly cell geometry (Iris §2 spec: 60×88pt)
+    @ScaledMetric private var cellWidth: CGFloat = 60
+    @ScaledMetric private var cellHeight: CGFloat = 88
+    // Time-column label width (AX4+ vertical layout)
+    @ScaledMetric private var timeColWidth: CGFloat = 64
+    // Current-hour indicator dot
+    @ScaledMetric private var hourDotSize: CGFloat = 5
+    // Icon sizes (icon-adjacent; semantic style would change layout proportions)
+    @ScaledMetric private var chevronSize: CGFloat = 20
+    @ScaledMetric private var hourIconSize: CGFloat = 20
+    // Skeleton anatomy (Iris §1.2 spec)
+    @ScaledMetric private var skeletonRowHeight: CGFloat = 52
+    @ScaledMetric private var skeletonDayLabelWidth: CGFloat = 88
+    @ScaledMetric private var skeletonDayLabelHeight: CGFloat = 14
+    @ScaledMetric private var skeletonBadgeWidth: CGFloat = 36
+    @ScaledMetric private var skeletonBadgeHeight: CGFloat = 20
+
     public init(
         selectedDate: Binding<Date>,
         forecastDays: [DayForecast],
@@ -203,7 +233,7 @@ public struct ForecastPickerView: View {
                 }
                 .font(.footnote)
                 .foregroundStyle(.tint)
-                .frame(minHeight: 44)
+                .frame(minHeight: minTap)
             }
             .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
             .padding(.horizontal, 16)
@@ -354,7 +384,7 @@ public struct ForecastPickerView: View {
         Text("\(Int(uvi))")
             .font(.headline.bold())
             .foregroundStyle(whoBandTextColor(for: uvi))
-            .frame(width: 40, height: 22)
+            .frame(width: pillWidth, height: pillHeight)
             .background(whoBandColor(for: uvi), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -368,7 +398,7 @@ public struct ForecastPickerView: View {
         Text(whoBandName(for: uvi))
             .font(.caption.bold())
             .foregroundStyle(whoBandTextColor(for: uvi))
-            .frame(width: 56, height: 22)
+            .frame(width: chipWidth, height: pillHeight)
             .background(whoBandColor(for: uvi), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -386,7 +416,7 @@ public struct ForecastPickerView: View {
                 // Single symbol rotated 180° for up/down — .easeInOut(0.15) per Iris §3.
                 // Under Reduce Motion: instant rotation (animation nil = no tween).
                 Image(systemName: "chevron.down.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: chevronSize))
                     .foregroundStyle(Color(.secondaryLabel))
                     .rotationEffect(.degrees(showExtendedDays ? 180 : 0))
                     .animation(
@@ -490,7 +520,7 @@ public struct ForecastPickerView: View {
             ForEach(0..<6, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(Color(.systemFill))
-                    .frame(height: 44)
+                    .frame(height: minTap)
                     .padding(.horizontal, 16)
             }
         } else {
@@ -512,7 +542,7 @@ public struct ForecastPickerView: View {
                 Text(hour.timestamp.formatted(.dateTime.hour(.defaultDigits(amPM: .abbreviated))))
                     .font(.body)
                     .foregroundStyle(Color(.secondaryLabel))
-                    .frame(width: 64, alignment: .leading)
+                    .frame(width: timeColWidth, alignment: .leading)
                 Text(isNighttime ? "—" : "\(Int(hour.uvIndex))")
                     .font(.headline.bold())
                     .foregroundStyle(isNighttime ? Color(.tertiaryLabel) : Color(.label))
@@ -542,7 +572,7 @@ public struct ForecastPickerView: View {
             // Hidden (clear) when the cell is selected — accent border already distinguishes it.
             Circle()
                 .fill(isCurrent && !isSelected ? Color(.label) : Color.clear)
-                .frame(width: 5, height: 5)
+                .frame(width: hourDotSize, height: hourDotSize)
         }
     }
 
@@ -565,7 +595,7 @@ public struct ForecastPickerView: View {
                         .foregroundStyle(Color(.secondaryLabel))
                     // sun.max.fill tinted to WHO band color; moon.fill in tertiaryLabel for UVI=0.
                     Image(systemName: isNighttime ? "moon.fill" : "sun.max.fill")
-                        .font(.system(size: 20))
+                        .font(.system(size: hourIconSize))
                         .foregroundStyle(isNighttime ? Color(.tertiaryLabel) : bandColor)
                     // "—" dash for nighttime/UVI=0; integer scalar for daytime.
                     Text(isNighttime ? "—" : "\(Int(hour.uvIndex))")
@@ -580,7 +610,7 @@ public struct ForecastPickerView: View {
                     .fill(isNighttime ? Color.clear : bandColor)
                     .frame(height: bandBarHeight)
             }
-            .frame(width: 60, height: 88)
+            .frame(width: cellWidth, height: cellHeight)
             .background(
                 isSelected
                     ? Color.accentColor.opacity(0.15)
@@ -603,7 +633,7 @@ public struct ForecastPickerView: View {
         // IRIS-HOOK: shimmer animation overlay.
         RoundedRectangle(cornerRadius: 10, style: .continuous)
             .fill(Color(.systemFill))
-            .frame(width: 60, height: 88)
+            .frame(width: cellWidth, height: cellHeight)
     }
 
     // MARK: - Loading skeleton (forecastDays empty → cold start / no snapshot)
@@ -616,15 +646,15 @@ public struct ForecastPickerView: View {
                     // Day label placeholder: 88×14pt (§1.2 skeleton anatomy).
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(Color(.systemFill))
-                        .frame(width: 88, height: 14)
+                        .frame(width: skeletonDayLabelWidth, height: skeletonDayLabelHeight)
                     Spacer()
                     // Badge placeholder: 36×20pt pill (§1.2).
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color(.systemFill))
-                        .frame(width: 36, height: 20)
+                        .frame(width: skeletonBadgeWidth, height: skeletonBadgeHeight)
                 }
                 .padding(.horizontal, 16)
-                .frame(height: 52)
+                .frame(height: skeletonRowHeight)
             }
 
             Divider().padding(.horizontal, 16)
