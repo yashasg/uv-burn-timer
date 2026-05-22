@@ -240,7 +240,7 @@ toolbar item. Resulting `AppViews.swift` positions on this commit:
 - `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
   (was 138 pre-Loop-28-WI-0)
 - `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
-  push — line **2170**
+  push — line **2171**
 - `skinTypeChip` — line **339**, `locationChip` — line **301**,
   `spfChip` — line **320**
 
@@ -285,8 +285,8 @@ is unchanged.
 
 **Loop-28 WI-4 — line-number refresh (AV-12 / AV-13 verbose
 justification restored):** the `PersistentFooter` `AboutView` push
-citation was bumped from line **2150** → line **2170** (body block
-2149–2151 → 2169–2171) after the `clearStoredSkinType` (AV-12) and
+citation was bumped from line **2150** → line **2171** (body block
+2149–2151 → 2170–2172) after the `clearStoredSkinType` (AV-12) and
 `clearStoredSPF` (AV-13) `// swiftlint:disable:next
 missing_min_touch_target` justifications inside `struct SettingsSheet`
 had their "Reason: Button has multi-line action body …" comments
@@ -352,8 +352,8 @@ identity:
   at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
   at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2170` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2169–2171), rendered inside the
+  `AppViews.swift:2171` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2170–2172), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 143–151.
 
 ### Rule (extended)

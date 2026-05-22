@@ -1150,6 +1150,7 @@ struct TierBadge: View {
             Label(title, systemImage: symbolName)
             if differentiateWithoutColor, let accessorySymbolName {
                 Image(systemName: accessorySymbolName)
+                    .accessibilityHidden(true)
             }
         }
         .font(.subheadline.weight(.semibold))
