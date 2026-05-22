@@ -11,23 +11,4 @@ Local commits waiting for `gh` auth restoration.
 
 ## Entries
 
-### `squad/wi-loop30-1-ui-flake-stabilization`
-- **Base:** `main` (`85080a8`)
-- **Head:** `a9dc664`
-- **Status:** pushed
-- **PR:** https://github.com/yashasg/uv-burn-timer/pull/114
-- **PR title:** `WI-loop30-1: stabilize toolbar settle + nav pop in UVBurnTimerUITests`
-- **PR body:**
-
-  > Implements Ma-Ti's GAP-iter2-B plan (`.squad/decisions/inbox/ma-ti-ui-flake-investigation.md`) to remove the iOS 26.4-only one-or-the-other flake between `testToolbarRendersBothSettingsAndEstimateInfoButtons` and `testEstimateInfoNavigationRoundTripReturnsToMainScreen`.
-  >
-  > Three additive XCUITest-only edits (no SUT touched):
-  > 1. New helper `waitForToolbarSettled(in:timeout:)` polls BOTH `buttons["Settings"]` AND `buttons.matching("EstimateInfoButton").firstMatch` for `exists && isHittable`, mirroring `waitForHittable` semantics.
-  > 2. Replace the discarded `_ = waitForHittable(...)` in `acknowledgeDisclaimerAndChooseTypeIII` with an `XCTAssertTrue` on the new helper — closes the silent-failure surface.
-  > 3. In `testEstimateInfoNavigationRoundTripReturnsToMainScreen`, replace the immediate `XCTAssertFalse(navigationBars["About & Citations"].exists)` with an `XCTNSPredicateExpectation` (`exists == false`) awaited via `XCTWaiter.wait(timeout: 5)` so the pop-animation tail does not flake.
-  >
-  > **Acceptance signal deferred:** Statistical validation (≥20 consecutive UI-test legs green on `main`) requires CI re-enablement; this PR is the implementation half. Pair with the WI-loop30-9 CI-workflow PR for the infra half.
-  >
-  > Closes WI-loop30-1 (implementation).
-  >
-  > Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+_(empty — last sweep 2026-05-22T20:10:00Z; PR #114 #115 #116 merged and pruned. See `.squad/decisions/inbox/gaia-loop30-iter2-merge-sweep.md` for merge SHAs.)_
