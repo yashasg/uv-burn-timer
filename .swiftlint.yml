@@ -1,0 +1,93 @@
+# HIG-enforcing config — HARD GATE.
+#
+# All HIG layout rules ship at severity: error. NO grace period, NO warning tier.
+# Literal numbers in layout dimensions are violations EVEN for HIG touch-target floors
+# (minHeight: 44 / 56). Use @ScaledMetric so tap targets scale with Dynamic Type.
+#
+# Rationale: iPhone SE/mini at AX5 makes fixed 44pt cramped. @ScaledMetric makes
+# the tap target grow with the user's text-size preference, which is what HIG
+# actually intends.
+#
+# Escape hatch: per-line disable comments (// swiftlint:disable:next {rule}) are
+# allowed for genuine exceptions — but they require justification in the PR.
+#
+# Policy supersedes: Iris's "Error after grace period" bucket + minHeight: 44/56
+# literal exception in iris-hig-lint-rule-catalog.md.
+# Authority: user directive 2026-05-22 → .squad/decisions/inbox/copilot-directive-hig-strict-error-day1.md
+
+included:
+  - app/Sources
+
+excluded:
+  - app/.build
+  - app/Tests
+  - .squad
+
+# Built-in rule overrides
+analyzer_rules:
+  - explicit_self
+
+opt_in_rules:
+  - first_where
+  - sorted_first_last
+  - empty_string
+
+disabled_rules:
+  - comma                      # legacy debt; not part of the HIG gate
+  - cyclomatic_complexity      # legacy debt; not part of the HIG gate
+  - file_length                # legacy debt; not part of the HIG gate
+  - function_body_length       # legacy debt; not part of the HIG gate
+  - identifier_name            # legacy debt; not part of the HIG gate
+  - line_length                # we use SwiftFormat for this
+  - opening_brace              # legacy debt; not part of the HIG gate
+  - optional_data_string_conversion # legacy debt; not part of the HIG gate
+  - trailing_comma             # legacy debt; not part of the HIG gate
+  - trailing_whitespace        # noisy
+  - type_body_length           # legacy debt; not part of the HIG gate
+
+# HIG custom rules — hard gate
+custom_rules:
+  color_literal_rgb:
+    name: "HIG: Use semantic colors, not raw RGB"
+    regex: 'Color\(\s*red:|Color\(\s*\#|UIColor\(\s*red:|#colorLiteral'
+    message: "Use Color.accentColor / Color(.systemBackground) / asset-catalog semantic colors. Raw RGB defeats dark mode + dynamic contrast."
+    severity: error
+
+  navigation_stack_in_sheet:
+    name: "HIG: Don't nest NavigationStack inside .sheet"
+    regex: '\.sheet\([^)]*\)\s*\{[^}]*NavigationStack'
+    message: "HIG: sheets present a single focused task — don't nest a navigation hierarchy inside one. Use a separate .fullScreenCover or restructure."
+    severity: error
+
+  missing_min_touch_target:
+    name: "HIG: Tap targets must be >= 44pt"
+    # Heuristic only: regex can enforce "bare identifier vs literal" near Button/
+    # onTapGesture, not prove the identifier is declared with @ScaledMetric. Use a
+    # per-line disable with PR justification for genuine exceptions; perfect
+    # @ScaledMetric validation would need an AST.
+    regex: '(?:\.onTapGesture\b|\bButton\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
+    message: "HIG: touch targets need @ScaledMetric-backed minWidth/minHeight identifiers near Button/onTapGesture. Literals like 44/56 are violations."
+    severity: error
+
+  no_uppercased_in_code:
+    name: "HIG: Don't .uppercased() user-facing strings"
+    regex: '\.uppercased\(\)'
+    message: "HIG: don't .uppercased() in code — many locales don't have uppercase, and CSS-style display-only uppercase belongs in a font/text style. Use .textCase(.uppercase) on Text if you must visually uppercase."
+    severity: error
+
+  hardcoded_frame_dimensions:
+    name: "HIG: Avoid hardcoded live-content frames"
+    regex: '\.frame\(\s*(?:width|height):\s*\d'
+    message: "HIG: prefer flexible layout, max-width alignment, or @ScaledMetric-backed sizing for live content. Reserve minWidth/minHeight for @ScaledMetric-backed touch-target floors."
+    severity: error
+
+  literal_system_font_size:
+    name: "HIG: Prefer semantic text styles over literal font sizes"
+    regex: '\.font\(\.system\(size:\s*\d'
+    message: "HIG: prefer semantic text styles, imageScale, or @ScaledMetric-backed sizing over literal .system(size:) values."
+    severity: error
+
+# Placeholder for additional HIG rules — Iris's catalog at
+# .squad/decisions/inbox/iris-hig-lint-rule-catalog.md will be merged in next pass.
+
+reporter: "xcode"  # emit clickable Xcode-style errors

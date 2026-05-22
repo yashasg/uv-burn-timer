@@ -801,6 +801,7 @@ struct HeroTimerCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .largeTitle) private var heroNumberSize = 80
     @ScaledMetric(relativeTo: .largeTitle) private var heroIconSize = 80
+    @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -903,7 +904,7 @@ struct HeroTimerCard: View {
                     .foregroundStyle(Color(.secondaryLabel))
             } icon: {
                 Image(systemName: "moon.fill")
-                    .font(.system(size: 16))
+                    .font(.subheadline)
                     .foregroundStyle(Color(.secondaryLabel))
                     .accessibilityHidden(true)
             }
@@ -919,6 +920,7 @@ struct HeroTimerCard: View {
                     .foregroundStyle(.secondary)
                 Button("Try again", action: onRecalculate)
                     .buttonStyle(.borderedProminent)
+                    .frame(minHeight: minTap)
             }
         } else if let locationFailureMessage {
             VStack(alignment: .leading, spacing: 12) {
@@ -929,19 +931,29 @@ struct HeroTimerCard: View {
                     .foregroundStyle(.secondary)
                 #if canImport(UIKit)
                 HStack {
+                    // Reason: Button has multi-line action body (URL fetch +
+                    // open); `.frame(minHeight: minTap)` is applied below but
+                    // falls outside SwiftLint's 200-char regex lookahead. The
+                    // `@ScaledMetric private var minTap` declaration lives at
+                    // the top of `HeroTimerCard` and is verified by Group R
+                    // `test_R1_appViewsDeclaresMinTapScaledMetric`.
+                    // swiftlint:disable:next missing_min_touch_target
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     }
                     .buttonStyle(.bordered)
+                    .frame(minHeight: minTap)
 
                     Button("Try again", action: onRecalculate)
                         .buttonStyle(.borderedProminent)
+                        .frame(minHeight: minTap)
                 }
                 #else
                 Button("Try again", action: onRecalculate)
                     .buttonStyle(.borderedProminent)
+                    .frame(minHeight: minTap)
                 #endif
             }
         } else {
@@ -969,6 +981,7 @@ struct HeroTimerCard: View {
                 Label("Recalculate", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderedProminent)
+            .frame(minHeight: minTap)
             .accessibilityHint("Fetches a fresh UV index before relying on this estimate.")
         }
 
@@ -1189,6 +1202,8 @@ struct TierBadge: View {
 struct DisclaimerCover: View {
     let onAcknowledge: () -> Void
     @State private var showAbout = false
+    @ScaledMetric private var warningIconSize: CGFloat = 48
+    @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1201,7 +1216,7 @@ struct DisclaimerCover: View {
                     // users do not hear "Exclamation mark, triangle, fill,
                     // Image" ahead of "How accurate is this for you?".
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 48))
+                        .font(.system(size: warningIconSize))
                         .foregroundStyle(.orange)
                         .accessibilityHidden(true)
 
@@ -1291,7 +1306,7 @@ struct DisclaimerCover: View {
 
             Button(action: onAcknowledge) {
                 Text("I understand")
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .frame(maxWidth: .infinity, minHeight: minTap)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -1302,12 +1317,13 @@ struct DisclaimerCover: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial)
-        .sheet(isPresented: $showAbout) {
+        .fullScreenCover(isPresented: $showAbout) {
             NavigationStack {
                 AboutView(highlightEstimateApplicability: true)
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { showAbout = false }
+                                .frame(minHeight: minTap)
                         }
                     }
             }
@@ -1372,6 +1388,7 @@ struct SettingsSheet: View {
     /// re-presents the L1 cover. Pinned by `test_R3_*`.
     let onClearStoredSkinType: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
         NavigationStack {
@@ -1426,11 +1443,15 @@ struct SettingsSheet: View {
                         onClearSavedLocation()
                     } label: {
                         Text(ProductCopy.clearSavedLocationButtonTitle)
+                            .frame(minHeight: minTap)
                     }
                     .disabled(!hasSavedLocation)
                     .accessibilityHint(
                         hasSavedLocation ? "Clears the last saved rounded coordinate." : "No saved location is stored.")
 
+                    // Multi-line Button body; .frame(minHeight: minTap) on
+                    // Text label is outside SwiftLint's 200-char lookahead.
+                    // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
                         // WI-bundleR / Suchi L01 — defer the L1 re-fire +
                         // erasure to the parent so the Settings sheet
@@ -1440,16 +1461,21 @@ struct SettingsSheet: View {
                         dismiss()
                     } label: {
                         Text(ProductCopy.clearStoredSkinTypeButtonTitle)
+                            .frame(minHeight: minTap)
                     }
                     .disabled(session.selectedSkinType == nil)
                     .accessibilityHint("Removes your stored Fitzpatrick skin type and re-presents the informational disclaimer so you can re-attest before continuing.")
                     .accessibilityIdentifier("ClearStoredSkinTypeButton")
 
+                    // Multi-line Button body; .frame(minHeight: minTap) on
+                    // Text label is outside SwiftLint's 200-char lookahead.
+                    // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
                         UserPreferenceStorage.persist(spf: .spf30, to: .standard)
                         session.selectedSPF = .spf30
                     } label: {
                         Text(ProductCopy.clearStoredSPFButtonTitle)
+                            .frame(minHeight: minTap)
                     }
                     .disabled(session.selectedSPF == .spf30)
                     .accessibilityHint("Resets your stored SPF to SPF 30 — the default value. Closes the GDPR Art.17 erasure-path loop on the L1 storage disclosure.")
@@ -1484,6 +1510,7 @@ struct SettingsSheet: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .frame(minHeight: minTap)
                 }
             }
         }
@@ -1494,6 +1521,7 @@ struct SkinTypeEditView: View {
     @Binding var session: UVBurnTimerSession
     @Environment(\.dismiss) private var dismiss
     @State private var pendingSelection: FitzpatrickSkinType?
+    @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
         SkinTypePickerList(
@@ -1506,6 +1534,12 @@ struct SkinTypeEditView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
+                // Reason: Toolbar Button has multi-line action body
+                // (selection commit + dismiss); @ScaledMetric
+                // `.frame(minHeight: minTap)` is applied below but outside
+                // SwiftLint's 200-char regex lookahead. `minTap` declared
+                // on `SkinTypeEditView` above.
+                // swiftlint:disable:next missing_min_touch_target
                 Button("Save") {
                     if let selection = pendingSelection {
                         session.selectedSkinType = selection
@@ -1513,6 +1547,7 @@ struct SkinTypeEditView: View {
                     dismiss()
                 }
                 .disabled(pendingSelection == nil && session.selectedSkinType == nil)
+                .frame(minHeight: minTap)
             }
         }
         .onAppear {
@@ -1572,13 +1607,22 @@ struct SkinTypePickerRow: View {
     let skinType: FitzpatrickSkinType
     let isSelected: Bool
     let onSelect: () -> Void
+    @ScaledMetric private var minTap: CGFloat = 44
+    @ScaledMetric private var numeralColWidth: CGFloat = 36
 
     var body: some View {
+        // Reason: Button label is a multi-line HStack with VStack/Spacer;
+        // `@ScaledMetric`-backed `.frame(minHeight: minTap)` is applied to
+        // the HStack inside the Button closure (below) but falls outside
+        // SwiftLint's 200-char regex lookahead. `minTap` declared on
+        // `SkinTypePickerRow` above; AST validation noted out of scope in
+        // `.swiftlint.yml`.
+        // swiftlint:disable:next missing_min_touch_target
         Button(action: onSelect) {
             HStack(alignment: .top, spacing: 12) {
                 Text(skinType.romanNumeral)
                     .font(.title3.weight(.bold))
-                    .frame(width: 36)
+                    .frame(width: numeralColWidth)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Type \(skinType.romanNumeral)")
@@ -1596,6 +1640,7 @@ struct SkinTypePickerRow: View {
                         .accessibilityHidden(true)
                 }
             }
+            .frame(minHeight: minTap)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -2146,6 +2191,10 @@ struct UITestRefreshableProbeButton: View {
 
     var body: some View {
         if ProcessInfo.processInfo.arguments.contains("-uiTestRefreshableEcho") {
+            // Reason: UI-test probe — only rendered when -uiTestRefreshableEcho
+            // launch argument is present. Never shown to real users; touch-
+            // target HIG does not apply to programmatic test infrastructure.
+            // swiftlint:disable:next missing_min_touch_target
             Button("uiTestInvokeRefreshable") {
                 Task { await refreshAction() }
             }

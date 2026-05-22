@@ -590,3 +590,151 @@ private func uvBurnTimerAppSwiftURL(file: StaticString = #filePath) -> URL {
     )
 }
 
+
+// MARK: - Group R: HIG cleanup contract (Loop-26)
+//
+// Source-text guards that pin the HIG @ScaledMetric cleanup applied to
+// AppViews.swift and ForecastPickerView.swift in response to issues #95 and
+// #96 (PR #98 SwiftLint hard-gate enforcement, Iris cleanup playbook
+// 2026-05-22). These guards complement — they do NOT replace — the SwiftLint
+// custom rules `hardcoded_frame_dimensions`, `literal_system_font_size`, and
+// `missing_min_touch_target` defined in `.swiftlint.yml`. SwiftLint runs on
+// CI when the swiftlint binary is present; these tests run in every
+// `swift test` invocation regardless. Both layers must remain in agreement.
+//
+// Pattern: mirrors `test_O1_*` — compile-independent source-text read via
+// `String(contentsOf:)`, helper URL resolvers (`appViewsSwiftURL()` already
+// exists; `forecastPickerViewSwiftURL()` added below).
+
+/// Resolve `app/Sources/UVBurnTimer/ForecastPickerView.swift` from this
+/// test file's `#filePath`. Used by R4 / R5 to read the live source text
+/// without depending on the UVBurnTimer app target being linked into
+/// UVBurnTimerCoreTests.
+private func forecastPickerViewSwiftURL(file: StaticString = #filePath) -> URL {
+    URL(fileURLWithPath: "\(file)")
+        .deletingLastPathComponent()  // UVBurnTimerCoreTests/
+        .deletingLastPathComponent()  // Tests/
+        .deletingLastPathComponent()  // app/
+        .appendingPathComponent("Sources/UVBurnTimer/ForecastPickerView.swift")
+}
+
+/// R1 — `AppViews.swift` must declare `@ScaledMetric private var minTap`
+/// at least once. The Iris playbook prescribes this identifier as the
+/// canonical Dynamic-Type-scaling touch-target floor; it must be present
+/// in the source so the SwiftLint `missing_min_touch_target` lookahead
+/// (which only checks identifier-vs-literal at the Button site) is backed
+/// by a real `@ScaledMetric` declaration.
+@Test func test_R1_appViewsDeclaresMinTapScaledMetric() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    #expect(
+        source.contains("@ScaledMetric private var minTap"),
+        "AppViews.swift must declare `@ScaledMetric private var minTap` so touch-target floors scale with Dynamic Type per HIG (Iris loop-26 playbook §B)."
+    )
+}
+
+/// R2 — The DisclaimerCover "I understand" CTA must use `minHeight: minTap`,
+/// not the literal `44`. Iris loop-26 playbook §B (AV-8) prescribes this
+/// transformation; the literal would clip the tap target at AX5 on iPhone
+/// SE per the .swiftlint.yml policy comment.
+///
+/// Scope-limit rationale: there are pre-existing legitimate literal
+/// `minHeight: 44` sites in AppViews.swift outside Iris's playbook scope —
+/// the LocationChip / SPFChip / SkinTypeChip inputs row chips at lines
+/// 295 / 315 / 337 and the PersistentFooter disclaimer-reach Label
+/// (`WI-iris-e` Loop-11). These are NOT touched by loop-26 cleanup;
+/// they pass SwiftLint baseline because their host `Button {` / Menu /
+/// NavigationLink wrappers don't match the `\bButton\s*\(` rule anchor.
+/// R2 therefore guards the specific CTA Iris's playbook transformed,
+/// not the entire file.
+@Test func test_R2_appViewsDisclaimerCTAUsesMinTap() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    // Find the "I understand" CTA. Iris AV-8 prescribes
+    // `Text("I understand").frame(maxWidth: .infinity, minHeight: minTap)`.
+    #expect(
+        source.contains("Text(\"I understand\")"),
+        "AppViews.swift must contain the disclaimer CTA `Text(\"I understand\")`."
+    )
+    // Forbid the pre-cleanup shape with literal 44 on that exact CTA.
+    #expect(
+        !source.contains("Text(\"I understand\")\n                    .frame(maxWidth: .infinity, minHeight: 44)"),
+        "The DisclaimerCover \"I understand\" CTA must use `minHeight: minTap`, not the literal `44`. Iris loop-26 playbook §B AV-8."
+    )
+    // Positive assertion: the minTap form must be present somewhere.
+    #expect(
+        source.contains("minHeight: minTap"),
+        "AppViews.swift must apply `minHeight: minTap` to @ScaledMetric-backed touch targets per Iris loop-26 playbook §B."
+    )
+}
+
+/// R3 — `AppViews.swift` must NOT contain any `.font(.system(size: <digit>` —
+/// literal system-font sizes bypass Dynamic Type. Iris playbook prescribes
+/// semantic styles (`.subheadline`, `.title3`, …) or `@ScaledMetric`-backed
+/// identifiers (e.g. `warningIconSize`) at every site.
+@Test func test_R3_appViewsHasNoLiteralSystemFontSize() throws {
+    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
+    // Match `.font(.system(size:` followed by any amount of whitespace then
+    // a digit — the SwiftLint `literal_system_font_size` rule with a guard
+    // for whitespace variants.
+    let pattern = #"\.font\(\.system\(size:\s*\d"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    let matches = regex.matches(in: source, range: range)
+    #expect(
+        matches.isEmpty,
+        "AppViews.swift must not contain `.font(.system(size: <literal>))` — use semantic text styles (.subheadline / .title3 / .caption) or `@ScaledMetric`-backed identifiers. PR #98 / Iris loop-26 playbook §B. Found \(matches.count) literal site(s)."
+    )
+}
+
+/// R4 — `ForecastPickerView.swift` must declare the playbook's full
+/// `@ScaledMetric` block. The struct previously had no `@ScaledMetric`
+/// properties at all; Iris's playbook §A adds 14 identifiers including
+/// the canonical `minTap`, the pill/chip/cell anatomy, the time column
+/// width, the indicator dot, the icon sizes, and the skeleton anatomy.
+/// R4 spot-checks the load-bearing ones so a future refactor cannot
+/// silently drop the cluster.
+@Test func test_R4_forecastPickerDeclaresScaledMetricBlock() throws {
+    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
+    let requiredDeclarations = [
+        "@ScaledMetric private var minTap",
+        "@ScaledMetric private var pillWidth",
+        "@ScaledMetric private var pillHeight",
+        "@ScaledMetric private var chipWidth",
+        "@ScaledMetric private var cellWidth",
+        "@ScaledMetric private var cellHeight",
+        "@ScaledMetric private var timeColWidth",
+        "@ScaledMetric private var hourDotSize",
+        "@ScaledMetric private var chevronSize",
+        "@ScaledMetric private var hourIconSize",
+        "@ScaledMetric private var skeletonRowHeight",
+        "@ScaledMetric private var skeletonDayLabelWidth",
+        "@ScaledMetric private var skeletonDayLabelHeight",
+        "@ScaledMetric private var skeletonBadgeWidth",
+        "@ScaledMetric private var skeletonBadgeHeight"
+    ]
+    for decl in requiredDeclarations {
+        #expect(
+            source.contains(decl),
+            "ForecastPickerView.swift must declare `\(decl)` per Iris loop-26 playbook §A. Missing identifier — SwiftLint heuristic and Dynamic-Type scaling both depend on it."
+        )
+    }
+}
+
+/// R5 — `ForecastPickerView.swift` must contain no live-content
+/// `.frame(width: <digit>, height: <digit>)` (two literal CGFloats).
+/// Skeleton + live cells alike must use `@ScaledMetric`-backed identifiers
+/// so they scale with Dynamic Type. This is the same rule SwiftLint's
+/// `hardcoded_frame_dimensions` enforces, mirrored at unit-test level.
+@Test func test_R5_forecastPickerHasNoLiteralFrameWidthHeight() throws {
+    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
+    // Match `.frame(width: <digit>` OR `.frame(height: <digit>` — either
+    // literal axis triggers. Mirrors the SwiftLint `hardcoded_frame_dimensions`
+    // regex.
+    let pattern = #"\.frame\(\s*(?:width|height)\s*:\s*\d"#
+    let regex = try NSRegularExpression(pattern: pattern)
+    let range = NSRange(source.startIndex..., in: source)
+    let matches = regex.matches(in: source, range: range)
+    #expect(
+        matches.isEmpty,
+        "ForecastPickerView.swift must not contain `.frame(width: <literal>)` or `.frame(height: <literal>)` — use `@ScaledMetric`-backed identifiers (pillWidth/chipWidth/cellWidth/cellHeight/…) per Iris loop-26 playbook §A. Found \(matches.count) literal site(s)."
+    )
+}
