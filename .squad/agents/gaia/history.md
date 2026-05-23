@@ -28,3 +28,20 @@ PR **#112** merged (squash) at `42c97e9`. Docs-only ADR proposing replacement of
 **Architectural lesson:** When a Lead verdict has been issued, the orchestrator's merge eligibility check must treat that verdict as a structured signal — either by translating it to a GitHub-native `CHANGES_REQUESTED` review (so branch protection enforces it) or by surfacing it via a CI check. Unstructured PR comments are not a reliable merge gate.
 
 ### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
+
+## Learnings
+
+**2026-05-23T00:30:00Z — WI-loop31-process-A — Lead BLOCKED-discipline charter rule + reviewer-discipline skill (PR #129, merged `1aca1f0`).**
+
+Doc-only PR. Closes the procedural leg of the PR #119 bypass: every Lead verdict on a PR now binds (via charter) to a `gh pr review` call **before** any `.squad/` history or inbox write. Handshake codified in `.squad/agents/gaia/charter.md` § "Reviewer Discipline" and reusable skill at `.squad/skills/lead-reviewer-discipline/SKILL.md` (confidence: `medium`; bumps to `high` after first real BLOCKED re-application). Decision doc at `.squad/decisions/inbox/gaia-wi-process-a-discipline.md`.
+
+**Two-layer model now in place:**
+- *Technical* gate — branch protection (WI-process-B, PR #125, `6a27988`): `build-test` required + linear history. Enforced by GitHub.
+- *Procedural* gate — Lead verdict ↔ `gh pr review` handshake (this WI). Enforced by Gaia's own charter.
+
+**Protection-gate observations (second PR under new regime):**
+- `mergeStateStatus` flipped to `BLOCKED` until `build-test` passed, exactly as designed.
+- After CI passed, merge attempt initially rejected with "head branch is not up to date with the base branch" because `required_status_checks.strict = true`. Resolved cleanly via `gh api -X PUT .../pulls/129/update-branch`; second `build-test` run on the rebased head also passed, merge proceeded. The `strict` flag is doing real work — it prevented merging a PR whose CI had been run against a stale base.
+- `--auto` flag rejected: `enablePullRequestAutoMerge` is off at the repo level. Not blocking — fall back to manual merge after `--watch`. Worth filing as a follow-up: enabling auto-merge would reduce attended-merge latency under the new strict-CI regime.
+
+**Lesson:** branch protection without the discipline handshake leaves a Lead's design judgment invisible to the platform. Branch protection with the discipline handshake makes both CI verdicts AND Lead verdicts legible at the merge button. The cost is one `gh pr review` call per verdict — trivial compared to the cost of another #119-class bypass.
