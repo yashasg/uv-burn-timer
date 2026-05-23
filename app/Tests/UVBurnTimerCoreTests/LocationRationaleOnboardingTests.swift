@@ -1,3 +1,5 @@
+import Foundation
+import Testing
 import XCTest
 
 @testable import UVBurnTimerCore
@@ -168,4 +170,48 @@ final class LocationRationaleOnboardingTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         return defaults
     }
+}
+
+// MARK: - WI-L32-LOCATIONBODY-AUDIT (Wheeler)
+//
+// Pins `ProductCopy.locationRationaleBody` against predictive / health-claim
+// vocabulary that would push the rationale sheet outside its informational
+// privacy-disclosure remit. Rationale per Wheeler decision file
+// `.squad/decisions/inbox/wheeler-wi-l32-locationbody-audit.md` (Option A):
+//
+//   - `predict`, `safe`, `MED` — substring forbidden (case-insensitive).
+//   - `burn time` — forbidden as a free phrase, BUT must NOT collide with the
+//     product brand-name "UV Burn Timer". A naïve `contains("burn time")`
+//     would false-positive on "Burn Timer", so we use a word-boundary regex
+//     `\bburn time(?!r)\b` that rejects "burn time" / "burn times" while
+//     allowing "burn timer" (and capitalised variants via case-insensitive
+//     matching).
+
+@Test func test_locationRationaleBody_doesNotContainPredictiveOrHealthClaims() {
+    let body = ProductCopy.locationRationaleBody
+
+    #expect(
+        !body.localizedCaseInsensitiveContains("predict"),
+        "locationRationaleBody must not make predictive claims (substring 'predict')."
+    )
+    #expect(
+        !body.localizedCaseInsensitiveContains("safe"),
+        "locationRationaleBody must not assert safety (substring 'safe')."
+    )
+    #expect(
+        !body.localizedCaseInsensitiveContains("MED"),
+        "locationRationaleBody must not reference the clinical Minimal Erythemal Dose unit (substring 'MED')."
+    )
+
+    let burnTimePattern = #"\bburn time(?!r)\b"#
+    let regex = try! NSRegularExpression(
+        pattern: burnTimePattern,
+        options: [.caseInsensitive]
+    )
+    let range = NSRange(body.startIndex..<body.endIndex, in: body)
+    let matchCount = regex.numberOfMatches(in: body, options: [], range: range)
+    #expect(
+        matchCount == 0,
+        "locationRationaleBody must not use the phrase 'burn time' as a standalone term (word-boundary regex \(burnTimePattern)); the brand-name 'UV Burn Timer' is allowed."
+    )
 }
