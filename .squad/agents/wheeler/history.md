@@ -42,3 +42,31 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
 
 ### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
+
+## 2026-05-23T01:14:18Z — WI-L32-LOCATIONBODY-AUDIT: P0 STOP (no commit)
+
+Audit of `ProductCopy.locationRationaleBody` against forbidden substrings
+`{predict, burn time, safe, MED}` (case-insensitive). Three are absent —
+prose is clean from a photobiology standpoint (no time-to-burn promise,
+no MED reference, no "safe exposure" claim, defers UV value to Apple
+Weather). However `"burn time"` matches inside the product brand name
+`"UV Burn Timer"` (substring of `"Burn Timer"`).
+
+Per workflow step 5, halted without:
+- adding the pin test (would fail on first run),
+- editing the production string (brand name — Plunder/Linka territory),
+- running `./build.sh`,
+- committing.
+
+Filed P0 decision: `.squad/decisions/inbox/wheeler-wi-l32-locationbody-audit.md`.
+Recommended **Option A** — word-boundary regex (`\bburn time(?!r)\b`,
+case-insensitive) so the pin still catches `"burn time"`/`"time to burn"`
+predictive vocabulary but does not collide with the product name.
+
+Also flagged for Coordinator: target test file
+`BurnTimeCalculatorTests.swift` is Swift Testing (`@Test`/`#expect`), not
+XCTest — the spec's `XCTAssertFalse` won't compile there; translation to
+`#expect(...)` ready once policy is ratified.
+
+Coordination preserved: Plunder's WI-L32-PRIVACY-EH-EXTEND edits to the
+same file are not affected (I made no edits this round).

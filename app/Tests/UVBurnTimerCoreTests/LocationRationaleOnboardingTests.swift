@@ -147,6 +147,29 @@ final class LocationRationaleOnboardingTests: XCTestCase {
         )
     }
 
+    // WI-L32-PRIVACY-EH-EXTEND — regression-locking pins for the three
+    // load-bearing substrings of the rationale body: (1) provenance
+    // ("Apple Weather"), (2) precision claim ("2 decimals"), and (3) the
+    // negative analytics pin ("no analytics"). These pin the production
+    // copy against silent rewording that would break the privacy floor
+    // documented in `.squad/files/privacy-policy.md` and mirrored by
+    // `locationPrivacyLine` / `aboutPrivacy`.
+    func test_locationRationaleBody_pinsProvenancePrecisionAndNoAnalytics() {
+        let body = ProductCopy.locationRationaleBody
+        XCTAssertTrue(
+            body.contains("Apple Weather"),
+            "Provenance pin: body must name Apple Weather as the UV-data source."
+        )
+        XCTAssertTrue(
+            body.contains("2 decimals"),
+            "Precision pin: body must state coordinates are rounded to 2 decimals."
+        )
+        XCTAssertTrue(
+            body.contains("no analytics"),
+            "Negative pin: body must assert no analytics (anti-tracking floor)."
+        )
+    }
+
     func test_locationRationaleContinueLabel_isShortActionVerb() {
         // HIG-aligned: continue button must be a short imperative ≤ 24
         // chars so it fits a single line on iPhone SE under AX5.
