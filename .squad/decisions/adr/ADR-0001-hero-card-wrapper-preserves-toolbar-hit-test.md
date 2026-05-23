@@ -183,6 +183,48 @@ enough to materially change the parent's diff signature.
 
 ## References
 
+### Citation manifest (symbolic, AST-resolvable)
+
+WI-L31-DEBT-04 (Loop-31). Each row pins a symbolic anchor — a
+declaration signature, modifier call, or identifier literal — that
+uniquely resolves to one syntactic node in the cited file. Line
+numbers are intentionally **omitted**: they drift on every source
+edit (the Loop-28 / Loop-29 refresh chain below records four prior
+hand-bumps in eight loops). The forward-pinning guard
+`test_S5_adr0001CitationsResolveToAstAnchors` parses this table at
+test time, opens each cited file, and asserts the anchor still
+resolves. Renaming or removing any anchor below MUST be paired with
+an update to this table — anything else is silent rot.
+
+| file | anchor |
+| --- | --- |
+| `AppViews.swift` | `struct HeroTimerCard: View` |
+| `AppViews.swift` | `private var heroTimerCardView: some View` |
+| `AppViews.swift` | `NavigationStack {` |
+| `AppViews.swift` | `.sheet(isPresented: $showSettings)` |
+| `AppViews.swift` | `.sheet(isPresented: $showSkinTypeEdit)` |
+| `AppViews.swift` | `NavigationLink(destination: AboutView(highlightEstimateApplicability: true)) {` |
+| `AppViews.swift` | `.accessibilityIdentifier("EstimateInfoButton")` |
+| `AppViews.swift` | `struct PersistentFooter: View` |
+| `AppViews.swift` | `AboutView(highlightEstimateApplicability: true)` |
+| `AppViews.swift` | `private var skinTypeChip: some View` |
+| `AppViews.swift` | `private var locationChip: some View` |
+| `AppViews.swift` | `private var spfChip: some View` |
+| `UVBurnTimerApp.swift` | `isPresented: $showDisclaimer,` |
+| `UVBurnTimerApp.swift` | `.skinTypePresentation(isPresented: $showSkinTypeOnboarding)` |
+| `BurnTimeCalculatorTests.swift` | `@Test func test_R1_heroTimerCardWrapperStructStillExists()` |
+| `BurnTimeCalculatorTests.swift` | `@Test func test_R2_rootViewDelegatesToHeroTimerCardConstructor()` |
+
+The legacy literal-line-number prose (e.g. "line **2171**") that
+appears below and in the historical refresh addenda is preserved
+for context but is **no longer load-bearing**: the legacy guard
+`test_S5_legacy_adr0001CitationsMatchLiveSourceLineNumbers` is
+marked `@available(*, deprecated)` and will be removed after one
+clean CI loop. The symbolic manifest above is the new source of
+truth.
+
+### Legacy prose references (non-load-bearing, retained for context)
+
 - `app/Sources/UVBurnTimer/AppViews.swift`
   - `RootView.heroTimerCardView` delegation site — lines **233–247**
     (the `private var heroTimerCardView: some View` that calls

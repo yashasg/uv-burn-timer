@@ -4854,7 +4854,8 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
 /// `S4_toolbarGearButtonUsesTopBarTrailingNotPrimaryAction` slot that
 /// has not yet landed in the test suite; S5 is therefore the next
 /// available number in the S-prefixed bundle.
-@Test func test_S5_adr0001CitationsMatchLiveSourceLineNumbers() throws {
+@available(*, deprecated, message: "Legacy literal-line-number guard kept for one iteration. Prefer test_S5_adr0001CitationsResolveToAstAnchors which pins citations symbolically. Remove after one clean CI loop.")
+@Test func test_S5_legacy_adr0001CitationsMatchLiveSourceLineNumbers() throws {
     let adr = try String(contentsOf: _adr0001URLForGroupS(), encoding: .utf8)
     let appViews = try _appViewsSourceForGroupR()
     let appSwift = try String(contentsOf: _uvBurnTimerAppSwiftURLForGroupS(), encoding: .utf8)
@@ -4976,6 +4977,180 @@ private func _firstLineNumberContaining(_ needle: String, in source: String) -> 
         !adr.contains("test_R2_rootViewDelegatesToHeroTimerCardConstructor` — line **1319**"),
         "ADR-0001 must not cite the retired Loop-13-era R2 line (1319); refresh to the current line."
     )
+}
+
+// MARK: - S5b — ADR-0001 citations resolve to AST-equivalent symbolic anchors (WI-L31-DEBT-04)
+
+/// Resolves the source file URL for a citation-manifest `file` cell.
+/// The manifest lists short basenames (`AppViews.swift`,
+/// `UVBurnTimerApp.swift`, `BurnTimeCalculatorTests.swift`); this helper
+/// maps them to absolute paths anchored at `#filePath` so the test is
+/// CWD-independent (xcodebuild and `swift test` both invoke from
+/// different working directories).
+private func _sourceURLForManifestFile(_ name: String) -> URL? {
+    let repoRoot = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+    switch name {
+    case "AppViews.swift":
+        return repoRoot.appendingPathComponent("app/Sources/UVBurnTimer/AppViews.swift")
+    case "UVBurnTimerApp.swift":
+        return repoRoot.appendingPathComponent("app/Sources/UVBurnTimer/UVBurnTimerApp.swift")
+    case "BurnTimeCalculatorTests.swift":
+        return URL(fileURLWithPath: #filePath)
+    default:
+        return nil
+    }
+}
+
+/// Parses the "Citation manifest (symbolic, AST-resolvable)" markdown
+/// table out of ADR-0001. The table is the load-bearing artefact that
+/// the AST-anchor guard pins against; if the section is missing or
+/// malformed, the guard refuses to silently pass.
+///
+/// Returns an array of (file-basename, anchor) tuples. The anchor is the
+/// raw declaration / call-site / identifier substring the guard searches
+/// for in the cited source file — equivalent to an AST-decl match at the
+/// declaration-signature granularity (e.g. `struct HeroTimerCard: View`
+/// uniquely identifies one `StructDeclSyntax`, `.sheet(isPresented:
+/// $showSettings)` uniquely identifies one `FunctionCallExprSyntax`).
+///
+/// The manifest format is deliberately strict: exactly two pipe-
+/// delimited columns (`| file | anchor |`), backtick-wrapped values,
+/// terminating on the first non-table line after the header. This keeps
+/// the parser dumb so future contributors can't accidentally pass the
+/// guard by writing prose that mentions the right symbol names.
+private func _parseAdr0001CitationManifest(_ adr: String) -> [(file: String, anchor: String)]? {
+    let lines = adr.components(separatedBy: "\n")
+    guard let headerIdx = lines.firstIndex(where: {
+        $0.contains("Citation manifest (symbolic, AST-resolvable)")
+    }) else {
+        return nil
+    }
+    var results: [(file: String, anchor: String)] = []
+    var sawTableHeader = false
+    for idx in (headerIdx + 1)..<lines.count {
+        let line = lines[idx]
+        let trimmed = line.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("| ---") || trimmed.hasPrefix("|---") {
+            sawTableHeader = true
+            continue
+        }
+        if trimmed.hasPrefix("| file") {
+            continue
+        }
+        if !trimmed.hasPrefix("|") {
+            if sawTableHeader { break } else { continue }
+        }
+        let cells = trimmed
+            .split(separator: "|", omittingEmptySubsequences: true)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        guard cells.count == 2 else { continue }
+        let file = cells[0].trimmingCharacters(in: CharacterSet(charactersIn: "`"))
+        let anchor = cells[1].trimmingCharacters(in: CharacterSet(charactersIn: "`"))
+        guard !file.isEmpty, !anchor.isEmpty else { continue }
+        results.append((file: file, anchor: anchor))
+    }
+    return results.isEmpty ? nil : results
+}
+
+/// S5b — WI-L31-DEBT-04: replaces the literal-line-number assertions of
+/// `test_S5_legacy_adr0001CitationsMatchLiveSourceLineNumbers` with
+/// symbolic-anchor resolution.
+///
+/// **Problem this fixes.** The legacy S5 guard asserted that ADR-0001's
+/// prose contains the *current* line number (an integer) of each cited
+/// symbol. Every edit above any cited anchor — even a one-line
+/// `accessibilityHidden(true)` insertion (PR #120) — bumped every
+/// downstream line and forced a hand-bump of the ADR prose. The
+/// maintenance tax was real and recurring (see the chain of "Loop-28
+/// WI-0", "Loop-28 WI-1", "Loop-29 WI-3", "Loop-28 WI-4" line-refresh
+/// addenda in ADR-0001 itself).
+///
+/// **What S5b asserts instead.** ADR-0001 carries a
+/// "Citation manifest (symbolic, AST-resolvable)" markdown table — each
+/// row is `| file | anchor |` where `anchor` is a declaration signature
+/// or call-site substring that uniquely identifies one AST node in the
+/// named file (e.g. `struct HeroTimerCard: View`, `.sheet(isPresented:
+/// $showSettings)`). The guard:
+///
+/// 1. Parses the manifest out of the ADR (fails if the section is
+///    missing — the manifest is the source of truth).
+/// 2. For each row, opens the named source file and verifies the
+///    anchor substring resolves to at least one line. The substring is
+///    SwiftSyntax-decl-equivalent at this granularity: each anchor is a
+///    syntactic landmark that the Swift parser would also pin a node
+///    to. We intentionally do not import SwiftSyntax into the iOS test
+///    target (ADR-0003 keeps SwiftSyntax confined to `tools/swiftlint-
+///    rules/`) — the substring resolver is the iOS-test-target-side
+///    equivalent of the AST-decl walk that the
+///    `tools/swiftlint-rules/swiftlint-ast` CLI performs.
+/// 3. Does **not** assert any specific line number appears in the ADR
+///    prose. That is the entire point: ADR-0001 is now line-stable
+///    under source churn.
+///
+/// **Approach (A) per WI-L31-DEBT-04.** We add a structured citation
+/// manifest to ADR-0001 rather than rewriting every prose mention.
+/// Historical refresh addenda ("bumped from **2150** → **2171**") are
+/// fossilised records and remain as-is — the guard does not police
+/// them. The legacy literal-line guard is kept for one iteration as
+/// `test_S5_legacy_adr0001CitationsMatchLiveSourceLineNumbers` (marked
+/// `@available(*, deprecated)`) so we can confirm one clean CI loop
+/// before deleting it.
+@Test func test_S5_adr0001CitationsResolveToAstAnchors() throws {
+    let adr = try String(contentsOf: _adr0001URLForGroupS(), encoding: .utf8)
+
+    guard let manifest = _parseAdr0001CitationManifest(adr) else {
+        Issue.record("ADR-0001 is missing the `Citation manifest (symbolic, AST-resolvable)` markdown table that this guard pins against. Re-add the section (see WI-L31-DEBT-04 PR body for the canonical format).")
+        return
+    }
+
+    #expect(manifest.count >= 12, "Citation manifest must list at least the 12 forward-pinned anchors (hero struct + delegate + nav-stack wrapper + 4 presentation modifiers + EstimateInfoButton link + identifier + PersistentFooter About push + R1/R2 test anchors). Found \(manifest.count).")
+
+    for (file, anchor) in manifest {
+        guard let url = _sourceURLForManifestFile(file) else {
+            Issue.record("ADR-0001 citation manifest references unknown file `\(file)`. Extend `_sourceURLForManifestFile` if a new source file is being pinned.")
+            continue
+        }
+        let source: String
+        do {
+            source = try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            Issue.record("ADR-0001 citation manifest references file `\(file)` which could not be read at \(url.path): \(error). The file may have been moved or renamed; update the manifest to track the new location.")
+            continue
+        }
+        let line = _firstLineNumberContaining(anchor, in: source)
+        #expect(
+            line != nil,
+            "ADR-0001 citation manifest pins `\(anchor)` in `\(file)` but no line in that file contains this anchor. Either the symbol was renamed/removed (update the manifest to the new anchor), or the file was restructured (update the manifest)."
+        )
+    }
+
+    // Sanity guard: the well-known anchors that the legacy S5 guard
+    // covered MUST be present in the manifest. This prevents a partial
+    // migration where the manifest is added but some citations are
+    // silently dropped.
+    let anchorSet = Set(manifest.map(\.anchor))
+    let requiredAnchors = [
+        "struct HeroTimerCard: View",
+        "private var heroTimerCardView: some View",
+        ".sheet(isPresented: $showSettings)",
+        ".sheet(isPresented: $showSkinTypeEdit)",
+        ".accessibilityIdentifier(\"EstimateInfoButton\")",
+        "private var skinTypeChip: some View",
+        "private var locationChip: some View",
+        "private var spfChip: some View",
+        "@Test func test_R1_heroTimerCardWrapperStructStillExists()",
+        "@Test func test_R2_rootViewDelegatesToHeroTimerCardConstructor()",
+    ]
+    for required in requiredAnchors {
+        #expect(
+            anchorSet.contains(required),
+            "Citation manifest must include the symbolic anchor `\(required)` (covered by the legacy S5 line-number guard). Do not drop coverage during the symbolic migration."
+        )
+    }
 }
 
 // MARK: - S6 — Privacy-policy {TBD} automation-status block
