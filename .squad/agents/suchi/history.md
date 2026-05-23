@@ -77,3 +77,15 @@ Loop-27 shipped HIG-only token cleanup — `@ScaledMetric` wiring so the ≥44×
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
 
 ### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
+
+## 2026-05-23T01:14:18Z — WI-L32-TOMAS-SCAN (P2) — LocationRationaleOnboardingView scannability audit for Tomas
+
+READ-ONLY audit. Measured `ProductCopy.locationRationaleBody` (`app/Sources/UVBurnTimerCore/ProductCopy.swift:107-112`, rendered at `LocationRationaleOnboardingView.swift:50` with `.font(.body)`).
+
+**Counts:** 359 chars · 64 words · 4 sentences (85/128/74/69 chars). Estimated **~8 rendered lines** at default Dynamic Type body on iPhone 17 Pro default width (≈44–48 chars/line at SF 17pt over a ~370pt content column).
+
+**Tomas budget** (established here since `suchi-persona-annotations.md` had no prior Tomas scannability gates): ≤2 sentences, ≤~110 chars, ≤~20 words, ≤2 short rendered lines, glance-to-Continue under 3s.
+
+**Verdict: FAIL** — production body is ~3.3× over char budget, 2× over sentence budget, ~4× over line budget. Body is privacy-load-bearing (GDPR / Plunder lane / Iris policy alignment), so this is a density-vs-completeness tension, not a defect.
+
+Filed `.squad/decisions/inbox/suchi-wi-l32-tomas-scan.md` with FAIL analysis + two proposed tighter copy alternatives (Option A 94 chars / Option B 107 chars) for Iris+Wheeler+Plunder copy review, plus a "summary on top, receipts in a disclosure below" compromise pattern that would preserve Greta/Maya's needs. Production string **not modified**. Flagged the two pinning unit tests in `LocationRationaleOnboardingTests.swift:135,155` for Wheeler if copy lands.
