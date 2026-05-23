@@ -299,7 +299,7 @@ struct RootView: View {
     }
 
     private var locationChip: some View {
-        Button { // swiftlint:disable:this missing_min_touch_target
+        Button {
             Task {
                 await refreshUV()
             }
@@ -337,7 +337,7 @@ struct RootView: View {
     }
 
     private var skinTypeChip: some View {
-        Button { // swiftlint:disable:this missing_min_touch_target
+        Button {
             if session.selectedSkinType != nil {
                 showSkinTypeEdit = true
             } else {
@@ -414,7 +414,7 @@ struct RootView: View {
     }
 
     private var primaryAction: some View {
-        Button { // swiftlint:disable:this missing_min_touch_target
+        Button {
             Task {
                 await refreshUV()
             }
@@ -943,13 +943,6 @@ struct HeroTimerCard: View {
                     .foregroundStyle(.secondary)
                 #if canImport(UIKit)
                 HStack {
-                    // Reason: Button has multi-line action body (URL fetch +
-                    // open); `.frame(minHeight: minTap)` is applied below but
-                    // falls outside SwiftLint's 200-char regex lookahead. The
-                    // `@ScaledMetric private var minTap` declaration lives at
-                    // the top of `HeroTimerCard` and is verified by Group R
-                    // `test_R1_appViewsDeclaresMinTapScaledMetric`.
-                    // swiftlint:disable:next missing_min_touch_target
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
@@ -1288,7 +1281,7 @@ struct DisclaimerCover: View {
                         .font(.body)
                         .accessibilityIdentifier("DisclaimerStorageLine")
 
-                    Button { // swiftlint:disable:this missing_min_touch_target
+                    Button {
                         showAbout = true
                     } label: {
                         (
@@ -1408,7 +1401,7 @@ struct SettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    NavigationLink { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                    NavigationLink { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                         SkinTypeEditView(session: $session)
                     } label: {
                         HStack {
@@ -1433,11 +1426,11 @@ struct SettingsSheet: View {
                 }
 
                 Section {
-                    NavigationLink("About & Citations") { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                    NavigationLink("About & Citations") { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                         AboutView()
                     }
 
-                    NavigationLink("Attribution & Legal") { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                    NavigationLink("Attribution & Legal") { /* Reason: SwiftUI Form row chrome already guarantees the HIG ≥44pt tap-target floor for `NavigationLink` rows. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                         AttributionView()
                     }
                 }
@@ -1463,20 +1456,6 @@ struct SettingsSheet: View {
                     .accessibilityHint(
                         hasSavedLocation ? "Clears the last saved rounded coordinate." : "No saved location is stored.")
 
-                    // Reason: Button has multi-line action body
-                    // (WI-bundleR / Suchi L01 — `onClearStoredSkinType()`
-                    // defers the L1 re-fire + erasure to the parent so
-                    // the Settings sheet dismisses, then L1 takes over
-                    // the screen with the photosens reach-back Asha
-                    // needs to re-read). `@ScaledMetric`-backed
-                    // `.frame(minHeight: minTap)` is applied to the
-                    // `Text` label on the line above, but the
-                    // intervening Button-closure newlines push that
-                    // `.frame(...)` call outside SwiftLint's 200-char
-                    // regex lookahead from the Button opener. `minTap`
-                    // is declared on `SettingsSheet` and verified by
-                    // Group R / Group LU.
-                    // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
                         // WI-bundleR / Suchi L01 — defer the L1 re-fire +
                         // erasure to the parent so the Settings sheet
@@ -1492,18 +1471,6 @@ struct SettingsSheet: View {
                     .accessibilityHint("Removes your stored Fitzpatrick skin type and re-presents the informational disclaimer so you can re-attest before continuing.")
                     .accessibilityIdentifier("ClearStoredSkinTypeButton")
 
-                    // Reason: Button has multi-line action body
-                    // (UserDefaults reset + in-memory session reset —
-                    // closes the GDPR Art.17 erasure-path loop on the
-                    // L1 SPF storage disclosure). `@ScaledMetric`-backed
-                    // `.frame(minHeight: minTap)` is applied to the
-                    // `Text` label on the line above, but the
-                    // intervening Button-closure newlines push that
-                    // `.frame(...)` call outside SwiftLint's 200-char
-                    // regex lookahead from the Button opener. `minTap`
-                    // is declared on `SettingsSheet` and verified by
-                    // Group R / Group LU.
-                    // swiftlint:disable:next missing_min_touch_target
                     Button(role: .destructive) {
                         UserPreferenceStorage.persist(spf: .spf30, to: .standard)
                         session.selectedSPF = .spf30
@@ -1568,12 +1535,6 @@ struct SkinTypeEditView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                // Reason: Toolbar Button has multi-line action body
-                // (selection commit + dismiss); @ScaledMetric
-                // `.frame(minHeight: minTap)` is applied below but outside
-                // SwiftLint's 200-char regex lookahead. `minTap` declared
-                // on `SkinTypeEditView` above.
-                // swiftlint:disable:next missing_min_touch_target
                 Button("Save") {
                     if let selection = pendingSelection {
                         session.selectedSkinType = selection
@@ -1625,7 +1586,7 @@ struct SkinTypePickerList: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(ProductCopy.skinTypeSourcePointer)
                         .font(.footnote.weight(.medium))
-                    NavigationLink("Open About & Citations") { /* Reason: Inline footnote-style reach-back hyperlink inside a Section footer paragraph — HIG tap-target floor does not apply to inline body links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                    NavigationLink("Open About & Citations") { /* Reason: Inline footnote-style reach-back hyperlink inside a Section footer paragraph — HIG tap-target floor does not apply to inline body links. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                         AboutView()
                     }
                     .font(.footnote.weight(.medium))
@@ -1651,13 +1612,6 @@ struct SkinTypePickerRow: View {
     @ScaledMetric private var rowMinHeight: CGFloat = 56
 
     var body: some View {
-        // Reason: Button label is a multi-line HStack with VStack/Spacer;
-        // `@ScaledMetric`-backed `.frame(minHeight: minTap)` is applied to
-        // the HStack inside the Button closure (below) but falls outside
-        // SwiftLint's 200-char regex lookahead. `minTap` declared on
-        // `SkinTypePickerRow` above; AST validation noted out of scope in
-        // `.swiftlint.yml`.
-        // swiftlint:disable:next missing_min_touch_target
         Button(action: onSelect) {
             HStack(alignment: .top, spacing: 12) {
                 Text(skinType.romanNumeral)
@@ -1770,7 +1724,7 @@ struct AboutView: View {
                         Text(ProductCopy.photosensitizationAuthorityLine)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-                        Link( /* Reason: Inline hyperlink inside body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                        Link( /* Reason: Inline hyperlink inside body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                             "NIH MedlinePlus sun-sensitivity overview",
                             destination: ProductCopy.medlinePlusSunSensitivityURL
                         )
@@ -1814,7 +1768,7 @@ struct AboutView: View {
                         .font(.title3.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
                     Text(ProductCopy.weatherDataAttributionBody)
-                    Link("Apple Weather data sources", destination: ProductCopy.weatherAttributionLegalURL) /* Reason: Inline hyperlink inside body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                    Link("Apple Weather data sources", destination: ProductCopy.weatherAttributionLegalURL) /* Reason: Inline hyperlink inside body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                     Text(ProductCopy.weatherAttributionLegalURLString)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -1878,7 +1832,7 @@ struct CitationLinksView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(ProductCopy.citationLinks, id: \.title) { link in
-                Link(link.title, destination: link.url) /* Reason: Inline hyperlink inside a footnote-styled citations list — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                Link(link.title, destination: link.url) /* Reason: Inline hyperlink inside a footnote-styled citations list — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                     .font(.footnote.weight(.medium))
             }
         }
@@ -1899,7 +1853,7 @@ struct AttributionView: View {
 
                 WeatherAttributionView()
 
-                Link("Apple Weather data sources", destination: legalURL) /* Reason: Inline hyperlink inside the Attribution body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+                Link("Apple Weather data sources", destination: legalURL) /* Reason: Inline hyperlink inside the Attribution body paragraph — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
                 Text(ProductCopy.weatherAttributionLegalURLString)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -1923,7 +1877,7 @@ struct WeatherAttributionView: View {
         HStack {
             officialMark
             Spacer()
-            Link("Data sources", destination: attribution?.legalPageURL ?? fallbackLegalURL) /* Reason: Inline caption-style hyperlink inside the WeatherKit attribution row — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // swiftlint:disable:this missing_min_touch_target
+            Link("Data sources", destination: attribution?.legalPageURL ?? fallbackLegalURL) /* Reason: Inline caption-style hyperlink inside the WeatherKit attribution row — HIG tap-target floor does not apply to inline text links. Iris loop-29 WI-29-7. */ // MISSING_MIN_TOUCH_TARGET_OK
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -2162,13 +2116,12 @@ struct PersistentFooter: View {
     // target scales with Dynamic Type. At default Dynamic Type the rendered
     // height is unchanged (44 pt); at AX5 the floor expands proportionally
     // to ~88 pt per HIG, restoring reachability for users who depend on
-    // larger type sizes. Pre-Loop-28 the literal passed SwiftLint because
-    // the `missing_min_touch_target` rule anchors on `\bButton\s*(` at the
-    // call site and didn't see this NavigationLink-nested literal.
+    // larger type sizes. Pre-AST, the regex lint could not reason about
+    // this nested NavigationLink shape; the SwiftSyntax rule now owns it.
     @ScaledMetric private var minTap: CGFloat = 44
 
     var body: some View {
-        NavigationLink { /* Reason: HIG ≥44pt tap-target floor IS applied via `.frame(minHeight: minTap, alignment: .leading)` on the Label below — the floor sits beyond the SwiftLint regex's 200-char lookahead window because of the intervening multi-line Loop-11/Loop-28 history comment. Iris loop-29 WI-29-7. */
+        NavigationLink {
             AboutView(highlightEstimateApplicability: true)
         } label: {
             Label(ProductCopy.disclaimerLinkLabel, systemImage: "info.circle")
@@ -2245,7 +2198,7 @@ struct UITestRefreshableProbeButton: View {
             // Reason: UI-test probe — only rendered when -uiTestRefreshableEcho
             // launch argument is present. Never shown to real users; touch-
             // target HIG does not apply to programmatic test infrastructure.
-            // swiftlint:disable:next missing_min_touch_target
+            // MISSING_MIN_TOUCH_TARGET_OK: UI-test probe — only rendered under -uiTestRefreshableEcho; real-user HIG touch-target policy does not apply.
             Button("uiTestInvokeRefreshable") {
                 Task { await refreshAction() }
             }

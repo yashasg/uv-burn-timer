@@ -878,6 +878,16 @@ private func astRuleSourceURL(file: StaticString = #filePath) -> URL {
         .appendingPathComponent("tools/swiftlint-rules/Sources/SwiftLintASTRules/ToolbarImageNeedsScaledFrameRule.swift")
 }
 
+private func missingMinTouchTargetASTRuleSourceURL(file: StaticString = #filePath) -> URL {
+    let testFile = URL(fileURLWithPath: String(describing: file))
+    return testFile
+        .deletingLastPathComponent()   // UVBurnTimerCoreTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // app
+        .deletingLastPathComponent()   // <repo>
+        .appendingPathComponent("tools/swiftlint-rules/Sources/SwiftLintASTRules/MissingMinTouchTargetRule.swift")
+}
+
 /// LV1 — `ForecastPickerView.swift` must contain no
 /// `.frame(...minHeight: <literal>)` or `.frame(...minWidth: <literal>)`.
 /// Every touch-target / banner floor must use a `@ScaledMetric`-backed
@@ -974,251 +984,33 @@ private func astRuleSourceURL(file: StaticString = #filePath) -> URL {
     )
 }
 
-// MARK: - Group LW: Loop-29 WI-2 — Button { trailing-closure form HIG floor
+// MARK: - Group LW: WI-L32-TOUCH-TARGET-AST — missing_min_touch_target regex retired
 //
-// Iris loop-29 gap analysis GAP-2: the SwiftLint `missing_min_touch_target`
-// rule regex `(?:\.onTapGesture\b|\bButton\s*\()` caught `.onTapGesture` and
-// `Button(` (with paren) but MISSED `Button {` (trailing-closure form). That
-// blind spot let the iOS 26.4 toolbar hittability regression on the gear
-// Button (AppViews.swift line 122) slip through SwiftLint in Loop-28 — PR
-// #99 fixed the call site manually but did not close the rule hole. WI-29-2
-// widens the alternation to also catch `Button {` and mirrors the guard
-// here so unit tests catch regressions independently of the lint pass.
-//
-// Group LW strategy:
-//   LW1 — `.swiftlint.yml` `missing_min_touch_target` regex line contains
-//         the alternation literal `Button\s*\{`.
-//   LW2 — `AppViews.swift` contains no `Button {` site lacking an adjacent
-//         `.frame(...min(Width|Height): <id>...)` within 200 chars (mirror
-//         of the SwiftLint lookahead). Sites carrying an immediately-
-//         preceding `// swiftlint:disable:next missing_min_touch_target`
-//         directive are intentional system-floor exceptions and exempt.
-//   LW3 — Same mirror-guard for `ForecastPickerView.swift`.
+// The original `missing_min_touch_target` SwiftLint custom rule used a 200-char
+// lookahead heuristic for `Button`, `NavigationLink`, `Link`, and `.onTapGesture`.
+// WI-L32-TOUCH-TARGET-AST retires that regex and promotes the SwiftSyntax rule at
+// `tools/swiftlint-rules/Sources/SwiftLintASTRules/MissingMinTouchTargetRule.swift`
+// to the sole source of truth.
 
-/// Mirror-guard: returns `Button {` (trailing-closure-form) matches in
-/// `source` that lack an adjacent
-/// `.frame(...min(Width|Height): <identifier>...)` within 200 chars AND
-/// are not suppressed by an immediately-preceding
-/// `// swiftlint:disable:next missing_min_touch_target` directive.
-/// Mirrors the SwiftLint `missing_min_touch_target` regex exactly so a
-/// regression in either side will be caught.
-private func unsuppressedButtonTrailingClosureViolations(
-    in source: String
-) throws -> [NSRange] {
-    let pattern = #"\bButton\s*\{(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)"#
-    let regex = try NSRegularExpression(pattern: pattern)
-    let range = NSRange(source.startIndex..., in: source)
-    let matches = regex.matches(in: source, range: range)
-    let nsSource = source as NSString
-    return matches.compactMap { match -> NSRange? in
-        let start = match.range.location
-        // Resolve the current line (containing the Button { match) and the
-        // immediately-preceding line by scanning newlines — inline directives
-        // can exceed any fixed lookback window.
-        var lineStart = start
-        while lineStart > 0 && nsSource.character(at: lineStart - 1) != 0x0A {
-            lineStart -= 1
-        }
-        var lineEnd = start
-        while lineEnd < nsSource.length && nsSource.character(at: lineEnd) != 0x0A {
-            lineEnd += 1
-        }
-        let currentLine = nsSource.substring(
-            with: NSRange(location: lineStart, length: lineEnd - lineStart)
-        )
-        if currentLine.contains("swiftlint:disable:this")
-            && currentLine.contains("missing_min_touch_target") {
-            return nil
-        }
-        if lineStart > 0 {
-            let endOfPrev = lineStart - 1
-            var startOfPrev = endOfPrev
-            while startOfPrev > 0 && nsSource.character(at: startOfPrev - 1) != 0x0A {
-                startOfPrev -= 1
-            }
-            let prevLine = nsSource.substring(
-                with: NSRange(location: startOfPrev, length: endOfPrev - startOfPrev)
-            )
-            if prevLine.contains("swiftlint:disable:next")
-                && prevLine.contains("missing_min_touch_target") {
-                return nil
-            }
-        }
-        return match.range
-    }
-}
-
-/// LW1 — `.swiftlint.yml` `missing_min_touch_target` rule regex must
-/// include the `Button\s*\{` alternation so SwiftLint catches the
-/// trailing-closure form (e.g. the gear toolbar Button at AppViews.swift
-/// line 122 that bypassed the rule in Loop-28). Iris loop-29 GAP-2.
-@Test func test_LW1_swiftlintMissingMinTouchTargetCoversButtonTrailingClosure() throws {
-    let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
-    let pattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*Button\\s\*\\\{[^']*'"#
-    let regex = try NSRegularExpression(pattern: pattern)
-    let range = NSRange(source.startIndex..., in: source)
+/// LW1 — `.swiftlint.yml` must NOT contain a `missing_min_touch_target:`
+/// custom-rule entry. The SwiftSyntax AST gate is now canonical.
+@Test func test_LW1_swiftlintMissingMinTouchTargetRegexRuleRetired_astIsCanonical() throws {
+    let yaml = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
+    let yamlRange = NSRange(yaml.startIndex..., in: yaml)
+    let entryPattern = #"(?m)^\s{2}missing_min_touch_target:\s*$"#
     #expect(
-        regex.firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `missing_min_touch_target` regex must include the `Button\\s*\\{` alternation so SwiftLint catches `Button {` (trailing-closure form). Iris loop-29 gap analysis GAP-2 — closes the blind spot that let the iOS 26.4 gear-Button toolbar hittability regression (AppViews.swift line 122) slip through SwiftLint in Loop-28."
+        try NSRegularExpression(pattern: entryPattern).firstMatch(in: yaml, range: yamlRange) == nil,
+        ".swiftlint.yml must NOT declare a `missing_min_touch_target:` custom-rule entry — the SwiftSyntax AST gate is the canonical source of truth post WI-L32-TOUCH-TARGET-AST."
     )
-}
-
-/// LW2 — `AppViews.swift` must contain no `Button {` (trailing-closure
-/// form) site missing an adjacent `@ScaledMetric`-backed
-/// `.frame(...min(Width|Height): <id>...)` within 200 chars, unless that
-/// site carries an immediately-preceding
-/// `// swiftlint:disable:next missing_min_touch_target` directive. Mirrors
-/// WI-29-2's widened SwiftLint regex in Swift `NSRegularExpression`.
-@Test func test_LW2_appViewsButtonTrailingClosureSitesCarryMinTapFloor() throws {
-    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
-    let violations = try unsuppressedButtonTrailingClosureViolations(in: source)
+    let astRuleSource = missingMinTouchTargetASTRuleSourceURL()
     #expect(
-        violations.isEmpty,
-        "AppViews.swift must not contain `Button {` (trailing-closure) sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style already guarantees the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` directive with a Reason: comment. Iris loop-29 gap analysis GAP-2 / WI-29-2. Found \(violations.count) unsuppressed site(s)."
+        FileManager.default.fileExists(atPath: astRuleSource.path),
+        "AST rule source must exist at \(astRuleSource.path) — it is now the sole source of truth for the HIG 44pt minimum touch-target floor."
     )
-}
-
-/// LW3 — `ForecastPickerView.swift` mirror-guard for the trailing-closure
-/// form. Iris loop-29 gap analysis GAP-2 / WI-29-2.
-@Test func test_LW3_forecastPickerButtonTrailingClosureSitesCarryMinTapFloor() throws {
-    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
-    let violations = try unsuppressedButtonTrailingClosureViolations(in: source)
+    let astRuleText = try String(contentsOf: astRuleSource, encoding: .utf8)
     #expect(
-        violations.isEmpty,
-        "ForecastPickerView.swift must not contain `Button {` (trailing-closure) sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style already guarantees the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` directive with a Reason: comment. Iris loop-29 gap analysis GAP-2 / WI-29-2. Found \(violations.count) unsuppressed site(s)."
-    )
-}
-
-// MARK: - Group LX: Loop-29 WI-7 — NavigationLink / Link HIG floor
-//
-// Iris loop-29 gap analysis GAP-7: the SwiftLint `missing_min_touch_target`
-// rule regex, even after WI-29-2 widened it to catch `Button {`, still
-// missed `NavigationLink { … }`, `NavigationLink(…)`, and `Link(…)` —
-// SwiftUI's other primary tap-target primitives. That blind spot meant a
-// regression that swapped a `Button` for a `NavigationLink` (or added a
-// new standalone `Link` outside of inline body copy) would silently bypass
-// the HIG ≥44pt tap-target floor lint. WI-29-7 widens the alternation to
-// also catch the `NavigationLink`/`Link` forms and mirrors the guard here
-// so unit tests catch regressions independently of the lint pass.
-//
-// Group LX strategy:
-//   LX1 — `.swiftlint.yml` `missing_min_touch_target` regex line contains
-//         the alternation literals `NavigationLink\s*\{`,
-//         `NavigationLink\s*\(`, and `Link\s*\(`.
-//   LX2 — `AppViews.swift` contains no `NavigationLink`/`Link` trigger
-//         site lacking an adjacent `@ScaledMetric`-backed
-//         `.frame(...min(Width|Height): <id>...)` within 200 chars (mirror
-//         of the SwiftLint lookahead). Sites carrying an immediately-
-//         preceding `// swiftlint:disable:next missing_min_touch_target`
-//         (or inline `:this`) directive are intentional system-floor or
-//         inline-hyperlink exceptions and exempt.
-//   LX3 — Same mirror-guard for `ForecastPickerView.swift`.
-
-/// Mirror-guard: returns `NavigationLink {`, `NavigationLink(`, and
-/// `Link(` matches in `source` that lack an adjacent
-/// `.frame(...min(Width|Height): <identifier>...)` within 200 chars AND
-/// are not suppressed by an immediately-preceding
-/// `// swiftlint:disable:next missing_min_touch_target` directive (or an
-/// inline `:this` directive on the same line). Mirrors the SwiftLint
-/// `missing_min_touch_target` regex exactly so a regression in either
-/// side will be caught.
-private func unsuppressedNavigationLinkLinkViolations(
-    in source: String
-) throws -> [NSRange] {
-    let pattern = #"\b(?:NavigationLink\s*\{|NavigationLink\s*\(|Link\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)"#
-    let regex = try NSRegularExpression(pattern: pattern)
-    let range = NSRange(source.startIndex..., in: source)
-    let matches = regex.matches(in: source, range: range)
-    let nsSource = source as NSString
-    return matches.compactMap { match -> NSRange? in
-        let start = match.range.location
-        var lineStart = start
-        while lineStart > 0 && nsSource.character(at: lineStart - 1) != 0x0A {
-            lineStart -= 1
-        }
-        var lineEnd = start
-        while lineEnd < nsSource.length && nsSource.character(at: lineEnd) != 0x0A {
-            lineEnd += 1
-        }
-        let currentLine = nsSource.substring(
-            with: NSRange(location: lineStart, length: lineEnd - lineStart)
-        )
-        if currentLine.contains("swiftlint:disable:this")
-            && currentLine.contains("missing_min_touch_target") {
-            return nil
-        }
-        if lineStart > 0 {
-            let endOfPrev = lineStart - 1
-            var startOfPrev = endOfPrev
-            while startOfPrev > 0 && nsSource.character(at: startOfPrev - 1) != 0x0A {
-                startOfPrev -= 1
-            }
-            let prevLine = nsSource.substring(
-                with: NSRange(location: startOfPrev, length: endOfPrev - startOfPrev)
-            )
-            if prevLine.contains("swiftlint:disable:next")
-                && prevLine.contains("missing_min_touch_target") {
-                return nil
-            }
-        }
-        return match.range
-    }
-}
-
-/// LX1 — `.swiftlint.yml` `missing_min_touch_target` rule regex must
-/// include the `NavigationLink\s*\{`, `NavigationLink\s*\(`, and
-/// `Link\s*\(` alternations so SwiftLint catches SwiftUI's other primary
-/// tap-target primitives. Iris loop-29 GAP-7 / WI-29-7 — closes the
-/// blind spot analogous to the `Button {` blind spot closed in WI-29-2.
-@Test func test_LX1_swiftlintMissingMinTouchTargetCoversNavigationLinkAndLink() throws {
-    let source = try String(contentsOf: swiftlintYAMLURL(), encoding: .utf8)
-    let navLinkBracePattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*NavigationLink\\s\*\\\{[^']*'"#
-    let navLinkParenPattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*NavigationLink\\s\*\\\([^']*'"#
-    // Anchor on the YAML alternation token `|\bLink\s*\(` literally — the
-    // leading `\|` distinguishes the `Link` alternation from the sibling
-    // `NavigationLink` alternation without relying on a regex `\b` word
-    // boundary firing between `b` and `L` in the YAML source text (both are
-    // word chars in the literal `\bLink…`, so `\b` never matches there).
-    let linkParenPattern = #"missing_min_touch_target:[\s\S]{0,1500}regex:\s*'[^']*\|\\bLink\\s\*\\\([^']*'"#
-    let range = NSRange(source.startIndex..., in: source)
-    #expect(
-        try NSRegularExpression(pattern: navLinkBracePattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `missing_min_touch_target` regex must include the `NavigationLink\\s*\\{` alternation. Iris loop-29 GAP-7 / WI-29-7."
-    )
-    #expect(
-        try NSRegularExpression(pattern: navLinkParenPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `missing_min_touch_target` regex must include the `NavigationLink\\s*\\(` alternation. Iris loop-29 GAP-7 / WI-29-7."
-    )
-    #expect(
-        try NSRegularExpression(pattern: linkParenPattern).firstMatch(in: source, range: range) != nil,
-        ".swiftlint.yml `missing_min_touch_target` regex must include the `|\\bLink\\s*\\(` alternation token (anchored on the leading pipe to disambiguate from the sibling `NavigationLink` alternation). Iris loop-29 GAP-7 / WI-29-7."
-    )
-}
-
-/// LX2 — `AppViews.swift` must contain no `NavigationLink`/`Link` trigger
-/// site missing an adjacent `@ScaledMetric`-backed
-/// `.frame(...min(Width|Height): <id>...)` within 200 chars, unless that
-/// site carries an immediately-preceding
-/// `// swiftlint:disable:next missing_min_touch_target` (or inline `:this`)
-/// directive. Mirrors WI-29-7's widened SwiftLint regex in Swift
-/// `NSRegularExpression`.
-@Test func test_LX2_appViewsNavigationLinkAndLinkSitesCarryMinTapFloor() throws {
-    let source = try String(contentsOf: appViewsSwiftURL(), encoding: .utf8)
-    let violations = try unsuppressedNavigationLinkLinkViolations(in: source)
-    #expect(
-        violations.isEmpty,
-        "AppViews.swift must not contain `NavigationLink {`, `NavigationLink(`, or `Link(` sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style (Form/List row chrome) or context (inline body hyperlink) already guarantees / excuses the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` (or inline `:this`) directive with a Reason: comment. Iris loop-29 GAP-7 / WI-29-7. Found \(violations.count) unsuppressed site(s)."
-    )
-}
-
-/// LX3 — `ForecastPickerView.swift` mirror-guard for the NavigationLink /
-/// Link forms. Iris loop-29 GAP-7 / WI-29-7.
-@Test func test_LX3_forecastPickerNavigationLinkAndLinkSitesCarryMinTapFloor() throws {
-    let source = try String(contentsOf: forecastPickerViewSwiftURL(), encoding: .utf8)
-    let violations = try unsuppressedNavigationLinkLinkViolations(in: source)
-    #expect(
-        violations.isEmpty,
-        "ForecastPickerView.swift must not contain `NavigationLink {`, `NavigationLink(`, or `Link(` sites without an adjacent `@ScaledMetric`-backed `.frame(minWidth: <id>, minHeight: <id>)` within 200 chars — or, where the system style or inline-hyperlink context excuses the HIG ≥44pt tap-target floor, a `// swiftlint:disable:next missing_min_touch_target` (or inline `:this`) directive with a Reason: comment. Iris loop-29 GAP-7 / WI-29-7. Found \(violations.count) unsuppressed site(s)."
+        astRuleText.contains("missing_min_touch_target"),
+        "AST rule source must declare the `missing_min_touch_target` id so diagnostics remain traceable to the HIG touch-target lineage."
     )
 }
 

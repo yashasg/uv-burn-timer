@@ -52,3 +52,12 @@ Closed the only LANE 1 surface missing from `main`: a privacy-rationale sheet th
 **Verification:** `./build.sh` — SwiftLint HIG gate ✓, AST gate ✓, Debug + Release builds clean, all tests pass (14 core + 10 UI, 0 failures).
 
 **PR #123:** https://github.com/yashasg/uv-burn-timer/pull/123 — MERGED.
+
+## Learnings
+
+### 2026-05-22T21:10:27.757-07:00 — WI-L32-TOUCH-TARGET-AST (PR #134)
+- AST rule location: `tools/swiftlint-rules/Sources/SwiftLintASTRules/MissingMinTouchTargetRule.swift`; CLI wiring lives in `tools/swiftlint-rules/Sources/swiftlint-ast/main.swift`.
+- Test pattern: keep rule-local XCTest coverage in `tools/swiftlint-rules/Tests/SwiftLintASTRulesTests/*RuleTests.swift` with inline positive/negative fixtures, violation-metadata checks, and an `app/Sources` parity gate.
+- Disable-marker convention: regex-era `swiftlint:disable:this/next missing_min_touch_target` comments should be removed when the AST can prove compliance; intentional AST-only exemptions now use `MISSING_MIN_TOUCH_TARGET_OK` so SwiftLint does not emit `superfluous_disable_command`.
+- 17-site handling: removed 13 regex-era disable sites (`locationChip`, `skinTypeChip`, `primaryAction`, HeroTimerCard `Open Settings`, `DisclaimerSeeAboutLink`, Settings `Clear stored skin type`, Settings `Clear stored SPF`, SkinTypeEdit `Save`, `SkinTypePickerRow`, Forecast day row, Forecast reveal row, Forecast hourly vertical row, Forecast hourly cell`) and migrated 4 intentional exemptions (`Settings` Form-row links to skin type/about/attribution, plus `SkinTypePickerList` footer reach-back link) to `MISSING_MIN_TOUCH_TARGET_OK`.
+- PR #134: https://github.com/yashasg/uv-burn-timer/pull/134

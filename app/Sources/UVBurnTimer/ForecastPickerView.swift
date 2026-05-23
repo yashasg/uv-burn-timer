@@ -153,7 +153,7 @@ public struct ForecastPickerView: View {
             Divider()
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
-            NavigationLink { /* Reason: HIG ≥44pt tap-target floor IS applied via `.frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)` on the NavigationLink below — the floor sits beyond the SwiftLint regex's 200-char lookahead window because of the verbose label content and accessibility modifiers. Iris loop-29 WI-29-7. */
+            NavigationLink {
                 AboutView(highlightEstimateApplicability: true)
             } label: {
                 Label("Is this estimate for me?", systemImage: "info.circle")
@@ -166,7 +166,7 @@ public struct ForecastPickerView: View {
             .frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)
             .padding(.horizontal, 16)
 
-            Link(destination: ProductCopy.weatherAttributionLegalURL) { /* Reason: HIG ≥44pt tap-target floor IS applied via `.frame(maxWidth: .infinity, minHeight: minTap, alignment: .leading)` on the Link below — the floor sits beyond the SwiftLint regex's 200-char lookahead window because of the verbose label, accessibility modifiers, and Loop-13 history comment. Iris loop-29 WI-29-7. */
+            Link(destination: ProductCopy.weatherAttributionLegalURL) {
                 Text("Source: \(ProductCopy.weatherAttributionServiceName)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -354,7 +354,7 @@ public struct ForecastPickerView: View {
     private func dayRow(_ day: DayForecast, index: Int) -> some View {
         let isSelected = selectedDay(matches: day)
         let isToday = Calendar.current.isDateInToday(day.date)
-        Button { // swiftlint:disable:this missing_min_touch_target
+        Button {
             selectDay(day)
         } label: {
             HStack(alignment: .center, spacing: 12) {
@@ -421,7 +421,7 @@ public struct ForecastPickerView: View {
     // MARK: - Reveal affordance row (Iris §3, §8 item 7 — verified + chevron animation)
 
     private var revealAffordanceRow: some View {
-        Button { // swiftlint:disable:this missing_min_touch_target
+        Button {
             toggleExtendedDays()
         } label: {
             HStack(spacing: 8) {
@@ -547,7 +547,7 @@ public struct ForecastPickerView: View {
         let isSelected = isSelectedHour(hour.timestamp)
         let isNighttime = hour.uvIndex == 0
 
-        return Button { // swiftlint:disable:this missing_min_touch_target
+        return Button {
             selectHour(hour)
         } label: {
             HStack(spacing: 12) {
@@ -595,7 +595,7 @@ public struct ForecastPickerView: View {
         let isNighttime = hour.uvIndex == 0
         let bandColor = whoBandColor(for: hour.uvIndex)
 
-        Button { // swiftlint:disable:this missing_min_touch_target
+        Button {
             selectHour(hour)
         } label: {
             VStack(spacing: 0) {

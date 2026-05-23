@@ -18,6 +18,7 @@ var anyViolations = false
 let toolbarRule = ToolbarImageNeedsScaledFrameRule()
 let imageA11yRule = ImageSystemNameMissingAccessibilityLabelRule()
 let reduceMotionRule = ReduceMotionUnguardedAnimationRule()
+let minTouchTargetRule = MissingMinTouchTargetRule()
 
 for path in args {
     let url = URL(fileURLWithPath: path)
@@ -32,6 +33,7 @@ for path in args {
     violations.append(contentsOf: toolbarRule.violations(in: source))
     violations.append(contentsOf: imageA11yRule.violations(in: source))
     violations.append(contentsOf: reduceMotionRule.violations(in: source))
+    violations.append(contentsOf: minTouchTargetRule.violations(in: source))
     for v in violations {
         anyViolations = true
         let line = "\(path):\(v.line):\(v.column): error: \(v.message) [\(v.ruleID)]\n"

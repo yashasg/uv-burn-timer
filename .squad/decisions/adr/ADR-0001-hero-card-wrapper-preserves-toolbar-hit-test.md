@@ -282,7 +282,7 @@ toolbar item. Resulting `AppViews.swift` positions on this commit:
 - `.accessibilityIdentifier("EstimateInfoButton")` — line **140**
   (was 138 pre-Loop-28-WI-0)
 - `PersistentFooter`'s `AboutView(highlightEstimateApplicability: true)`
-  push — line **2172**
+  push — line **2125**
 - `skinTypeChip` — line **339**, `locationChip` — line **301**,
   `spfChip` — line **320**
 
@@ -394,8 +394,8 @@ identity:
   at `AppViews.swift:133` (accessibility identifier `EstimateInfoButton`
   at line 140).
 - `PersistentFooter` reach-back link → `AboutView(...)` at
-  `AppViews.swift:2172` (inside the `NavigationLink { AboutView(...) }`
-  body at lines 2170–2172), rendered inside the
+  `AppViews.swift:2125` (inside the `NavigationLink { AboutView(...) }`
+  body at lines 2123–2125), rendered inside the
   `.safeAreaInset(edge: .bottom)` at line 143–151.
 
 ### Rule (extended)

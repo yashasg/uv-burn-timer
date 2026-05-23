@@ -44,11 +44,12 @@ run_swiftlint() {
   swiftlint "$@" --config .swiftlint.yml --reporter "$reporter"
 }
 
-# WI-loop30-AST-buildsh-wire: SwiftSyntax AST gate.
-# Belt-and-braces with the regex SwiftLint rules — both gates run for
-# this PR. ADR-0003 §Rollout WI-30-A: the regex rule for
-# `toolbar_image_needs_scaled_frame` stays in `.swiftlint.yml` while
-# the AST rule beds in for one CI cycle.
+# SwiftSyntax AST gate.
+#
+# AST rules are now the canonical source of truth for `toolbar_image_needs_scaled_frame`
+# and `missing_min_touch_target` (ADR-0003 rollout). SwiftLint's regex gate still runs
+# for the remaining regex-backed rules; this AST pass owns the structural HIG cases that
+# outgrew regex lookahead.
 #
 # Skips gracefully when `swift` is not on PATH (parity with the
 # SwiftLint-not-installed skip in `run_swiftlint`). CI runners that

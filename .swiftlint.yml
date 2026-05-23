@@ -59,33 +59,12 @@ custom_rules:
     message: "HIG: sheets present a single focused task — don't nest a navigation hierarchy inside one. Use a separate .fullScreenCover or restructure."
     severity: error
 
-  missing_min_touch_target:
-    name: "HIG: Tap targets must be >= 44pt"
-    # Heuristic only: regex can enforce "bare identifier vs literal" near Button/
-    # onTapGesture, not prove the identifier is declared with @ScaledMetric. Use a
-    # per-line disable with PR justification for genuine exceptions; perfect
-    # @ScaledMetric validation would need an AST.
-    #
-    # Iris loop-29 GAP-2 / WI-29-2: the alternation now also catches the
-    # trailing-closure form `Button { ... }` (in addition to `Button(`). The
-    # Loop-28 toolbar gear-Button hittability regression (AppViews.swift
-    # line 122) slipped through SwiftLint because the original alternation
-    # only recognized the paren form. The 200-char lookahead window and
-    # identifier-backed `min(Width|Height):` floor check are unchanged.
-    #
-    # Iris loop-29 GAP-7 / WI-29-7: the alternation is further widened to
-    # catch `NavigationLink { ... }`, `NavigationLink(...)`, and
-    # `Link(...)` — SwiftUI's other primary tap-target primitives. Before
-    # WI-29-7 a regression that swapped a `Button` for a `NavigationLink`
-    # (or added a new standalone `Link` outside of inline body copy)
-    # silently bypassed the HIG ≥44pt tap-target floor lint. Inline body
-    # `Link("...", destination:)` calls inside paragraph copy and
-    # `NavigationLink` rows inside Form/List system chrome are excused via
-    # per-line `// swiftlint:disable:this missing_min_touch_target`
-    # directives (with a Reason: annotation) at the call site.
-    regex: '(?:\.onTapGesture\b|\bButton\s*\(|\bButton\s*\{|\bNavigationLink\s*\{|\bNavigationLink\s*\(|\bLink\s*\()(?![\s\S]{0,200}\.frame\([^)]*min(?:Width|Height):\s*[A-Za-z_]+\b)'
-    message: "HIG: touch targets need @ScaledMetric-backed minWidth/minHeight identifiers near Button/onTapGesture. Literals like 44/56 are violations."
-    severity: error
+  # The `missing_min_touch_target` regex rule lived here through loops 28–31
+  # as a lookahead heuristic for `Button`, `NavigationLink`, `Link`, and
+  # `.onTapGesture`. WI-L32-TOUCH-TARGET-AST retires it: the SwiftSyntax AST
+  # gate at `tools/swiftlint-rules/Sources/SwiftLintASTRules/
+  # MissingMinTouchTargetRule.swift`, wired into `./build.sh` and `./build.sh lint`,
+  # is now the sole source of truth for the HIG 44pt minimum touch-target floor.
 
   # The `toolbar_image_needs_scaled_frame` regex rule lived here through
   # loops 29–30 (Iris GAP-4 / WI-29-4). WI-loop30-AST-LY-retire-regex
