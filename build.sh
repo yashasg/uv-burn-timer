@@ -131,8 +131,133 @@ run_swiftlint_ast
 # ---------------------------------------------------------------------------
 # Simulator destination
 # ---------------------------------------------------------------------------
+#
+# WI-L32-02 — Dedicated per-repo simulator to avoid cross-repo UDID contention.
+# Without this, concurrent xcodebuild runs from a sibling Xcode project bound
+# to the same booted "iPhone 17 Pro" UDID (observed locally with
+# knitting-gauge-reconciler) repeatedly steal the simulator's foreground app
+# layout, killing the UVBurnTimer host process mid-XCUI and surfacing as
+# "Test crashed with signal kill" on 4–5 UI tests (the WI-L32-01 symptom set:
+# testToolbarRendersBothSettingsAndEstimateInfoButtons,
+# testEstimateInfoNavigationRoundTripReturnsToMainScreen,
+# testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor,
+# testLocationButtonFiresLocationRequest, testSettingsSheetOpens).
+#
+# Strategy: create-once a dedicated `UVBurnTimer-<DeviceType>` simulator on the
+# preferred device type/runtime, then always target its UDID. The dedicated
+# device is identified by an opaque name prefix that no other repo claims,
+# so concurrent runs in sibling repos cannot steal foreground from us.
+#
+# Override knobs:
+#   UV_BURN_TIMER_DESTINATION    — full xcodebuild destination string; if set,
+#                                  skips all dedicated-simulator logic.
+#   UV_BURN_TIMER_SIM_NAME       — override the dedicated simulator name
+#                                  (default: UVBurnTimer-<device>).
+#   UV_BURN_TIMER_DISABLE_DEDICATED_SIM=1 — opt out (fallback to legacy
+#                                  "first booted sim" selection).
+
+dedicated_sim_name_for() {
+  local device="$1"
+  printf 'UVBurnTimer-%s' "${device// /-}"
+}
+
+find_or_create_dedicated_simulator() {
+  local preferred_device="$1"
+  local sim_name="${UV_BURN_TIMER_SIM_NAME:-$(dedicated_sim_name_for "$preferred_device")}"
+
+  local device_id
+  device_id="$(
+    xcrun simctl list devices | awk -v name="$sim_name" '
+      index($0, "    " name " (") && !found {
+        if (match($0, /\([0-9A-F-]{36}\)/)) {
+          print substr($0, RSTART + 1, 36)
+          found = 1
+        }
+      }
+    '
+  )"
+
+  if [[ -n "$device_id" ]]; then
+    printf '%s' "$device_id"
+    return 0
+  fi
+
+  local device_type_id
+  device_type_id="$(
+    xcrun simctl list devicetypes | awk -v device="$preferred_device" '
+      index($0, device " (com.apple.CoreSimulator.SimDeviceType.") && !found {
+        if (match($0, /\(com\.apple\.CoreSimulator\.SimDeviceType\.[^)]+\)/)) {
+          print substr($0, RSTART + 1, RLENGTH - 2)
+          found = 1
+        }
+      }
+    '
+  )"
+
+  if [[ -z "$device_type_id" ]]; then
+    return 1
+  fi
+
+  local runtime_id
+  runtime_id="$(
+    xcrun simctl list runtimes | awk '
+      / - com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9]+-[0-9]+/ {
+        if (match($0, /com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9]+-[0-9]+/)) {
+          last = substr($0, RSTART, RLENGTH)
+        }
+      }
+      END { if (last) print last }
+    '
+  )"
+
+  if [[ -z "$runtime_id" ]]; then
+    return 1
+  fi
+
+  device_id="$(xcrun simctl create "$sim_name" "$device_type_id" "$runtime_id" 2>/dev/null)"
+  if [[ -z "$device_id" || ${#device_id} -ne 36 ]]; then
+    return 1
+  fi
+
+  printf '%s' "$device_id"
+}
 
 select_destination() {
+  local available_devices
+  available_devices="$(xcrun simctl list devices available)"
+
+  local xcode_major
+  local xcode_version_output
+  xcode_version_output="$(xcodebuild -version)"
+  xcode_major="$(awk '/^Xcode / && !found { split($2, parts, "."); print parts[1]; found = 1 }' <<< "$xcode_version_output")"
+
+  local -a preferred_devices
+  if [[ -n "$xcode_major" && "$xcode_major" -lt 26 ]]; then
+    # Xcode 16.4 on GitHub's macOS 15 image can list iPhone 17 Pro
+    # (iPhone18,1/iOS 26) but actool cannot resolve that device's trait set.
+    preferred_devices=("iPhone 16 Pro" "iPhone 16" "iPhone 15")
+  else
+    preferred_devices=("iPhone 17 Pro" "iPhone 16 Pro" "iPhone 16" "iPhone 15")
+  fi
+
+  # WI-L32-02: prefer the dedicated per-repo simulator.
+  if [[ "${UV_BURN_TIMER_DISABLE_DEDICATED_SIM:-0}" != "1" ]]; then
+    local preferred_device
+    for preferred_device in "${preferred_devices[@]}"; do
+      if [[ "$available_devices" != *"$preferred_device ("* ]]; then
+        continue
+      fi
+      local dedicated_id
+      if dedicated_id="$(find_or_create_dedicated_simulator "$preferred_device")" \
+        && [[ -n "$dedicated_id" ]]; then
+        echo "platform=iOS Simulator,id=$dedicated_id,arch=arm64"
+        return
+      fi
+    done
+    echo "warning: WI-L32-02 dedicated simulator unavailable; falling back to shared selection (cross-repo UDID contention risk)." >&2
+  fi
+
+  # Fallback path (legacy): first booted sim, else first preferred device.
   local device_id
   local booted_devices
   booted_devices="$(xcrun simctl list devices booted)"
@@ -150,23 +275,6 @@ select_destination() {
     )"
     echo "platform=iOS Simulator,id=$device_id,arch=arm64"
     return
-  fi
-
-  local available_devices
-  available_devices="$(xcrun simctl list devices available)"
-
-  local xcode_major
-  local xcode_version_output
-  xcode_version_output="$(xcodebuild -version)"
-  xcode_major="$(awk '/^Xcode / && !found { split($2, parts, "."); print parts[1]; found = 1 }' <<< "$xcode_version_output")"
-
-  local -a preferred_devices
-  if [[ -n "$xcode_major" && "$xcode_major" -lt 26 ]]; then
-    # Xcode 16.4 on GitHub's macOS 15 image can list iPhone 17 Pro
-    # (iPhone18,1/iOS 26) but actool cannot resolve that device's trait set.
-    preferred_devices=("iPhone 16 Pro" "iPhone 16" "iPhone 15")
-  else
-    preferred_devices=("iPhone 17 Pro" "iPhone 16 Pro" "iPhone 16" "iPhone 15")
   fi
 
   local preferred_device
@@ -194,6 +302,59 @@ destination="${UV_BURN_TIMER_DESTINATION:-$(select_destination)}"
 echo "Using destination: $destination"
 echo "Using derived data: $derived_data_path"
 [[ -n "$ci_configuration" ]] && echo "CI mode: CONFIGURATION=$ci_configuration TEST_CONFIGURATION=$test_configuration RUN_TESTS=$run_tests"
+
+# WI-L32-02 — Pre-boot the destination simulator before xcodebuild starts.
+# When the dedicated `UVBurnTimer-*` simulator is selected, xcodebuild's
+# implicit cold-boot can race the test-runner install and surface as
+# `Mach -308 (ipc/mig) server died` from `IDELaunchiPhoneSimulatorLauncher`
+# (recurring locally per WI-L31-DEBT-05). A warm simctl boot eliminates the
+# race and is a no-op for already-booted devices.
+preboot_destination_simulator() {
+  local dest="$1"
+  local id
+  case "$dest" in
+    *id=*) id="${dest#*id=}"; id="${id%%,*}" ;;
+    *) return 0 ;;
+  esac
+  [[ ${#id} -eq 36 ]] || return 0
+
+  local state
+  state="$(xcrun simctl list devices | awk -v id="$id" '
+    index($0, "(" id ")") {
+      if (match($0, /\((Booted|Shutdown|Booting|Shutting Down)\)/)) {
+        print substr($0, RSTART + 1, RLENGTH - 2)
+      }
+      exit
+    }
+  ')"
+
+  if [[ "$state" == "Booted" ]]; then
+    return 0
+  fi
+
+  echo "Pre-booting simulator $id (was: ${state:-unknown}) — WI-L32-02 race guard..."
+  xcrun simctl boot "$id" >/dev/null 2>&1 || true
+  # Wait briefly for the device to reach Booted state. Bounded so a stuck
+  # CoreSimulator does not silently hang the build.
+  local deadline=$(( $(date +%s) + 30 ))
+  while (( $(date +%s) < deadline )); do
+    state="$(xcrun simctl list devices | awk -v id="$id" '
+      index($0, "(" id ")") {
+        if (match($0, /\((Booted|Shutdown|Booting|Shutting Down)\)/)) {
+          print substr($0, RSTART + 1, RLENGTH - 2)
+        }
+        exit
+      }
+    ')"
+    if [[ "$state" == "Booted" ]]; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "warning: simulator $id did not reach Booted state within 30s (last: ${state:-unknown})." >&2
+}
+
+preboot_destination_simulator "$destination"
 
 # ---------------------------------------------------------------------------
 # Build helper

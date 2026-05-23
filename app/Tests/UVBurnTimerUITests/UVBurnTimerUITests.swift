@@ -351,7 +351,7 @@ final class UVBurnTimerUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 15))
         XCTAssertTrue(
-            waitForToolbarSettled(in: app, timeout: 10),
+            waitForToolbarSettled(in: app, timeout: 20),
             "Both toolbar trailing items must settle to hittable before tests proceed."
         )
     }
@@ -366,11 +366,25 @@ final class UVBurnTimerUITests: XCTestCase {
     /// No-ops if the rationale screen is not present (e.g. already acknowledged).
     /// Waits up to 5 s for the button to disappear so callers can proceed once
     /// the sheet has fully dismissed.
+    ///
+    /// WI-L32-01 hardening: after the button disappears we also poll for the
+    /// main "UV Burn Timer" navigation bar to exist before returning. On
+    /// iOS 26 the `.sheet` dismissal animation tail can keep the toolbar's
+    /// trailing items present-but-not-hittable for several hundred ms after
+    /// the rationale button has gone, which previously raced
+    /// `waitForToolbarSettled` and flaked
+    /// `testEstimateInfoButtonOpensAboutWithHighlightedApplicabilityAnchor`
+    /// and siblings even on the WI-L32-02 dedicated simulator.
     private func acknowledgeLocationRationale(_ app: XCUIApplication) {
         let continueButton = app.buttons.matching(identifier: "LocationRationaleContinueButton").firstMatch
         guard continueButton.waitForExistence(timeout: 10) else { return }
         tapWithRetry(continueButton)
         _ = continueButton.waitForNonExistence(timeout: 5)
+        // Settle past the sheet's dismissal animation tail so the toolbar's
+        // trailing items finish their hit-test composition before the caller
+        // begins polling them.
+        _ = app.navigationBars["UV Burn Timer"].waitForExistence(timeout: 10)
+        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
     }
 
     private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
