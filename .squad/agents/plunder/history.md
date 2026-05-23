@@ -50,3 +50,13 @@ Model assignment updated 2026-05-22T03:55: claude-opus-4.7-1m-internal (1M-conte
 **2026-05-22T18:30:00Z** — Loop-29 iter-2 closure complete: 3 PRs merged (#106 WI-29-7, #107 WI-29-6, #108 WI-29-4). Goals 4/5 ✅, Goal-5 hardware-blocked. Decisions merged, orchestration-log + session-log recorded. Ready for Loop-30 planning.
 
 ### 2026-05-22T22:15:00Z — Loop-30 closure — final review delivered. Goals: 4/5 PASS (Goal-5 hardware-blocked). 8 PRs merged. 10 WIs carry-forward.
+
+### 2026-05-23T01:14:18Z — WI-L32-PRIVACY-EH-EXTEND: locationRationaleBody substring pins extended
+
+- **Commit:** `f11c9c2` on `squad/wi-l32-privacy-eh-extend` (not pushed; coordinator batches).
+- **File:** `app/Tests/UVBurnTimerCoreTests/LocationRationaleOnboardingTests.swift` — new test `test_locationRationaleBody_pinsProvenancePrecisionAndNoAnalytics` adds three exact-substring asserts against `ProductCopy.locationRationaleBody`:
+  1. `"Apple Weather"` (provenance / WeatherKit attribution)
+  2. `"2 decimals"` (GDPR data-minimization / approximate-location precision claim)
+  3. `"no analytics"` (negative pin — anti-tracking floor, FTC §5 + App Store Privacy Label posture)
+- **Production string unchanged** — this is a pure regression-locking exercise. `./build.sh` green (10/10 UI tests, full unit suite passing, warnings-as-errors).
+- **Closure:** `.squad/decisions/inbox/plunder-wi-l32-privacy-eh-extend.md`.
